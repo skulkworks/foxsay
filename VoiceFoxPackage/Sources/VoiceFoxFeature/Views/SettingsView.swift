@@ -1,0 +1,338 @@
+import SwiftUI
+
+/// Settings view for VoiceFox
+public struct SettingsView: View {
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var engineManager = EngineManager.shared
+    @ObservedObject private var hotkeyManager = HotkeyManager.shared
+    @ObservedObject private var devAppConfig = DevAppConfigManager.shared
+    @ObservedObject private var correctionPipeline = CorrectionPipeline.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var showAddAppSheet = false
+    @State private var newAppBundleId = ""
+    @State private var newAppName = ""
+
+    public init() {}
+
+    public var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Settings")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+
+            TabView {
+                generalTab
+                    .tabItem {
+                        Label("General", systemImage: "gear")
+                    }
+
+                engineTab
+                    .tabItem {
+                        Label("Engine", systemImage: "waveform")
+                    }
+
+                devAppsTab
+                    .tabItem {
+                        Label("Dev Apps", systemImage: "terminal")
+                    }
+
+                correctionsTab
+                    .tabItem {
+                        Label("Corrections", systemImage: "text.badge.checkmark")
+                    }
+            }
+        }
+        .frame(width: 500, height: 450)
+    }
+
+    // MARK: - General Tab
+
+    private var generalTab: some View {
+        Form {
+            Section("Hotkey") {
+                Picker("Hold key to record", selection: $hotkeyManager.selectedModifier) {
+                    ForEach(HotkeyManager.HotkeyModifier.allCases) { modifier in
+                        Text(modifier.displayName).tag(modifier)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                if !HotkeyManager.checkAccessibilityPermission() {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Accessibility permission required")
+                            .font(.caption)
+                        Spacer()
+                        Button("Grant") {
+                            HotkeyManager.requestAccessibilityPermission()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            Section("Appearance") {
+                Toggle("Show in menu bar", isOn: .init(
+                    get: { UserDefaults.standard.bool(forKey: "showInMenuBar") },
+                    set: { UserDefaults.standard.set($0, forKey: "showInMenuBar") }
+                ))
+            }
+
+            Section("Audio") {
+                HStack {
+                    Text("Microphone")
+                    Spacer()
+                    if AudioEngine.shared.hasPermission {
+                        Label("Granted", systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    } else {
+                        Button("Request Permission") {
+                            Task {
+                                await AudioEngine.shared.checkPermission()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            Section("Output") {
+                Toggle("Copy to clipboard only", isOn: .init(
+                    get: { UserDefaults.standard.bool(forKey: "copyToClipboardOnly") },
+                    set: { UserDefaults.standard.set($0, forKey: "copyToClipboardOnly") }
+                ))
+                Text("When enabled, transcribed text is copied to clipboard instead of pasting into active app")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    // MARK: - Engine Tab
+
+    private var engineTab: some View {
+        Form {
+            Section("Transcription Engine") {
+                Picker("Engine", selection: Binding(
+                    get: { engineManager.currentEngineType },
+                    set: { type in
+                        Task {
+                            await engineManager.selectEngine(type)
+                        }
+                    }
+                )) {
+                    ForEach(EngineType.allCases) { type in
+                        VStack(alignment: .leading) {
+                            Text(type.displayName)
+                            Text(type.description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .tag(type)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+            }
+
+            Section("Model") {
+                modelStatusView
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private var modelStatusView: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(engineManager.currentEngineType.displayName)
+                    .font(.headline)
+
+                if engineManager.isDownloading {
+                    ProgressView(value: engineManager.downloadProgress)
+                        .progressViewStyle(.linear)
+                    Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if engineManager.isModelReady {
+                    Label("Model ready", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+            }
+
+            Spacer()
+
+            if engineManager.isDownloading {
+                Button("Cancel") {
+                    engineManager.cancelDownload()
+                }
+                .buttonStyle(.bordered)
+            } else if !engineManager.isModelReady {
+                Button("Download Model") {
+                    Task {
+                        try? await engineManager.downloadCurrentModel()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+
+        if let error = engineManager.downloadError {
+            Text(error)
+                .font(.caption)
+                .foregroundColor(.red)
+        }
+    }
+
+    // MARK: - Dev Apps Tab
+
+    private var devAppsTab: some View {
+        Form {
+            Section("Developer Applications") {
+                Text("Transcriptions in these apps will be corrected for developer terminology.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ForEach(devAppConfig.apps) { app in
+                    HStack {
+                        Toggle(app.displayName, isOn: .init(
+                            get: { app.isEnabled },
+                            set: { enabled in
+                                devAppConfig.setEnabled(enabled, for: app.bundleId)
+                            }
+                        ))
+
+                        Spacer()
+
+                        Button(role: .destructive) {
+                            devAppConfig.removeApp(bundleId: app.bundleId)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+
+            Section {
+                Button("Add Application...") {
+                    showAddAppSheet = true
+                }
+
+                Button("Reset to Defaults") {
+                    devAppConfig.resetToDefaults()
+                }
+                .foregroundColor(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .sheet(isPresented: $showAddAppSheet) {
+            addAppSheet
+        }
+    }
+
+    private var addAppSheet: some View {
+        VStack(spacing: 16) {
+            Text("Add Developer Application")
+                .font(.headline)
+
+            Form {
+                TextField("Bundle ID", text: $newAppBundleId)
+                    .textFieldStyle(.roundedBorder)
+
+                TextField("Display Name", text: $newAppName)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            HStack {
+                Button("Cancel") {
+                    showAddAppSheet = false
+                    newAppBundleId = ""
+                    newAppName = ""
+                }
+                .buttonStyle(.bordered)
+
+                Button("Add") {
+                    let config = DevAppConfig(
+                        bundleId: newAppBundleId,
+                        displayName: newAppName
+                    )
+                    devAppConfig.addApp(config)
+                    showAddAppSheet = false
+                    newAppBundleId = ""
+                    newAppName = ""
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(newAppBundleId.isEmpty || newAppName.isEmpty)
+            }
+        }
+        .padding()
+        .frame(width: 350)
+    }
+
+    // MARK: - Corrections Tab
+
+    private var correctionsTab: some View {
+        Form {
+            Section("Correction Settings") {
+                Toggle("Enable dev corrections", isOn: $correctionPipeline.devCorrectionEnabled)
+
+                Toggle("Use LLM for ambiguous cases", isOn: $correctionPipeline.llmCorrectionEnabled)
+                    .disabled(true)  // LLM not yet implemented
+
+                if correctionPipeline.llmCorrectionEnabled {
+                    Text("LLM correction uses a local model for context-aware corrections")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Section("Preview") {
+                Text("Sample corrections:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    correctionExample("git status dash dash short", "git status --short")
+                    correctionExample("dot js", ".js")
+                    correctionExample("equals equals", "==")
+                    correctionExample("open paren close paren", "()")
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func correctionExample(_ input: String, _ output: String) -> some View {
+        HStack {
+            Text(input)
+                .foregroundColor(.secondary)
+            Image(systemName: "arrow.right")
+                .foregroundColor(.blue)
+            Text(output)
+                .fontWeight(.medium)
+        }
+        .font(.caption)
+    }
+}
+
+#Preview {
+    SettingsView()
+        .environmentObject(AppState.shared)
+}

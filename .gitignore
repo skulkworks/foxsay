@@ -1,0 +1,35 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# User-specific xcodeproj data
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Xcode workspace data
+*.xcworkspace/xcuserdata/
+
+# Downloaded ML models (at runtime)
+*.mlmodelc/
+huggingface/
+
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
