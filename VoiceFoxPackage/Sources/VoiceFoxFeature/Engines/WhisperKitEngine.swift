@@ -134,4 +134,29 @@ public actor WhisperKitEngine: TranscriptionEngine {
     public func cancel() async {
         isCancelled = true
     }
+
+    /// Preload the model into memory for faster first transcription
+    public func preload() async throws {
+        guard whisperKit == nil else {
+            // Already loaded
+            return
+        }
+
+        guard await isModelDownloaded else {
+            throw TranscriptionError.modelNotDownloaded
+        }
+
+        print("VoiceFox: Preloading WhisperKit model...")
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        let modelsDir = EngineManager.modelsDirectory
+        whisperKit = try await WhisperKit(
+            model: "base.en",
+            downloadBase: modelsDir.appendingPathComponent("whisperkit"),
+            verbose: false
+        )
+
+        let loadTime = CFAbsoluteTimeGetCurrent() - startTime
+        print("VoiceFox: WhisperKit model preloaded in \(String(format: "%.2f", loadTime))s")
+    }
 }

@@ -61,8 +61,8 @@ public struct ContentView: View {
                     )
 
                     statusPill(
-                        icon: engineManager.isModelReady ? "checkmark.circle.fill" : "arrow.down.circle",
-                        color: engineManager.isModelReady ? .green : .orange
+                        icon: engineStatusIcon,
+                        color: engineStatusColor
                     )
                 }
                 .id(permissionRefreshID)  // Force refresh when ID changes
@@ -174,8 +174,32 @@ public struct ContentView: View {
             return "Recording..."
         } else if appState.isTranscribing {
             return "Transcribing..."
+        } else if engineManager.isPreloading {
+            return "Warming up..."
         } else {
             return "Hold \(hotkeyManager.selectedModifier.displayName) to record"
+        }
+    }
+
+    private var engineStatusIcon: String {
+        if engineManager.isEngineReady {
+            return "checkmark.circle.fill"
+        } else if engineManager.isPreloading {
+            return "arrow.trianglehead.2.clockwise.rotate.90"
+        } else if engineManager.isModelReady {
+            return "hourglass"
+        } else {
+            return "arrow.down.circle"
+        }
+    }
+
+    private var engineStatusColor: Color {
+        if engineManager.isEngineReady {
+            return .green
+        } else if engineManager.isPreloading || engineManager.isModelReady {
+            return .blue
+        } else {
+            return .orange
         }
     }
 

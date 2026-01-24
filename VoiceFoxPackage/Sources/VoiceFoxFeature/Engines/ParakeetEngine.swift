@@ -70,6 +70,11 @@ public actor ParakeetEngine: TranscriptionEngine {
         transcriptionTask?.cancel()
         transcriptionTask = nil
     }
+
+    public func preload() async throws {
+        // Placeholder - not implemented yet
+        throw TranscriptionError.engineNotAvailable
+    }
 }
 
 // MARK: - Parakeet MLX Integration Notes

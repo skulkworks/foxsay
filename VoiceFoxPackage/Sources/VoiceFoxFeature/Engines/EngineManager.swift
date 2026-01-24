@@ -10,6 +10,8 @@ public class EngineManager: ObservableObject {
     @Published public private(set) var downloadProgress: Double = 0
     @Published public private(set) var downloadError: String?
     @Published public private(set) var isModelReady = false
+    @Published public private(set) var isPreloading = false
+    @Published public private(set) var isEngineReady = false
 
     private var engines: [EngineType: any TranscriptionEngine] = [:]
     private var downloadTask: Task<Void, Error>?
@@ -22,9 +24,12 @@ public class EngineManager: ObservableObject {
         engines[.whisperKit] = WhisperKitEngine()
         // Parakeet engine requires additional setup
 
-        // Check initial model state
+        // Check initial model state and preload if ready
         Task {
             await refreshModelReadyState()
+            if isModelReady {
+                await preloadCurrentEngine()
+            }
         }
     }
 
@@ -37,16 +42,42 @@ public class EngineManager: ObservableObject {
     public func selectEngine(_ type: EngineType) async {
         currentEngineType = type
         UserDefaults.standard.set(type.rawValue, forKey: "selectedEngine")
+        isEngineReady = false  // Reset - new engine needs preloading
         await refreshModelReadyState()
+        if isModelReady {
+            await preloadCurrentEngine()
+        }
     }
 
     /// Refresh the model ready state
     public func refreshModelReadyState() async {
         guard let engine = currentEngine else {
             isModelReady = false
+            isEngineReady = false
             return
         }
         isModelReady = await engine.isModelDownloaded
+    }
+
+    /// Preload the current engine's model into memory
+    public func preloadCurrentEngine() async {
+        guard let engine = currentEngine else { return }
+        guard isModelReady else { return }
+        guard !isEngineReady else { return }  // Already preloaded
+
+        isPreloading = true
+        print("VoiceFox: Starting engine preload...")
+
+        do {
+            try await engine.preload()
+            isEngineReady = true
+            print("VoiceFox: Engine preload complete")
+        } catch {
+            print("VoiceFox: Engine preload failed: \(error)")
+            // Non-fatal - will load on first use
+        }
+
+        isPreloading = false
     }
 
     /// Download the model for the current engine
@@ -81,6 +112,9 @@ public class EngineManager: ObservableObject {
             downloadProgress = 1.0
             isDownloading = false
             await refreshModelReadyState()
+
+            // Preload the model after download
+            await preloadCurrentEngine()
         } catch {
             isDownloading = false
             downloadError = error.localizedDescription

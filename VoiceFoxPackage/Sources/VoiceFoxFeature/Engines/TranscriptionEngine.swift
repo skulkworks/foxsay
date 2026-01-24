@@ -27,6 +27,9 @@ public protocol TranscriptionEngine: Sendable {
 
     /// Cancel any ongoing transcription
     func cancel() async
+
+    /// Preload the model into memory for faster first transcription
+    func preload() async throws
 }
 
 /// Errors that can occur during transcription
