@@ -15,6 +15,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.12.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.10.0"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", branch: "main"),
     ],
     targets: [
         .target(
@@ -22,6 +23,7 @@ let package = Package(
             dependencies: [
                 "WhisperKit",
                 "FluidAudio",
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
             ]
         ),
         .testTarget(

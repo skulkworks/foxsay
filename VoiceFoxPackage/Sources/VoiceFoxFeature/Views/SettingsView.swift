@@ -7,6 +7,7 @@ public struct SettingsView: View {
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var devAppConfig = DevAppConfigManager.shared
     @ObservedObject private var correctionPipeline = CorrectionPipeline.shared
+    @ObservedObject private var llmManager = LLMModelManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var showAddAppSheet = false
@@ -294,13 +295,17 @@ public struct SettingsView: View {
                 Toggle("Enable dev corrections", isOn: $correctionPipeline.devCorrectionEnabled)
 
                 Toggle("Use LLM for ambiguous cases", isOn: $correctionPipeline.llmCorrectionEnabled)
-                    .disabled(true)  // LLM not yet implemented
+                    .disabled(!llmManager.isModelReady)
 
-                if correctionPipeline.llmCorrectionEnabled {
+                if correctionPipeline.llmCorrectionEnabled && llmManager.isModelReady {
                     Text("LLM correction uses a local model for context-aware corrections")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+            }
+
+            Section("LLM Model") {
+                llmModelStatusView
             }
 
             Section("Preview") {
@@ -317,6 +322,62 @@ public struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    @ViewBuilder
+    private var llmModelStatusView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Qwen2.5-Coder-0.5B")
+                    .font(.headline)
+
+                Text("\(LLMModelManager.modelSizeMB) MB - 4-bit quantized")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                if llmManager.isDownloading {
+                    ProgressView(value: llmManager.downloadProgress)
+                        .progressViewStyle(.linear)
+                    Text("Downloading... \(Int(llmManager.downloadProgress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if llmManager.isPreloading {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                        Text("Loading model...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else if llmManager.isModelReady {
+                    Label("Model ready", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+            }
+
+            Spacer()
+
+            if llmManager.isDownloading {
+                Button("Cancel") {
+                    llmManager.cancelDownload()
+                }
+                .buttonStyle(.bordered)
+            } else if !llmManager.isModelReady {
+                Button("Download") {
+                    Task {
+                        try? await llmManager.downloadModel()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+
+        if let error = llmManager.downloadError {
+            Text(error)
+                .font(.caption)
+                .foregroundColor(.red)
+        }
     }
 
     private func correctionExample(_ input: String, _ output: String) -> some View {
