@@ -308,6 +308,10 @@ public struct SettingsView: View {
                 llmModelStatusView
             }
 
+            Section("LLM Prompt") {
+                llmPromptEditorView
+            }
+
             Section("Preview") {
                 Text("Sample corrections:")
                     .font(.caption)
@@ -377,6 +381,49 @@ public struct SettingsView: View {
             Text(error)
                 .font(.caption)
                 .foregroundColor(.red)
+        }
+    }
+
+    @ViewBuilder
+    private var llmPromptEditorView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("System Prompt")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                if llmManager.isUsingCustomPrompt {
+                    Button("Reset to Default") {
+                        llmManager.resetPromptToDefault()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            Text("Use {input} as placeholder for the transcribed text")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            TextEditor(text: $llmManager.customPrompt)
+                .font(.system(.caption, design: .monospaced))
+                .frame(minHeight: 120, maxHeight: 200)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+
+            if llmManager.isUsingCustomPrompt {
+                Label("Using custom prompt", systemImage: "pencil.circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
         }
     }
 

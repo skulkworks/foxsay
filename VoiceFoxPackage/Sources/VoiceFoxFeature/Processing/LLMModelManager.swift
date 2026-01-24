@@ -13,6 +13,38 @@ public class LLMModelManager: ObservableObject {
     /// Approximate model size for display
     public static let modelSizeMB = 278
 
+    /// Default system prompt for LLM correction
+    /// Use {input} as placeholder for the text to correct
+    public static let defaultPrompt = """
+        Convert spoken developer dictation to code. Detect the programming language from context clues and output ONLY the raw code.
+
+        Rules:
+        - Convert spoken punctuation: "open paren" -> (, "close bracket" -> ], "semi colon" -> ;
+        - Convert operators: "dash dash" -> --, "equals equals" -> ==, "plus equals" -> +=
+        - Convert keywords: "open angle bracket" -> <, "question mark" -> ?
+        - Recognize common patterns: "if condition then" -> if () {}, "for loop" -> for ()
+        - Apply proper syntax, indentation, and casing for the detected language
+        - No explanations, comments, or markdown formatting
+
+        Input: {input}
+        Output:
+        """
+
+    /// UserDefaults key for custom prompt
+    private static let customPromptKey = "llmCustomPrompt"
+
+    /// The current prompt (custom or default)
+    @Published public var customPrompt: String {
+        didSet {
+            UserDefaults.standard.set(customPrompt, forKey: Self.customPromptKey)
+        }
+    }
+
+    /// Whether a custom prompt is being used
+    public var isUsingCustomPrompt: Bool {
+        customPrompt != Self.defaultPrompt
+    }
+
     @Published public private(set) var isDownloading = false
     @Published public private(set) var downloadProgress: Double = 0
     @Published public private(set) var isModelReady = false
@@ -23,10 +55,23 @@ public class LLMModelManager: ObservableObject {
     private var downloadTask: Task<Void, Error>?
 
     private init() {
+        // Load custom prompt from UserDefaults or use default
+        self.customPrompt = UserDefaults.standard.string(forKey: Self.customPromptKey) ?? Self.defaultPrompt
+
         // Check if model is already downloaded
         Task {
             await checkModelStatus()
         }
+    }
+
+    /// Reset the prompt to default
+    public func resetPromptToDefault() {
+        customPrompt = Self.defaultPrompt
+    }
+
+    /// Build the final prompt with input text substituted
+    public func buildPrompt(for inputText: String) -> String {
+        customPrompt.replacingOccurrences(of: "{input}", with: inputText)
     }
 
     /// Check if the model files exist locally

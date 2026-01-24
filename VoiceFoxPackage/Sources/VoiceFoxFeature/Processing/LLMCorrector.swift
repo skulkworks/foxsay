@@ -28,8 +28,8 @@ public actor LLMCorrector {
         let manager = await LLMModelManager.shared
         let container = try await manager.getModel()
 
-        // Build the prompt for spoken-to-code correction
-        let promptText = buildPrompt(text: text, context: context)
+        // Build the prompt using the manager's configurable prompt
+        let promptText = await manager.buildPrompt(for: text)
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
@@ -65,26 +65,6 @@ public actor LLMCorrector {
         let corrected = cleanResponse(generatedText, originalText: text)
 
         return corrected
-    }
-
-    /// Build the prompt for spoken-to-code correction
-    private func buildPrompt(text: String, context: String?) -> String {
-        var prompt = """
-        Convert this spoken developer text to code. Output ONLY the corrected text, nothing else.
-        Rules:
-        - Fix speech-to-code errors (dash dash -> --, equals equals -> ==)
-        - Use proper code syntax and casing
-        - Keep it concise
-        - Do not add explanations or comments
-        """
-
-        if let context = context {
-            prompt += "\nContext: \(context)"
-        }
-
-        prompt += "\n\nInput: \(text)\nOutput:"
-
-        return prompt
     }
 
     /// Clean up the LLM response to extract just the corrected text
