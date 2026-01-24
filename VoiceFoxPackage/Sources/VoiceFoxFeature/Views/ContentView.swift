@@ -60,10 +60,7 @@ public struct ContentView: View {
                         color: HotkeyManager.checkAccessibilityPermission() ? .green : .orange
                     )
 
-                    statusPill(
-                        icon: engineStatusIcon,
-                        color: engineStatusColor
-                    )
+                    engineStatusPill
                 }
                 .id(permissionRefreshID)  // Force refresh when ID changes
             }
@@ -210,6 +207,37 @@ public struct ContentView: View {
             .frame(width: 28, height: 28)
             .background(color.opacity(0.15))
             .clipShape(Circle())
+    }
+
+    @ViewBuilder
+    private var engineStatusPill: some View {
+        if engineManager.isPreloading {
+            SpinningIconView(icon: engineStatusIcon, color: engineStatusColor)
+        } else {
+            statusPill(icon: engineStatusIcon, color: engineStatusColor)
+        }
+    }
+}
+
+/// Separate view for spinning animation - animation stops when view is removed
+struct SpinningIconView: View {
+    let icon: String
+    let color: Color
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(color)
+            .rotationEffect(.degrees(rotation))
+            .frame(width: 28, height: 28)
+            .background(color.opacity(0.15))
+            .clipShape(Circle())
+            .onAppear {
+                withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
     }
 }
 
