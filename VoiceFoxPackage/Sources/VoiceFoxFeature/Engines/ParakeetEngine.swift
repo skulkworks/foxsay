@@ -1,23 +1,38 @@
 import Foundation
+import FluidAudio
 
-/// Parakeet TDT engine via MLX (placeholder - requires parakeet-mlx integration)
-/// This engine provides the fastest transcription for English using NVIDIA's Parakeet model.
+/// Parakeet TDT engine via FluidAudio (CoreML/ANE)
+/// This engine provides extremely fast transcription for English using NVIDIA's Parakeet model
+/// accelerated by Apple's Neural Engine.
 public actor ParakeetEngine: TranscriptionEngine {
-    public nonisolated let name = "Parakeet MLX"
+    public nonisolated let name = "Parakeet"
     public nonisolated let identifier = "parakeet"
-    public nonisolated let modelSize: Int64 = 600_000_000  // ~600MB for Parakeet TDT 0.6B
+    public nonisolated let modelSize: Int64 = 450_000_000  // ~450MB for CoreML Parakeet TDT 0.6B v2
 
-    private var isLoaded = false
-    private var _downloadProgress: Double = 0
+    // Using nonisolated(unsafe) because AsrManager handles its own thread safety
+    // and FluidAudio is designed to be called from any context
+    private nonisolated(unsafe) var asrManager: AsrManager?
+    private var models: AsrModels?
+    // nonisolated so progress polling doesn't block on actor
+    private nonisolated(unsafe) var _downloadProgress: Double = 0
     private var transcriptionTask: Task<TranscriptionResult, Error>?
+    private var isCancelled = false
 
     public init() {}
 
     public var isModelDownloaded: Bool {
         get async {
-            // Check if model files exist
-            let modelPath = Self.modelPath
-            return FileManager.default.fileExists(atPath: modelPath.path)
+            // FluidAudio stores models in ~/Library/Application Support/FluidAudio/Models/
+            let modelDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("FluidAudio")
+                .appendingPathComponent("Models")
+                .appendingPathComponent("parakeet-tdt-0.6b-v2-coreml")
+
+            guard let modelDir = modelDir else { return false }
+
+            // Check if the vocab file exists (indicates complete download)
+            let vocabPath = modelDir.appendingPathComponent("parakeet_vocab.json")
+            return FileManager.default.fileExists(atPath: vocabPath.path)
         }
     }
 
@@ -27,77 +42,116 @@ public actor ParakeetEngine: TranscriptionEngine {
         }
     }
 
-    private static var modelPath: URL {
-        EngineManager.modelsDirectory.appendingPathComponent("parakeet/parakeet-tdt-0.6b-v3")
-    }
-
     public func downloadModel() async throws {
         _downloadProgress = 0
 
-        // Create models directory
-        let modelsDir = EngineManager.modelsDirectory.appendingPathComponent("parakeet")
-        try FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+        print("VoiceFox: Starting Parakeet model download via FluidAudio...")
 
-        _downloadProgress = 0.1
+        do {
+            // Start a background task to animate progress while downloading
+            // FluidAudio doesn't expose download progress, so we simulate it
+            let progressTask = Task {
+                // Simulate download progress over ~20 seconds
+                for i in 1...80 {
+                    try Task.checkCancellation()
+                    try await Task.sleep(for: .milliseconds(250))
+                    // Progress from 0 to 0.8 during download
+                    _downloadProgress = Double(i) / 100.0
+                }
+            }
 
-        // Parakeet-MLX integration would go here
-        // For now, this is a placeholder that indicates the model is not available
-        // The actual implementation would:
-        // 1. Download the model from Hugging Face
-        // 2. Convert to MLX format if needed
-        // 3. Store in the models directory
+            // FluidAudio handles downloading and caching automatically
+            // v2 is English-only with highest recall
+            models = try await AsrModels.downloadAndLoad(version: .v2)
 
-        // Simulated download for demonstration
-        // In production, this would use the parakeet-mlx Python package or native MLX Swift
+            // Cancel the simulated progress
+            progressTask.cancel()
+            _downloadProgress = 0.85
 
-        throw TranscriptionError.engineNotAvailable
+            print("VoiceFox: Parakeet models downloaded, initializing...")
+
+            // Initialize ASR manager
+            let manager = AsrManager(config: .default)
+            _downloadProgress = 0.90
+            try await manager.initialize(models: models!)
+            asrManager = manager
+
+            _downloadProgress = 1.0
+            print("VoiceFox: Parakeet model download complete")
+        } catch {
+            print("VoiceFox: Parakeet download failed: \(error)")
+            throw TranscriptionError.transcriptionFailed("Failed to download Parakeet model: \(error.localizedDescription)")
+        }
     }
 
     public func transcribe(audioBuffer: [Float]) async throws -> TranscriptionResult {
-        guard await isModelDownloaded else {
-            throw TranscriptionError.modelNotDownloaded
+        isCancelled = false
+
+        // Ensure model is loaded
+        if asrManager == nil {
+            guard await isModelDownloaded else {
+                throw TranscriptionError.modelNotDownloaded
+            }
+
+            // Load existing model
+            print("VoiceFox: Loading Parakeet model...")
+            models = try await AsrModels.downloadAndLoad(version: .v2)
+            let manager = AsrManager(config: .default)
+            try await manager.initialize(models: models!)
+            asrManager = manager
         }
 
-        guard isLoaded else {
+        guard let manager = asrManager else {
             throw TranscriptionError.engineNotAvailable
         }
 
-        // Placeholder - actual implementation would use MLX Swift or subprocess
-        throw TranscriptionError.engineNotAvailable
+        if isCancelled {
+            throw TranscriptionError.cancelled
+        }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        // FluidAudio expects 16kHz mono audio samples
+        let result = try await manager.transcribe(audioBuffer)
+
+        if isCancelled {
+            throw TranscriptionError.cancelled
+        }
+
+        let processingTime = CFAbsoluteTimeGetCurrent() - startTime
+
+        return TranscriptionResult(
+            text: result.text,
+            confidence: nil,
+            processingTime: processingTime
+        )
     }
 
     public func cancel() async {
+        isCancelled = true
         transcriptionTask?.cancel()
         transcriptionTask = nil
     }
 
     public func preload() async throws {
-        // Placeholder - not implemented yet
-        throw TranscriptionError.engineNotAvailable
+        guard asrManager == nil else {
+            // Already loaded
+            return
+        }
+
+        guard await isModelDownloaded else {
+            throw TranscriptionError.modelNotDownloaded
+        }
+
+        print("VoiceFox: Preloading Parakeet model...")
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        models = try await AsrModels.downloadAndLoad(version: .v2)
+        let manager = AsrManager(config: .default)
+        try await manager.initialize(models: models!)
+        asrManager = manager
+
+        let loadTime = CFAbsoluteTimeGetCurrent() - startTime
+        print("VoiceFox: Parakeet model preloaded in \(String(format: "%.2f", loadTime))s")
     }
 }
-
-// MARK: - Parakeet MLX Integration Notes
-/*
- To fully implement Parakeet engine:
-
- Option 1: Python subprocess with parakeet-mlx
- - Bundle Python runtime or require user installation
- - Create a Python script that loads the model and transcribes
- - Communicate via stdin/stdout or temp files
-
- Option 2: MLX Swift native integration
- - Use mlx-swift package when Parakeet support is available
- - Load model weights directly in Swift
- - Run inference using MLX operations
-
- Option 3: Core ML conversion
- - Convert Parakeet model to Core ML format
- - Use Core ML framework for inference
- - May have performance implications
-
- The parakeet-mlx package provides:
- - Model: mlx-community/parakeet-tdt-0.6b-v3 (~600MB)
- - Performance: ~5x realtime on M-series Macs
- - License: MIT (parakeet-mlx), Apache-2.0 (model)
- */

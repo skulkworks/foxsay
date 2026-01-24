@@ -5,11 +5,12 @@ import Foundation
 public actor WhisperKitEngine: TranscriptionEngine {
     public nonisolated let name = "WhisperKit"
     public nonisolated let identifier = "whisperkit"
-    public nonisolated let modelSize: Int64 = 150_000_000  // ~150MB for base.en
+    public nonisolated let modelSize: Int64 = 140_000_000  // ~140MB for base.en
 
     private var whisperKit: WhisperKit?
     private var isLoading = false
-    private var _downloadProgress: Double = 0
+    // nonisolated so progress polling doesn't block on actor
+    private nonisolated(unsafe) var _downloadProgress: Double = 0
     private var isCancelled = false
 
     public init() {}
@@ -62,17 +63,29 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
         // Download and initialize WhisperKit with base.en model
         do {
-            _downloadProgress = 0.1
             print("VoiceFox: Starting WhisperKit download to \(whisperKitDir.path)")
+
+            // Start a background task to animate progress while downloading
+            // WhisperKit doesn't expose download progress, so we simulate it
+            let progressTask = Task {
+                for i in 1...80 {
+                    try Task.checkCancellation()
+                    try await Task.sleep(for: .milliseconds(200))
+                    _downloadProgress = Double(i) / 100.0
+                }
+            }
 
             // WhisperKit handles model download automatically
             whisperKit = try await WhisperKit(
                 model: "base.en",
                 downloadBase: whisperKitDir,
-                verbose: true  // Enable verbose logging to see what's happening
+                verbose: true
             )
 
+            // Cancel the simulated progress
+            progressTask.cancel()
             _downloadProgress = 1.0
+
             print("VoiceFox: WhisperKit model download complete")
             print("VoiceFox: Model path exists: \(FileManager.default.fileExists(atPath: Self.modelPath.path))")
         } catch {

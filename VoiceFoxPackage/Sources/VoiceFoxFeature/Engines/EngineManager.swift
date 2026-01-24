@@ -22,7 +22,7 @@ public class EngineManager: ObservableObject {
 
         // Initialize available engines
         engines[.whisperKit] = WhisperKitEngine()
-        // Parakeet engine requires additional setup
+        engines[.parakeet] = ParakeetEngine()
 
         // Check initial model state and preload if ready
         Task {

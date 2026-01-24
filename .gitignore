@@ -27,6 +27,16 @@ Package.resolved
 # Downloaded ML models (at runtime)
 *.mlmodelc/
 huggingface/
+models/
+
+# Test directories and artifacts
+tests/
+*.tar.bz2
+*.tar.gz
+
+# Rust build artifacts (if any tests use Rust)
+target/
+Cargo.lock
 
 # Environment and secrets
 .env

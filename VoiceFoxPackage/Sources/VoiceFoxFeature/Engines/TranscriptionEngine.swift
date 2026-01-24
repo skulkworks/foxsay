@@ -66,16 +66,16 @@ public enum EngineType: String, CaseIterable, Identifiable, Codable {
     public var displayName: String {
         switch self {
         case .whisperKit: return "WhisperKit"
-        case .parakeet: return "Parakeet MLX"
+        case .parakeet: return "Parakeet"
         }
     }
 
     public var description: String {
         switch self {
         case .whisperKit:
-            return "OpenAI Whisper via WhisperKit - Fast and accurate"
+            return "OpenAI Whisper via WhisperKit (~140MB)"
         case .parakeet:
-            return "NVIDIA Parakeet TDT via MLX - Fastest for English"
+            return "Fastest and most accurate for English (~450MB)"
         }
     }
 }
