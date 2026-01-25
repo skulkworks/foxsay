@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Clean up resources
         Task { @MainActor in
-            await EngineManager.shared.cleanup()
+            await ModelManager.shared.cleanup()
         }
     }
 }
@@ -57,9 +57,8 @@ struct VoiceFoxApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainWindowView()
                 .environmentObject(appState)
-                .frame(width: 280, height: 320)
                 .onAppear {
                     // Initialize managers
                     Task { @MainActor in
@@ -77,9 +76,9 @@ struct VoiceFoxApp: App {
                         .environmentObject(appState)
                 }
         }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultSize(width: 280, height: 320)
+        .windowToolbarStyle(.unified)
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 650, height: 500)
         .commands {
             // Remove the default "New Window" command
             CommandGroup(replacing: .newItem) {}

@@ -56,17 +56,27 @@ public enum TranscriptionError: LocalizedError {
     }
 }
 
-/// Available engine types
-public enum EngineType: String, CaseIterable, Identifiable, Codable {
+/// Available model types
+public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
     case whisperKit = "whisperkit"
-    case parakeet = "parakeet"
+    case parakeetV2 = "parakeet"  // Keep raw value for backward compatibility
+    case parakeetV3 = "parakeet-v3"
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .whisperKit: return "WhisperKit"
-        case .parakeet: return "Parakeet"
+        case .parakeetV2: return "Parakeet V2"
+        case .parakeetV3: return "Parakeet V3"
+        }
+    }
+
+    public var shortName: String {
+        switch self {
+        case .whisperKit: return "WhisperKit"
+        case .parakeetV2: return "Parakeet V2"
+        case .parakeetV3: return "Parakeet V3"
         }
     }
 
@@ -74,8 +84,20 @@ public enum EngineType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .whisperKit:
             return "OpenAI Whisper via WhisperKit (~140MB)"
-        case .parakeet:
-            return "Fastest and most accurate for English (~450MB)"
+        case .parakeetV2:
+            return "English-only, highest recall (~450MB)"
+        case .parakeetV3:
+            return "Multilingual, 25 languages (~480MB)"
+        }
+    }
+
+    public var isMultilingual: Bool {
+        switch self {
+        case .whisperKit, .parakeetV3: return true
+        case .parakeetV2: return false
         }
     }
 }
+
+/// Type alias for backward compatibility
+public typealias EngineType = ModelType

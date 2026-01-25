@@ -1,88 +1,113 @@
 import Foundation
 
-/// Manages transcription engines and model downloads
+/// Manages transcription models and model downloads
 @MainActor
-public class EngineManager: ObservableObject {
-    public static let shared = EngineManager()
+public class ModelManager: ObservableObject {
+    public static let shared = ModelManager()
 
-    @Published public private(set) var currentEngineType: EngineType
+    @Published public private(set) var currentModelType: ModelType
     @Published public private(set) var isDownloading = false
     @Published public private(set) var downloadProgress: Double = 0
     @Published public private(set) var downloadError: String?
     @Published public private(set) var isModelReady = false
     @Published public private(set) var isPreloading = false
-    @Published public private(set) var isEngineReady = false
+    @Published public private(set) var isModelLoaded = false
 
-    private var engines: [EngineType: any TranscriptionEngine] = [:]
+    private var models: [ModelType: any TranscriptionEngine] = [:]
     private var downloadTask: Task<Void, Error>?
 
     private init() {
-        let savedEngine = UserDefaults.standard.string(forKey: "selectedEngine") ?? "whisperkit"
-        currentEngineType = EngineType(rawValue: savedEngine) ?? .whisperKit
+        // Read from both old and new keys for backward compatibility
+        let savedModel = UserDefaults.standard.string(forKey: "selectedModel")
+            ?? UserDefaults.standard.string(forKey: "selectedEngine")
+            ?? "parakeet"
+        currentModelType = ModelType(rawValue: savedModel) ?? .parakeetV2
 
-        // Initialize available engines
-        engines[.whisperKit] = WhisperKitEngine()
-        engines[.parakeet] = ParakeetEngine()
+        // Initialize available models
+        models[.whisperKit] = WhisperKitEngine()
+        models[.parakeetV2] = ParakeetEngine(version: .v2)
+        models[.parakeetV3] = ParakeetEngine(version: .v3)
 
         // Check initial model state and preload if ready
         Task {
             await refreshModelReadyState()
             if isModelReady {
-                await preloadCurrentEngine()
+                await preloadCurrentModel()
             }
         }
     }
 
-    /// Get the currently selected engine
-    public var currentEngine: (any TranscriptionEngine)? {
-        engines[currentEngineType]
+    /// Get the currently selected model
+    public var currentModel: (any TranscriptionEngine)? {
+        models[currentModelType]
     }
 
-    /// Select a different engine
-    public func selectEngine(_ type: EngineType) async {
-        currentEngineType = type
-        UserDefaults.standard.set(type.rawValue, forKey: "selectedEngine")
-        isEngineReady = false  // Reset - new engine needs preloading
+    /// Select a different model
+    public func selectModel(_ type: ModelType) async {
+        currentModelType = type
+        UserDefaults.standard.set(type.rawValue, forKey: "selectedModel")
+        isModelLoaded = false  // Reset - new model needs preloading
         await refreshModelReadyState()
         if isModelReady {
-            await preloadCurrentEngine()
+            await preloadCurrentModel()
         }
+    }
+
+    // MARK: - Backward Compatibility
+
+    /// Alias for currentModelType (backward compatibility)
+    public var currentEngineType: ModelType { currentModelType }
+
+    /// Alias for currentModel (backward compatibility)
+    public var currentEngine: (any TranscriptionEngine)? { currentModel }
+
+    /// Alias for isModelLoaded (backward compatibility)
+    public var isEngineReady: Bool { isModelLoaded }
+
+    /// Select engine (backward compatibility)
+    public func selectEngine(_ type: ModelType) async {
+        await selectModel(type)
     }
 
     /// Refresh the model ready state
     public func refreshModelReadyState() async {
-        guard let engine = currentEngine else {
+        guard let model = currentModel else {
             isModelReady = false
-            isEngineReady = false
+            isModelLoaded = false
             return
         }
-        isModelReady = await engine.isModelDownloaded
+        isModelReady = await model.isModelDownloaded
     }
 
-    /// Preload the current engine's model into memory
-    public func preloadCurrentEngine() async {
-        guard let engine = currentEngine else { return }
+    /// Preload the current model into memory
+    public func preloadCurrentModel() async {
+        guard let model = currentModel else { return }
         guard isModelReady else { return }
-        guard !isEngineReady else { return }  // Already preloaded
+        guard !isModelLoaded else { return }  // Already preloaded
 
         isPreloading = true
-        print("VoiceFox: Starting engine preload...")
+        print("VoiceFox: Starting model preload...")
 
         do {
-            try await engine.preload()
-            isEngineReady = true
-            print("VoiceFox: Engine preload complete")
+            try await model.preload()
+            isModelLoaded = true
+            print("VoiceFox: Model preload complete")
         } catch {
-            print("VoiceFox: Engine preload failed: \(error)")
+            print("VoiceFox: Model preload failed: \(error)")
             // Non-fatal - will load on first use
         }
 
         isPreloading = false
     }
 
-    /// Download the model for the current engine
+    // Backward compatibility alias
+    public func preloadCurrentEngine() async {
+        await preloadCurrentModel()
+    }
+
+    /// Download the model for the current selection
     public func downloadCurrentModel() async throws {
-        guard let engine = currentEngine else {
+        guard let model = currentModel else {
             throw TranscriptionError.engineNotAvailable
         }
 
@@ -94,7 +119,7 @@ public class EngineManager: ObservableObject {
             // Start progress polling task
             let progressTask = Task {
                 while !Task.isCancelled {
-                    let progress = await engine.downloadProgress
+                    let progress = await model.downloadProgress
                     await MainActor.run {
                         self.downloadProgress = progress
                     }
@@ -103,7 +128,7 @@ public class EngineManager: ObservableObject {
             }
 
             // Download the model
-            try await engine.downloadModel()
+            try await model.downloadModel()
 
             // Cancel progress polling
             progressTask.cancel()
@@ -114,7 +139,7 @@ public class EngineManager: ObservableObject {
             await refreshModelReadyState()
 
             // Preload the model after download
-            await preloadCurrentEngine()
+            await preloadCurrentModel()
         } catch {
             isDownloading = false
             downloadError = error.localizedDescription
@@ -129,18 +154,18 @@ public class EngineManager: ObservableObject {
         isDownloading = false
     }
 
-    /// Transcribe audio using the current engine
+    /// Transcribe audio using the current model
     public func transcribe(audioBuffer: [Float]) async throws -> TranscriptionResult {
-        guard let engine = currentEngine else {
+        guard let model = currentModel else {
             throw TranscriptionError.engineNotAvailable
         }
 
-        guard await engine.isModelDownloaded else {
+        guard await model.isModelDownloaded else {
             throw TranscriptionError.modelNotDownloaded
         }
 
         let startTime = CFAbsoluteTimeGetCurrent()
-        let result = try await engine.transcribe(audioBuffer: audioBuffer)
+        let result = try await model.transcribe(audioBuffer: audioBuffer)
         let processingTime = CFAbsoluteTimeGetCurrent() - startTime
 
         return TranscriptionResult(
@@ -154,7 +179,7 @@ public class EngineManager: ObservableObject {
 
     /// Cancel ongoing transcription
     public func cancelTranscription() async {
-        await currentEngine?.cancel()
+        await currentModel?.cancel()
     }
 
     /// Clean up resources
@@ -171,3 +196,6 @@ public class EngineManager: ObservableObject {
         return appSupport.appendingPathComponent("VoiceFox/Models", isDirectory: true)
     }
 }
+
+/// Type alias for backward compatibility
+public typealias EngineManager = ModelManager

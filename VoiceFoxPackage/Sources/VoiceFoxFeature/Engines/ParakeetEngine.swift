@@ -2,12 +2,32 @@ import Foundation
 import FluidAudio
 
 /// Parakeet TDT engine via FluidAudio (CoreML/ANE)
-/// This engine provides extremely fast transcription for English using NVIDIA's Parakeet model
+/// This engine provides extremely fast transcription using NVIDIA's Parakeet model
 /// accelerated by Apple's Neural Engine.
 public actor ParakeetEngine: TranscriptionEngine {
-    public nonisolated let name = "Parakeet"
-    public nonisolated let identifier = "parakeet"
-    public nonisolated let modelSize: Int64 = 450_000_000  // ~450MB for CoreML Parakeet TDT 0.6B v2
+    /// The model version this engine uses
+    public let version: AsrModelVersion
+
+    public nonisolated var name: String {
+        switch version {
+        case .v2: return "Parakeet V2"
+        case .v3: return "Parakeet V3"
+        }
+    }
+
+    public nonisolated var identifier: String {
+        switch version {
+        case .v2: return "parakeet-v2"
+        case .v3: return "parakeet-v3"
+        }
+    }
+
+    public nonisolated var modelSize: Int64 {
+        switch version {
+        case .v2: return 450_000_000  // ~450MB for V2
+        case .v3: return 480_000_000  // ~480MB for V3
+        }
+    }
 
     // Using nonisolated(unsafe) because AsrManager handles its own thread safety
     // and FluidAudio is designed to be called from any context
@@ -18,15 +38,18 @@ public actor ParakeetEngine: TranscriptionEngine {
     private var transcriptionTask: Task<TranscriptionResult, Error>?
     private var isCancelled = false
 
-    public init() {}
+    public init(version: AsrModelVersion = .v2) {
+        self.version = version
+    }
 
     public var isModelDownloaded: Bool {
         get async {
             // FluidAudio stores models in ~/Library/Application Support/FluidAudio/Models/
+            let versionSuffix = version == .v2 ? "v2" : "v3"
             let modelDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
                 .appendingPathComponent("FluidAudio")
                 .appendingPathComponent("Models")
-                .appendingPathComponent("parakeet-tdt-0.6b-v2-coreml")
+                .appendingPathComponent("parakeet-tdt-0.6b-\(versionSuffix)-coreml")
 
             guard let modelDir = modelDir else { return false }
 
@@ -45,7 +68,8 @@ public actor ParakeetEngine: TranscriptionEngine {
     public func downloadModel() async throws {
         _downloadProgress = 0
 
-        print("VoiceFox: Starting Parakeet model download via FluidAudio...")
+        let versionLabel = version == .v2 ? "V2" : "V3"
+        print("VoiceFox: Starting Parakeet \(versionLabel) model download via FluidAudio...")
 
         do {
             // Start a background task to animate progress while downloading
@@ -61,14 +85,13 @@ public actor ParakeetEngine: TranscriptionEngine {
             }
 
             // FluidAudio handles downloading and caching automatically
-            // v2 is English-only with highest recall
-            models = try await AsrModels.downloadAndLoad(version: .v2)
+            models = try await AsrModels.downloadAndLoad(version: version)
 
             // Cancel the simulated progress
             progressTask.cancel()
             _downloadProgress = 0.85
 
-            print("VoiceFox: Parakeet models downloaded, initializing...")
+            print("VoiceFox: Parakeet \(versionLabel) models downloaded, initializing...")
 
             // Initialize ASR manager
             let manager = AsrManager(config: .default)
@@ -77,15 +100,16 @@ public actor ParakeetEngine: TranscriptionEngine {
             asrManager = manager
 
             _downloadProgress = 1.0
-            print("VoiceFox: Parakeet model download complete")
+            print("VoiceFox: Parakeet \(versionLabel) model download complete")
         } catch {
-            print("VoiceFox: Parakeet download failed: \(error)")
-            throw TranscriptionError.transcriptionFailed("Failed to download Parakeet model: \(error.localizedDescription)")
+            print("VoiceFox: Parakeet \(versionLabel) download failed: \(error)")
+            throw TranscriptionError.transcriptionFailed("Failed to download Parakeet \(versionLabel) model: \(error.localizedDescription)")
         }
     }
 
     public func transcribe(audioBuffer: [Float]) async throws -> TranscriptionResult {
         isCancelled = false
+        let versionLabel = version == .v2 ? "V2" : "V3"
 
         // Ensure model is loaded
         if asrManager == nil {
@@ -94,8 +118,8 @@ public actor ParakeetEngine: TranscriptionEngine {
             }
 
             // Load existing model
-            print("VoiceFox: Loading Parakeet model...")
-            models = try await AsrModels.downloadAndLoad(version: .v2)
+            print("VoiceFox: Loading Parakeet \(versionLabel) model...")
+            models = try await AsrModels.downloadAndLoad(version: version)
             let manager = AsrManager(config: .default)
             try await manager.initialize(models: models!)
             asrManager = manager
@@ -150,15 +174,16 @@ public actor ParakeetEngine: TranscriptionEngine {
             throw TranscriptionError.modelNotDownloaded
         }
 
-        print("VoiceFox: Preloading Parakeet model...")
+        let versionLabel = version == .v2 ? "V2" : "V3"
+        print("VoiceFox: Preloading Parakeet \(versionLabel) model...")
         let startTime = CFAbsoluteTimeGetCurrent()
 
-        models = try await AsrModels.downloadAndLoad(version: .v2)
+        models = try await AsrModels.downloadAndLoad(version: version)
         let manager = AsrManager(config: .default)
         try await manager.initialize(models: models!)
         asrManager = manager
 
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("VoiceFox: Parakeet model preloaded in \(String(format: "%.2f", loadTime))s")
+        print("VoiceFox: Parakeet \(versionLabel) model preloaded in \(String(format: "%.2f", loadTime))s")
     }
 }

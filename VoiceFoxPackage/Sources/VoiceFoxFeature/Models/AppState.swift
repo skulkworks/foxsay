@@ -21,8 +21,19 @@ public class AppState: ObservableObject {
     /// Whether the overlay is visible
     @Published public var isOverlayVisible = false
 
-    /// Whether settings sheet is shown
-    @Published public var showSettings = false
+    /// Currently selected sidebar item
+    @Published public var selectedSidebarItem: SidebarItem = .status
+
+    /// Whether settings sheet is shown (deprecated - for backward compatibility)
+    @Published public var showSettings = false {
+        didSet {
+            if showSettings {
+                // Navigate to general settings when old showSettings is triggered
+                selectedSidebarItem = .general
+                showSettings = false
+            }
+        }
+    }
 
     /// Whether model download is in progress
     @Published public var isDownloadingModel = false
@@ -111,6 +122,7 @@ public class AppState: ObservableObject {
 
         print("VoiceFox: Stopping recording...")
         let audioBuffer = AudioEngine.shared.stopRecording()
+        let recordingDuration = AudioEngine.shared.lastRecordingDuration
         isRecording = false
 
         guard !audioBuffer.isEmpty else {
@@ -118,14 +130,14 @@ public class AppState: ObservableObject {
             return
         }
 
-        print("VoiceFox: Audio buffer size: \(audioBuffer.count) samples")
+        print("VoiceFox: Audio buffer size: \(audioBuffer.count) samples, duration: \(recordingDuration)s")
 
         // Start transcription
         isTranscribing = true
 
         do {
             // Check if model is ready
-            guard EngineManager.shared.isModelReady else {
+            guard ModelManager.shared.isModelReady else {
                 print("VoiceFox: Model not downloaded")
                 setError("Speech model not downloaded")
                 isTranscribing = false
@@ -133,7 +145,7 @@ public class AppState: ObservableObject {
             }
 
             print("VoiceFox: Starting transcription...")
-            var result = try await EngineManager.shared.transcribe(audioBuffer: audioBuffer)
+            var result = try await ModelManager.shared.transcribe(audioBuffer: audioBuffer)
 
             // Apply corrections if in a dev app
             let isDevApp = AppDetector.shared.isDevApp
@@ -145,6 +157,15 @@ public class AppState: ObservableObject {
             print("VoiceFox: Transcription result: \(result.text)")
             lastResult = result
             isTranscribing = false
+
+            // Save to history (with audio if text is not empty)
+            if !result.text.isEmpty {
+                HistoryManager.shared.addItem(
+                    from: result,
+                    duration: recordingDuration,
+                    audioBuffer: audioBuffer
+                )
+            }
 
             // Inject text into active app or copy to clipboard
             if !result.text.isEmpty {

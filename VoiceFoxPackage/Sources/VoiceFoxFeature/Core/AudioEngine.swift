@@ -122,8 +122,10 @@ public class AudioEngine: ObservableObject {
     @Published public private(set) var isRecording = false
     @Published public private(set) var hasPermission = false
     @Published public private(set) var audioLevel: Float = 0
+    @Published public private(set) var recordingDuration: TimeInterval = 0
 
     private var levelUpdateTimer: Timer?
+    private var recordingStartTime: Date?
 
     private init() {
         // Only check status on init, don't request permission
@@ -200,6 +202,8 @@ public class AudioEngine: ObservableObject {
         do {
             try engine.start()
             isRecording = true
+            recordingStartTime = Date()
+            recordingDuration = 0
             print("VoiceFox: Audio engine started successfully")
 
             // Start timer to poll audio level for UI updates
@@ -233,6 +237,12 @@ public class AudioEngine: ObservableObject {
     public func stopRecording() -> [Float] {
         guard isRecording else { return [] }
 
+        // Calculate final duration
+        if let startTime = recordingStartTime {
+            recordingDuration = Date().timeIntervalSince(startTime)
+        }
+        recordingStartTime = nil
+
         stopLevelUpdateTimer()
         inputNode?.removeTap(onBus: 0)
         audioEngine?.stop()
@@ -243,6 +253,11 @@ public class AudioEngine: ObservableObject {
         audioLevel = 0
 
         return storage.getAndClear()
+    }
+
+    /// Get the last recording duration
+    public var lastRecordingDuration: TimeInterval {
+        recordingDuration
     }
 
     /// Get the current audio buffer without stopping
