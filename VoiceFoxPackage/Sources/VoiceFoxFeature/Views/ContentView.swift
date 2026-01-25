@@ -6,6 +6,7 @@ public struct ContentView: View {
     @ObservedObject private var audioEngine = AudioEngine.shared
     @ObservedObject private var engineManager = EngineManager.shared
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
+    @ObservedObject private var llmManager = LLMModelManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var permissionRefreshID = UUID()
@@ -61,6 +62,11 @@ public struct ContentView: View {
                     )
 
                     engineStatusPill
+
+                    // LLM status pill (only show if LLM is enabled)
+                    if llmManager.isEnabled {
+                        llmStatusPill
+                    }
                 }
                 .id(permissionRefreshID)  // Force refresh when ID changes
             }
@@ -215,6 +221,39 @@ public struct ContentView: View {
             SpinningIconView(icon: engineStatusIcon, color: engineStatusColor)
         } else {
             statusPill(icon: engineStatusIcon, color: engineStatusColor)
+        }
+    }
+
+    // MARK: - LLM Status
+
+    private var llmStatusIcon: String {
+        if llmManager.isLoaded {
+            return "brain"
+        } else if llmManager.isPreloading {
+            return "arrow.trianglehead.2.clockwise.rotate.90"
+        } else if llmManager.isModelReady {
+            return "brain"
+        } else {
+            return "arrow.down.circle"
+        }
+    }
+
+    private var llmStatusColor: Color {
+        if llmManager.isLoaded {
+            return .green
+        } else if llmManager.isPreloading || llmManager.isModelReady {
+            return .blue
+        } else {
+            return .orange
+        }
+    }
+
+    @ViewBuilder
+    private var llmStatusPill: some View {
+        if llmManager.isPreloading {
+            SpinningIconView(icon: llmStatusIcon, color: llmStatusColor)
+        } else {
+            statusPill(icon: llmStatusIcon, color: llmStatusColor)
         }
     }
 }

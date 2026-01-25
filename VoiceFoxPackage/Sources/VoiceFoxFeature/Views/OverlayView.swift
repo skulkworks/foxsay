@@ -5,6 +5,7 @@ import AppKit
 public struct OverlayView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioEngine = AudioEngine.shared
+    @ObservedObject private var modeManager = VoiceModeManager.shared
 
     @State private var waveformLevels: [CGFloat] = Array(repeating: 0.3, count: 20)
 
@@ -27,6 +28,19 @@ public struct OverlayView: View {
                     .foregroundColor(.white.opacity(0.9))
 
                 Spacer()
+
+                // Mode indicator
+                if modeManager.currentMode != .none {
+                    Text(modeManager.currentMode.displayName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule()
+                                .fill(modeColor)
+                        )
+                }
             }
 
             // Transcription text or placeholder
@@ -70,6 +84,23 @@ public struct OverlayView: View {
             return "Processing..."
         } else {
             return "Ready"
+        }
+    }
+
+    private var modeColor: Color {
+        switch modeManager.currentMode {
+        case .none:
+            return .gray
+        case .markdown:
+            return .blue
+        case .javascript:
+            return .yellow.opacity(0.8)
+        case .php:
+            return .purple
+        case .python:
+            return .green
+        case .bash:
+            return .orange
         }
     }
 }

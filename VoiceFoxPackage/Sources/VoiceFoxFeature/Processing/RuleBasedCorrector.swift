@@ -60,6 +60,13 @@ public struct RuleBasedCorrector: Sendable {
         Rule(pattern: "\\bdash dash\\b", replacement: "--", isRegex: true),
         Rule(pattern: "\\bdouble dash\\b", replacement: "--", isRegex: true),
 
+        // Markdown headers (must come before single hash replacement)
+        Rule(pattern: "\\bhash hash hash hash hash hash\\b", replacement: "######", isRegex: true),
+        Rule(pattern: "\\bhash hash hash hash hash\\b", replacement: "#####", isRegex: true),
+        Rule(pattern: "\\bhash hash hash hash\\b", replacement: "####", isRegex: true),
+        Rule(pattern: "\\bhash hash hash\\b", replacement: "###", isRegex: true),
+        Rule(pattern: "\\bhash hash\\b", replacement: "##", isRegex: true),
+
         // Common Git commands
         Rule(pattern: "\\bgit status\\b", replacement: "git status", isRegex: true, caseSensitive: true),
         Rule(pattern: "\\bgit add\\b", replacement: "git add", isRegex: true, caseSensitive: true),

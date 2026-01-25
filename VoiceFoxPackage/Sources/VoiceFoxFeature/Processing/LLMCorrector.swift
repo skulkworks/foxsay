@@ -1,6 +1,9 @@
 import Foundation
 import MLXLLM
 import MLXLMCommon
+import os.log
+
+private let llmLog = OSLog(subsystem: "com.voicefox", category: "LLM-DEBUG")
 
 /// LLM-based correction for ambiguous transcriptions
 /// Uses local MLX models for context-aware spoken-to-code corrections
@@ -22,14 +25,22 @@ public actor LLMCorrector {
     /// Correct text using LLM for context-aware spoken-to-code improvements
     /// - Parameters:
     ///   - text: The text to correct
-    ///   - context: Optional context about what the user is doing
+    ///   - prompt: Optional custom prompt template (uses default if nil)
     /// - Returns: Corrected text
-    public func correct(_ text: String, context: String? = nil) async throws -> String {
+    public func correct(_ text: String, prompt: String? = nil) async throws -> String {
         let manager = await LLMModelManager.shared
         let container = try await manager.getModel()
 
-        // Build the prompt using the manager's configurable prompt
-        let promptText = await manager.buildPrompt(for: text)
+        // Build the prompt - use custom prompt or fall back to manager's prompt
+        let promptTemplate: String
+        if let customPrompt = prompt {
+            promptTemplate = customPrompt
+        } else {
+            promptTemplate = await manager.customPrompt
+        }
+        let promptText = promptTemplate.replacingOccurrences(of: "{input}", with: text)
+
+        os_log(.info, log: llmLog, ">>> PRE-LLM: %{public}@", text)
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
@@ -71,6 +82,36 @@ public actor LLMCorrector {
     private func cleanResponse(_ response: String, originalText: String) -> String {
         var cleaned = response
 
+        // Stop at common end tokens (Gemma, Llama, Qwen, etc.)
+        let endTokens = ["<end_of_turn>", "<|end|>", "<|eot_id|>", "</s>", "<|im_end|>", "<|endoftext|>", "<|assistant|>", "<|user|>"]
+        for endToken in endTokens {
+            if let range = cleaned.range(of: endToken) {
+                cleaned = String(cleaned[..<range.lowerBound])
+            }
+        }
+
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Remove markdown code blocks (```language ... ```)
+        // Handle both ```python\ncode\n``` and ```\ncode\n```
+        if cleaned.hasPrefix("```") {
+            // Find the end of the opening ``` line (may include language identifier)
+            if let firstNewline = cleaned.firstIndex(of: "\n") {
+                cleaned = String(cleaned[cleaned.index(after: firstNewline)...])
+            } else {
+                // No newline, just remove the ```
+                cleaned = String(cleaned.dropFirst(3))
+            }
+        }
+
+        // Remove closing ```
+        if cleaned.hasSuffix("```") {
+            cleaned = String(cleaned.dropLast(3))
+        }
+
+        // Also handle ``` anywhere in the string (in case of partial blocks)
+        cleaned = cleaned.replacingOccurrences(of: "```", with: "")
+
         // Remove common prefixes the model might add
         let prefixesToRemove = [
             "Output:",
@@ -80,9 +121,11 @@ public actor LLMCorrector {
             "The corrected text is:",
         ]
 
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in prefixesToRemove {
             if cleaned.lowercased().hasPrefix(prefix.lowercased()) {
                 cleaned = String(cleaned.dropFirst(prefix.count))
+                cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
             }
         }
 
@@ -94,20 +137,14 @@ public actor LLMCorrector {
             cleaned = String(cleaned.dropFirst().dropLast())
         }
 
-        // Remove markdown code blocks if present
-        if cleaned.hasPrefix("```") {
-            if let endIndex = cleaned.range(of: "\n") {
-                cleaned = String(cleaned[endIndex.upperBound...])
-            }
-            if cleaned.hasSuffix("```") {
-                cleaned = String(cleaned.dropLast(3))
-            }
-        }
-
         cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        os_log(.info, log: llmLog, "RAW OUTPUT: %{public}@", response)
+        os_log(.info, log: llmLog, "CLEANED: %{public}@", cleaned)
 
         // If the response is empty or much longer than input, return original
         if cleaned.isEmpty || cleaned.count > originalText.count * 3 {
+            os_log(.info, log: llmLog, "REJECTED: empty or too long, using original")
             return originalText
         }
 

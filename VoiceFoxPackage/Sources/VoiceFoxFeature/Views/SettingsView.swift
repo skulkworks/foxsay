@@ -294,11 +294,15 @@ public struct SettingsView: View {
             Section("Correction Settings") {
                 Toggle("Enable dev corrections", isOn: $correctionPipeline.devCorrectionEnabled)
 
-                Toggle("Use LLM for ambiguous cases", isOn: $correctionPipeline.llmCorrectionEnabled)
+                Toggle("Use LLM for corrections", isOn: $correctionPipeline.llmCorrectionEnabled)
                     .disabled(!llmManager.isModelReady)
 
                 if correctionPipeline.llmCorrectionEnabled && llmManager.isModelReady {
-                    Text("LLM correction uses a local model for context-aware corrections")
+                    Toggle("Always apply LLM", isOn: $correctionPipeline.llmAlwaysApply)
+
+                    Text(correctionPipeline.llmAlwaysApply
+                         ? "LLM processes all transcriptions in dev apps"
+                         : "LLM only processes text with detected code patterns")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -332,7 +336,7 @@ public struct SettingsView: View {
     private var llmModelStatusView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Qwen2.5-Coder-0.5B")
+                Text("Qwen2.5 Coder 1.5B")
                     .font(.headline)
 
                 Text("\(LLMModelManager.modelSizeMB) MB - 4-bit quantized")

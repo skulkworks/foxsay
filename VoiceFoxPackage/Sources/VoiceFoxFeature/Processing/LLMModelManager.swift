@@ -8,23 +8,32 @@ public class LLMModelManager: ObservableObject {
     public static let shared = LLMModelManager()
 
     /// The HuggingFace model ID for the code correction model
-    public static nonisolated let modelId = "mlx-community/Qwen2.5-Coder-0.5B-Instruct-4bit"
+    public static nonisolated let modelId = "mlx-community/Qwen2.5-Coder-1.5B-Instruct-4bit"
 
     /// Approximate model size for display
-    public static let modelSizeMB = 278
+    public static let modelSizeMB = 900
 
     /// Default system prompt for LLM correction
     /// Use {input} as placeholder for the text to correct
     public static let defaultPrompt = """
-        Convert spoken developer dictation to code. Detect the programming language from context clues and output ONLY the raw code.
+        Convert spoken punctuation to symbols. Be minimal - output only the converted text.
+        IMPORTANT: Preserve any existing markdown formatting (*, **, `) exactly as-is.
 
-        Rules:
-        - Convert spoken punctuation: "open paren" -> (, "close bracket" -> ], "semi colon" -> ;
-        - Convert operators: "dash dash" -> --, "equals equals" -> ==, "plus equals" -> +=
-        - Convert keywords: "open angle bracket" -> <, "question mark" -> ?
-        - Recognize common patterns: "if condition then" -> if () {}, "for loop" -> for ()
-        - Apply proper syntax, indentation, and casing for the detected language
-        - No explanations, comments, or markdown formatting
+        Rules: hash=#, dash=-, dot=., equals=, colon=:, semicolon=;
+        open paren=(, close paren=), open bracket=[, close bracket=]
+        greater than=>, less than=<, plus=+
+        "dash dash"=--, "equals equals"==, "not equals"=!=, "plus equals"=+=
+
+        Examples:
+        "hash hello" -> # hello
+        "hash hash hello" -> ## hello
+        "const x equals 5" -> const x = 5
+        "if x equals equals y" -> if x == y
+        "function hello open paren close paren" -> function hello()
+        "hello world" -> hello world
+        "text *with italic* here" -> text *with italic* here
+        "this is **bold** text" -> this is **bold** text
+        "use `code` inline" -> use `code` inline
 
         Input: {input}
         Output:
@@ -50,6 +59,12 @@ public class LLMModelManager: ObservableObject {
     @Published public private(set) var isModelReady = false
     @Published public private(set) var downloadError: String?
     @Published public private(set) var isPreloading = false
+    @Published public private(set) var isLoaded = false
+
+    /// Whether LLM correction is enabled (reads from UserDefaults)
+    public var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "llmCorrectionEnabled")
+    }
 
     private var loadedModel: ModelContainer?
     private var downloadTask: Task<Void, Error>?
@@ -58,9 +73,16 @@ public class LLMModelManager: ObservableObject {
         // Load custom prompt from UserDefaults or use default
         self.customPrompt = UserDefaults.standard.string(forKey: Self.customPromptKey) ?? Self.defaultPrompt
 
-        // Check if model is already downloaded
+        print("VoiceFox: LLMModelManager initializing...")
+
+        // Check if model is already downloaded and preload if LLM correction is enabled
         Task {
             await checkModelStatus()
+            let llmEnabled = UserDefaults.standard.bool(forKey: "llmCorrectionEnabled")
+            if isModelReady && llmEnabled {
+                print("VoiceFox: LLM model already downloaded and enabled, preloading...")
+                try? await preload()
+            }
         }
     }
 
@@ -76,43 +98,36 @@ public class LLMModelManager: ObservableObject {
 
     /// Check if the model files exist locally
     public func checkModelStatus() async {
-        isModelReady = isModelDownloaded()
+        let downloaded = isModelDownloaded()
+        isModelReady = downloaded
+        print("VoiceFox: LLM model status check - downloaded: \(downloaded), ready: \(isModelReady)")
     }
 
     /// Check if model is downloaded by looking for model files
     public nonisolated func isModelDownloaded() -> Bool {
-        // mlx-swift-lm stores models in caches directory via Hub
-        let modelName = Self.modelId.replacingOccurrences(of: "/", with: "--")
+        // mlx-swift-lm stores models in ~/Library/Caches/models/{org}/{model-name}/
+        // e.g., ~/Library/Caches/models/mlx-community/Qwen2.5-Coder-0.5B-Instruct-4bit/
 
-        // Check common HuggingFace Hub cache locations
-        let possiblePaths = [
-            // Default Hub cache location (caches directory)
-            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-                .appendingPathComponent("huggingface/hub/models--\(modelName)"),
-            // Alternative cache location
-            FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".cache/huggingface/hub/models--\(modelName)"),
-        ].compactMap { $0 }
-
-        for path in possiblePaths {
-            if FileManager.default.fileExists(atPath: path.path) {
-                // Check for snapshots directory which indicates complete download
-                let snapshotsPath = path.appendingPathComponent("snapshots")
-                if FileManager.default.fileExists(atPath: snapshotsPath.path) {
-                    // Check if there's at least one snapshot with model files
-                    if let snapshots = try? FileManager.default.contentsOfDirectory(atPath: snapshotsPath.path),
-                       !snapshots.isEmpty {
-                        let firstSnapshot = snapshotsPath.appendingPathComponent(snapshots[0])
-                        // Check for config.json as indicator of complete model
-                        if FileManager.default.fileExists(atPath: firstSnapshot.appendingPathComponent("config.json").path) {
-                            return true
-                        }
-                    }
-                }
-            }
+        guard let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return false
         }
 
-        return false
+        // Model path derived from model ID
+        let modelName = Self.modelId.replacingOccurrences(of: "mlx-community/", with: "")
+        let modelPath = cachesDir
+            .appendingPathComponent("models")
+            .appendingPathComponent("mlx-community")
+            .appendingPathComponent(modelName)
+
+        // Check for config.json as indicator of complete model download
+        let configPath = modelPath.appendingPathComponent("config.json")
+        let modelExists = FileManager.default.fileExists(atPath: configPath.path)
+
+        if modelExists {
+            print("VoiceFox: LLM model found at \(modelPath.path)")
+        }
+
+        return modelExists
     }
 
     /// Download the LLM model from HuggingFace
@@ -162,6 +177,7 @@ public class LLMModelManager: ObservableObject {
             downloadProgress = 1.0
             isDownloading = false
             isModelReady = true
+            isLoaded = true
 
             print("VoiceFox: LLM model download complete")
         } catch {
@@ -196,6 +212,7 @@ public class LLMModelManager: ObservableObject {
 
             isPreloading = false
             isModelReady = true
+            isLoaded = true
         } catch {
             isPreloading = false
             print("VoiceFox: LLM preload failed: \(error)")
@@ -230,6 +247,7 @@ public class LLMModelManager: ObservableObject {
     /// Unload the model from memory
     public func unload() {
         loadedModel = nil
+        isLoaded = false
     }
 }
 
