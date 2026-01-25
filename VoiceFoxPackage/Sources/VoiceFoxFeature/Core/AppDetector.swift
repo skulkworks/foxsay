@@ -29,11 +29,10 @@ public class AppDetector: ObservableObject {
             if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
             {
-                self.frontmostAppBundleId = app.bundleIdentifier
-                self.frontmostAppName = app.localizedName
-
-                // Update AppState
+                // Wrap all MainActor-isolated property mutations in Task
                 Task { @MainActor in
+                    self.frontmostAppBundleId = app.bundleIdentifier
+                    self.frontmostAppName = app.localizedName
                     AppState.shared.frontmostAppBundleId = app.bundleIdentifier
                 }
             }

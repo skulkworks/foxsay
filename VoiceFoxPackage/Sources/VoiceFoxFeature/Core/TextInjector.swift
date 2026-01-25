@@ -30,10 +30,6 @@ public class TextInjector {
 
         NSLog("VoiceFox: injectText called with: '%@'", text)
 
-        // Save current pasteboard contents
-        let savedContents = pasteboard.string(forType: .string)
-        let savedChangeCount = pasteboard.changeCount
-
         // Set new text to pasteboard
         pasteboard.clearContents()
         let success = pasteboard.setString(text, forType: .string)

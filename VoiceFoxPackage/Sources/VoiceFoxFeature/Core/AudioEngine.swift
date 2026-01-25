@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Foundation
 
 /// Thread-safe audio buffer storage - completely independent, no actor isolation

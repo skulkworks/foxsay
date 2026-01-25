@@ -146,9 +146,9 @@ struct WaveformView: View {
     }
 
     private func startAnimation() {
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
-            Task { @MainActor in
-                updateLevels()
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [self] _ in
+            Task { @MainActor [self] in
+                self.updateLevels()
             }
         }
     }
@@ -220,7 +220,9 @@ public class OverlayWindowController {
             context.duration = 0.2
             window.animator().alphaValue = 0
         }, completionHandler: {
-            window.orderOut(nil)
+            Task { @MainActor in
+                window.orderOut(nil)
+            }
         })
 
         isShowing = false

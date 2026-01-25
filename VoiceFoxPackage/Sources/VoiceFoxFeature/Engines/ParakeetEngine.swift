@@ -111,8 +111,15 @@ public actor ParakeetEngine: TranscriptionEngine {
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
-        // FluidAudio expects 16kHz mono audio samples
-        let result = try await manager.transcribe(audioBuffer)
+        // WORKAROUND: Pad short audio to > 240,000 samples to trigger ChunkProcessor
+        // which properly handles isLastChunk for trailing punctuation (question marks)
+        // See: FluidAudio bug where single-chunk path doesn't set isLastChunk: true
+        var paddedBuffer = audioBuffer
+        if audioBuffer.count <= 240_000 {
+            let targetLength = 240_001
+            paddedBuffer = audioBuffer + Array(repeating: 0, count: targetLength - audioBuffer.count)
+        }
+        let result = try await manager.transcribe(paddedBuffer)
 
         if isCancelled {
             throw TranscriptionError.cancelled
