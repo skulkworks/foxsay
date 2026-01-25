@@ -7,23 +7,27 @@ public struct DetailView: View {
     public init() {}
 
     public var body: some View {
-        Group {
-            switch appState.selectedSidebarItem {
-            case .status:
-                StatusPaneView()
-            case .general:
-                GeneralSettingsView()
-            case .models:
-                ModelsSettingsView()
-            case .devApps:
-                DevAppsSettingsView()
-            case .corrections:
-                CorrectionsSettingsView()
-            case .history:
-                HistoryView()
-            }
+        contentView
+            .id(appState.selectedSidebarItem)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        switch appState.selectedSidebarItem {
+        case .status:
+            StatusPaneView()
+        case .general:
+            GeneralSettingsView()
+        case .models:
+            ModelsSettingsView()
+        case .devApps:
+            DevAppsSettingsView()
+        case .corrections:
+            CorrectionsSettingsView()
+        case .history:
+            HistoryView()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

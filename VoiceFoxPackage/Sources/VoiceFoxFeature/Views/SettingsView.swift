@@ -91,6 +91,7 @@ public struct SettingsView: View {
                     get: { UserDefaults.standard.bool(forKey: "showInMenuBar") },
                     set: { UserDefaults.standard.set($0, forKey: "showInMenuBar") }
                 ))
+                .toggleStyle(.switch)
             }
 
             Section("Audio") {
@@ -116,6 +117,7 @@ public struct SettingsView: View {
                     get: { UserDefaults.standard.bool(forKey: "copyToClipboardOnly") },
                     set: { UserDefaults.standard.set($0, forKey: "copyToClipboardOnly") }
                 ))
+                .toggleStyle(.switch)
                 Text("When enabled, transcribed text is copied to clipboard instead of pasting into active app")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -218,6 +220,7 @@ public struct SettingsView: View {
                                 devAppConfig.setEnabled(enabled, for: app.bundleId)
                             }
                         ))
+                        .toggleStyle(.switch)
 
                         Spacer()
 
@@ -293,12 +296,15 @@ public struct SettingsView: View {
         Form {
             Section("Correction Settings") {
                 Toggle("Enable dev corrections", isOn: $correctionPipeline.devCorrectionEnabled)
+                    .toggleStyle(.switch)
 
                 Toggle("Use LLM for corrections", isOn: $correctionPipeline.llmCorrectionEnabled)
+                    .toggleStyle(.switch)
                     .disabled(!llmManager.isModelReady)
 
                 if correctionPipeline.llmCorrectionEnabled && llmManager.isModelReady {
                     Toggle("Always apply LLM", isOn: $correctionPipeline.llmAlwaysApply)
+                        .toggleStyle(.switch)
 
                     Text(correctionPipeline.llmAlwaysApply
                          ? "LLM processes all transcriptions in dev apps"

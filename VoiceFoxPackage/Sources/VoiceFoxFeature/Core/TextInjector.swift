@@ -9,9 +9,25 @@ public class TextInjector {
 
     private let pasteboard = NSPasteboard.general
 
-    /// Whether to only copy to clipboard without pasting
+    /// Whether to paste into the active app
+    public var shouldPasteToActiveApp: Bool {
+        UserDefaults.standard.object(forKey: "pasteToActiveApp") as? Bool ?? true
+    }
+
+    /// Whether to copy to clipboard
+    public var shouldCopyToClipboard: Bool {
+        UserDefaults.standard.bool(forKey: "copyToClipboard")
+    }
+
+    /// Whether to save to history
+    public var shouldSaveToHistory: Bool {
+        UserDefaults.standard.object(forKey: "saveToHistory") as? Bool ?? true
+    }
+
+    /// Legacy support - returns true if paste is disabled and copy is enabled
+    @available(*, deprecated, message: "Use shouldPasteToActiveApp and shouldCopyToClipboard instead")
     public var copyToClipboardOnly: Bool {
-        UserDefaults.standard.bool(forKey: "copyToClipboardOnly")
+        !shouldPasteToActiveApp && shouldCopyToClipboard
     }
 
     private init() {}

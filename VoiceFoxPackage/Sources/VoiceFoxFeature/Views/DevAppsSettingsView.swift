@@ -28,14 +28,18 @@ public struct DevAppsSettingsView: View {
                     VStack(spacing: 0) {
                         ForEach(devAppConfig.apps) { app in
                             HStack {
-                                Toggle(app.displayName, isOn: .init(
+                                Text(app.displayName)
+
+                                Spacer()
+
+                                Toggle("", isOn: .init(
                                     get: { app.isEnabled },
                                     set: { enabled in
                                         devAppConfig.setEnabled(enabled, for: app.bundleId)
                                     }
                                 ))
-
-                                Spacer()
+                                .labelsHidden()
+                                .toggleStyle(.switch)
 
                                 Button(role: .destructive) {
                                     devAppConfig.removeApp(bundleId: app.bundleId)
@@ -60,6 +64,7 @@ public struct DevAppsSettingsView: View {
                         }
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 // Actions
@@ -99,6 +104,7 @@ public struct DevAppsSettingsView: View {
                         .padding(.top, 4)
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 Spacer()

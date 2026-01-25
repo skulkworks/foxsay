@@ -26,14 +26,32 @@ public struct CorrectionsSettingsView: View {
                         Label("Settings", systemImage: "slider.horizontal.3")
                             .font(.headline)
 
-                        Toggle("Enable dev corrections", isOn: $correctionPipeline.devCorrectionEnabled)
+                        HStack {
+                            Text("Enable dev corrections")
+                            Spacer()
+                            Toggle("", isOn: $correctionPipeline.devCorrectionEnabled)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                        }
 
-                        Toggle("Use LLM for corrections", isOn: $correctionPipeline.llmCorrectionEnabled)
-                            .disabled(!llmManager.isModelReady)
+                        HStack {
+                            Text("Use LLM for corrections")
+                            Spacer()
+                            Toggle("", isOn: $correctionPipeline.llmCorrectionEnabled)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .disabled(!llmManager.isModelReady)
+                        }
 
                         if correctionPipeline.llmCorrectionEnabled && llmManager.isModelReady {
-                            Toggle("Always apply LLM", isOn: $correctionPipeline.llmAlwaysApply)
-                                .padding(.leading, 20)
+                            HStack {
+                                Text("Always apply LLM")
+                                Spacer()
+                                Toggle("", isOn: $correctionPipeline.llmAlwaysApply)
+                                    .labelsHidden()
+                                    .toggleStyle(.switch)
+                            }
+                            .padding(.leading, 20)
 
                             Text(correctionPipeline.llmAlwaysApply
                                  ? "LLM processes all transcriptions in dev apps"
@@ -44,6 +62,7 @@ public struct CorrectionsSettingsView: View {
                         }
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 // LLM Model
@@ -55,6 +74,7 @@ public struct CorrectionsSettingsView: View {
                         llmModelStatusView
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 // LLM Prompt
@@ -99,6 +119,7 @@ public struct CorrectionsSettingsView: View {
                         }
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 // Preview
@@ -115,6 +136,7 @@ public struct CorrectionsSettingsView: View {
                         }
                     }
                     .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 Spacer()

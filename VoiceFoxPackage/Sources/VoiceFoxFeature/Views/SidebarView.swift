@@ -6,10 +6,12 @@ public struct SidebarView: View {
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
 
+    @State private var selection: SidebarItem = .status
+
     public init() {}
 
     public var body: some View {
-        List(selection: $appState.selectedSidebarItem) {
+        List(selection: $selection) {
             Section {
                 ForEach([SidebarItem.status]) { item in
                     sidebarRow(item)
@@ -33,6 +35,19 @@ public struct SidebarView: View {
             statusFooter
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+        }
+        .onAppear {
+            selection = appState.selectedSidebarItem
+        }
+        .onChange(of: selection) { _, newValue in
+            DispatchQueue.main.async {
+                appState.selectedSidebarItem = newValue
+            }
+        }
+        .onChange(of: appState.selectedSidebarItem) { _, newValue in
+            if selection != newValue {
+                selection = newValue
+            }
         }
     }
 

@@ -7,6 +7,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("VoiceFox: applicationDidFinishLaunching")
 
+        // Apply dock visibility setting
+        let showInDock = UserDefaults.standard.object(forKey: "showInDock") as? Bool ?? true
+        NSApp.setActivationPolicy(showInDock ? .regular : .accessory)
+
         // Initialize MenuBarManager on main thread
         Task { @MainActor in
             _ = MenuBarManager.shared
@@ -44,6 +48,10 @@ struct VoiceFoxApp: App {
         // Register default values
         if defaults.object(forKey: "showInMenuBar") == nil {
             defaults.set(true, forKey: "showInMenuBar")
+        }
+
+        if defaults.object(forKey: "showInDock") == nil {
+            defaults.set(true, forKey: "showInDock")
         }
 
         if defaults.object(forKey: "selectedEngine") == nil {

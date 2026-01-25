@@ -81,7 +81,30 @@ public class AppState: ObservableObject {
             }
         }
 
+        hotkeyManager.onCancel = { [weak self] in
+            Task { @MainActor in
+                self?.cancelRecording()
+            }
+        }
+
         print("VoiceFox: Hotkey callbacks configured")
+    }
+
+    /// Cancel recording without transcribing
+    public func cancelRecording() {
+        guard isRecording else { return }
+
+        NSLog("VoiceFox: Recording cancelled")
+        AudioEngine.shared.stopRecording()
+        isRecording = false
+        isTranscribing = false
+        errorMessage = nil
+
+        // Hide overlay
+        OverlayWindowController.shared.hideOverlay()
+
+        // Update menu bar
+        MenuBarManager.shared.setRecording(false)
     }
 
     /// Start recording audio
@@ -159,7 +182,7 @@ public class AppState: ObservableObject {
             isTranscribing = false
 
             // Save to history (with audio if text is not empty)
-            if !result.text.isEmpty {
+            if !result.text.isEmpty && TextInjector.shared.shouldSaveToHistory {
                 HistoryManager.shared.addItem(
                     from: result,
                     duration: recordingDuration,
@@ -167,16 +190,29 @@ public class AppState: ObservableObject {
                 )
             }
 
-            // Inject text into active app or copy to clipboard
+            // Handle output based on settings
             if !result.text.isEmpty {
-                let copyOnly = TextInjector.shared.copyToClipboardOnly
-                NSLog("VoiceFox: Output text: '%@', copyToClipboardOnly: %d", result.text, copyOnly ? 1 : 0)
-                if copyOnly {
+                let shouldPaste = TextInjector.shared.shouldPasteToActiveApp
+                let shouldCopy = TextInjector.shared.shouldCopyToClipboard
+                NSLog("VoiceFox: Output text: '%@', paste: %d, copy: %d", result.text, shouldPaste ? 1 : 0, shouldCopy ? 1 : 0)
+
+                if shouldPaste {
+                    // Inject text (this also puts it on clipboard temporarily)
+                    NSLog("VoiceFox: Injecting text at cursor...")
+                    try await TextInjector.shared.injectText(result.text)
+
+                    // If copy is also enabled, ensure it stays on clipboard
+                    if shouldCopy {
+                        NSLog("VoiceFox: Also copying to clipboard...")
+                        TextInjector.shared.copyToClipboard(result.text)
+                    }
+                } else if shouldCopy {
+                    // Copy only mode
                     NSLog("VoiceFox: Copying text to clipboard only...")
                     TextInjector.shared.copyToClipboard(result.text)
                 } else {
-                    NSLog("VoiceFox: Injecting text at cursor...")
-                    try await TextInjector.shared.injectText(result.text)
+                    // History only mode - do nothing with output
+                    NSLog("VoiceFox: History only mode - text saved to history")
                 }
             } else {
                 NSLog("VoiceFox: No text to output (empty result)")
