@@ -23,8 +23,8 @@ public struct GeneralSettingsView: View {
                 // Keyboard Controls Section
                 keyboardControlsSection
 
-                // Sound Section (Microphone)
-                soundSection
+                // Input Section (Microphone)
+                inputSection
 
                 // Output Section
                 outputSection
@@ -182,12 +182,18 @@ public struct GeneralSettingsView: View {
         }
     }
 
-    // MARK: - Sound Section
+    // MARK: - Input Section
 
-    private var soundSection: some View {
+    @State private var showOverlay: Bool = UserDefaults.standard.object(forKey: "showInputOverlay") as? Bool ?? true
+    @State private var inputAmplitude: Double = {
+        let stored = UserDefaults.standard.double(forKey: "inputAmplitude")
+        return stored > 0 ? stored : 10.0
+    }()
+
+    private var inputSection: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Sound", systemImage: "speaker.wave.2")
+                Label("Input", systemImage: "mic")
                     .font(.headline)
 
                 // Microphone picker
@@ -232,7 +238,7 @@ public struct GeneralSettingsView: View {
 
                 // Mute while recording
                 HStack {
-                    Text("Mute While Recording")
+                    Text("Mute while recording")
 
                     Spacer()
 
@@ -241,9 +247,45 @@ public struct GeneralSettingsView: View {
                         .toggleStyle(.switch)
                 }
 
-                Text("Mute system audio during recording to prevent feedback")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                // Show overlay toggle
+                HStack {
+                    Text("Show recording overlay")
+
+                    Spacer()
+
+                    Toggle("", isOn: Binding(
+                        get: { showOverlay },
+                        set: { newValue in
+                            showOverlay = newValue
+                            UserDefaults.standard.set(newValue, forKey: "showInputOverlay")
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+
+                // Visual amplitude slider (only show if overlay enabled)
+                if showOverlay {
+                    HStack {
+                        Text("Visual amplitude")
+
+                        Spacer()
+
+                        Slider(value: Binding(
+                            get: { inputAmplitude },
+                            set: { newValue in
+                                inputAmplitude = newValue
+                                UserDefaults.standard.set(newValue, forKey: "inputAmplitude")
+                            }
+                        ), in: 5...20, step: 1)
+                        .frame(width: 120)
+
+                        Text("\(Int(inputAmplitude))x")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 30, alignment: .trailing)
+                    }
+                }
             }
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)

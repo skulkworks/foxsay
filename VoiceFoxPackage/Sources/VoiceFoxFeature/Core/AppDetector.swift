@@ -8,6 +8,12 @@ public class AppDetector: ObservableObject {
 
     @Published public private(set) var frontmostAppBundleId: String?
     @Published public private(set) var frontmostAppName: String?
+    @Published public private(set) var frontmostAppIcon: NSImage?
+
+    /// Stores the target app info when recording starts (so it doesn't change mid-recording)
+    @Published public private(set) var targetAppBundleId: String?
+    @Published public private(set) var targetAppName: String?
+    @Published public private(set) var targetAppIcon: NSImage?
 
     private var observer: NSObjectProtocol?
 
@@ -33,6 +39,7 @@ public class AppDetector: ObservableObject {
                 Task { @MainActor in
                     self.frontmostAppBundleId = app.bundleIdentifier
                     self.frontmostAppName = app.localizedName
+                    self.frontmostAppIcon = app.icon
                     AppState.shared.frontmostAppBundleId = app.bundleIdentifier
                 }
             }
@@ -43,8 +50,38 @@ public class AppDetector: ObservableObject {
         if let app = NSWorkspace.shared.frontmostApplication {
             frontmostAppBundleId = app.bundleIdentifier
             frontmostAppName = app.localizedName
+            frontmostAppIcon = app.icon
             AppState.shared.frontmostAppBundleId = app.bundleIdentifier
         }
+    }
+
+    /// Capture the current target app when recording starts
+    public func captureTargetApp() {
+        // Get the frontmost app that isn't VoiceFox
+        let voiceFoxBundleId = Bundle.main.bundleIdentifier
+
+        if let app = NSWorkspace.shared.frontmostApplication,
+           app.bundleIdentifier != voiceFoxBundleId {
+            targetAppBundleId = app.bundleIdentifier
+            targetAppName = app.localizedName
+            targetAppIcon = app.icon
+        } else if let previousApp = getPreviousFrontmostApp() {
+            targetAppBundleId = previousApp.bundleIdentifier
+            targetAppName = previousApp.localizedName
+            targetAppIcon = previousApp.icon
+        } else {
+            // Fallback to current frontmost
+            targetAppBundleId = frontmostAppBundleId
+            targetAppName = frontmostAppName
+            targetAppIcon = frontmostAppIcon
+        }
+    }
+
+    /// Clear target app when recording ends
+    public func clearTargetApp() {
+        targetAppBundleId = nil
+        targetAppName = nil
+        targetAppIcon = nil
     }
 
     /// Check if the current frontmost app is a developer app

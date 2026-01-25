@@ -103,6 +103,9 @@ public class AppState: ObservableObject {
         // Hide overlay
         OverlayWindowController.shared.hideOverlay()
 
+        // Clear target app
+        AppDetector.shared.clearTargetApp()
+
         // Update menu bar
         MenuBarManager.shared.setRecording(false)
     }
@@ -110,6 +113,9 @@ public class AppState: ObservableObject {
     /// Start recording audio
     public func startRecording() async {
         guard !isRecording else { return }
+
+        // Capture the target app before showing overlay (so we know where text will go)
+        AppDetector.shared.captureTargetApp()
 
         // Refresh and check microphone permission
         AudioEngine.shared.updatePermissionStatus()
@@ -121,6 +127,7 @@ public class AppState: ObservableObject {
         guard AudioEngine.shared.hasPermission else {
             print("VoiceFox: Microphone permission denied")
             setError("Microphone permission required")
+            AppDetector.shared.clearTargetApp()
             return
         }
 
@@ -136,6 +143,7 @@ public class AppState: ObservableObject {
         } catch {
             print("VoiceFox: Failed to start recording: \(error)")
             setError("Failed to start recording: \(error.localizedDescription)")
+            AppDetector.shared.clearTargetApp()
         }
     }
 
@@ -223,6 +231,7 @@ public class AppState: ObservableObject {
                 try? await Task.sleep(nanoseconds: 800_000_000)  // 0.8 seconds
                 await MainActor.run {
                     OverlayWindowController.shared.hideOverlay()
+                    AppDetector.shared.clearTargetApp()
                     // Ensure hotkey tap is still active
                     HotkeyManager.shared.ensureEventTapActive()
                 }
@@ -238,6 +247,7 @@ public class AppState: ObservableObject {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 seconds to show error
                 await MainActor.run {
                     OverlayWindowController.shared.hideOverlay()
+                    AppDetector.shared.clearTargetApp()
                     // Ensure hotkey tap is still active
                     HotkeyManager.shared.ensureEventTapActive()
                 }
