@@ -24,7 +24,14 @@ public class ModelManager: ObservableObject {
         currentModelType = ModelType(rawValue: savedModel) ?? .parakeetV2
 
         // Initialize available models
-        models[.whisperKit] = WhisperKitEngine()
+        // Whisper variants
+        models[.whisperTiny] = WhisperKitEngine(modelType: .whisperTiny)
+        models[.whisperBase] = WhisperKitEngine(modelType: .whisperBase)
+        models[.whisperSmall] = WhisperKitEngine(modelType: .whisperSmall)
+        models[.whisperLargeTurbo] = WhisperKitEngine(modelType: .whisperLargeTurbo)
+        models[.whisperKit] = models[.whisperBase]  // Legacy alias points to base
+
+        // Parakeet variants
         models[.parakeetV2] = ParakeetEngine(version: .v2)
         models[.parakeetV3] = ParakeetEngine(version: .v3)
 

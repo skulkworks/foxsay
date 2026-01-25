@@ -58,15 +58,27 @@ public enum TranscriptionError: LocalizedError {
 
 /// Available model types
 public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
-    case whisperKit = "whisperkit"
+    // Whisper variants via WhisperKit
+    case whisperTiny = "whisper-tiny"
+    case whisperBase = "whisper-base"
+    case whisperSmall = "whisper-small"
+    case whisperLargeTurbo = "whisper-large-turbo"
+
+    // Parakeet variants via FluidAudio
     case parakeetV2 = "parakeet"  // Keep raw value for backward compatibility
     case parakeetV3 = "parakeet-v3"
+
+    // Legacy alias
+    case whisperKit = "whisperkit"
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
-        case .whisperKit: return "WhisperKit"
+        case .whisperTiny: return "Whisper Tiny"
+        case .whisperBase, .whisperKit: return "Whisper Base"
+        case .whisperSmall: return "Whisper Small"
+        case .whisperLargeTurbo: return "Whisper Large Turbo"
         case .parakeetV2: return "Parakeet V2"
         case .parakeetV3: return "Parakeet V3"
         }
@@ -74,7 +86,10 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var shortName: String {
         switch self {
-        case .whisperKit: return "WhisperKit"
+        case .whisperTiny: return "Tiny"
+        case .whisperBase, .whisperKit: return "Base"
+        case .whisperSmall: return "Small"
+        case .whisperLargeTurbo: return "Turbo"
         case .parakeetV2: return "Parakeet V2"
         case .parakeetV3: return "Parakeet V3"
         }
@@ -82,8 +97,14 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var description: String {
         switch self {
-        case .whisperKit:
-            return "OpenAI Whisper via WhisperKit (~140MB)"
+        case .whisperTiny:
+            return "Fastest, good for quick dictation (~39MB)"
+        case .whisperBase, .whisperKit:
+            return "Fast and reliable (~74MB)"
+        case .whisperSmall:
+            return "Good balance of speed and accuracy (~244MB)"
+        case .whisperLargeTurbo:
+            return "Best accuracy, optimized for speed (~809MB)"
         case .parakeetV2:
             return "English-only, highest recall (~450MB)"
         case .parakeetV3:
@@ -93,9 +114,27 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var isMultilingual: Bool {
         switch self {
-        case .whisperKit, .parakeetV3: return true
-        case .parakeetV2: return false
+        case .whisperTiny, .whisperBase, .whisperKit, .whisperSmall, .whisperLargeTurbo, .parakeetV3:
+            return true
+        case .parakeetV2:
+            return false
         }
+    }
+
+    /// WhisperKit model name for this type
+    public var whisperKitModelName: String? {
+        switch self {
+        case .whisperTiny: return "tiny"
+        case .whisperBase, .whisperKit: return "base"
+        case .whisperSmall: return "small"
+        case .whisperLargeTurbo: return "large-v3-turbo"
+        default: return nil
+        }
+    }
+
+    /// Whether this is a Whisper-based model
+    public var isWhisperModel: Bool {
+        whisperKitModelName != nil
     }
 }
 

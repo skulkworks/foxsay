@@ -214,9 +214,14 @@ struct ModelCardView: View {
 
     private var iconName: String {
         switch modelInfo.type {
-        case .whisperKit: return "waveform.badge.mic"
-        case .parakeetV2: return "bolt.fill"
-        case .parakeetV3: return "globe"
+        case .whisperTiny, .whisperBase, .whisperSmall, .whisperKit:
+            return "waveform.badge.mic"
+        case .whisperLargeTurbo:
+            return "waveform.badge.magnifyingglass"
+        case .parakeetV2:
+            return "bolt.fill"
+        case .parakeetV3:
+            return "globe"
         }
     }
 

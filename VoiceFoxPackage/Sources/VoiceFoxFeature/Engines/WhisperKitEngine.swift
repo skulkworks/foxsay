@@ -3,9 +3,13 @@ import Foundation
 
 /// WhisperKit-based transcription engine
 public actor WhisperKitEngine: TranscriptionEngine {
-    public nonisolated let name = "WhisperKit"
-    public nonisolated let identifier = "whisperkit"
-    public nonisolated let modelSize: Int64 = 140_000_000  // ~140MB for base.en
+    public nonisolated let name: String
+    public nonisolated let identifier: String
+    public nonisolated let modelSize: Int64
+    public nonisolated let modelType: ModelType
+
+    /// WhisperKit model name (e.g., "tiny", "base", "small", "large-v3-turbo")
+    private let whisperModelName: String
 
     private var whisperKit: WhisperKit?
     private var isLoading = false
@@ -13,13 +17,31 @@ public actor WhisperKitEngine: TranscriptionEngine {
     private nonisolated(unsafe) var _downloadProgress: Double = 0
     private var isCancelled = false
 
-    public init() {}
+    public init(modelType: ModelType = .whisperBase) {
+        self.modelType = modelType
+        self.whisperModelName = modelType.whisperKitModelName ?? "base"
+        self.identifier = modelType.rawValue
+        self.name = modelType.displayName
+
+        // Set model size based on variant
+        switch modelType {
+        case .whisperTiny:
+            self.modelSize = 39_000_000
+        case .whisperBase, .whisperKit:
+            self.modelSize = 74_000_000
+        case .whisperSmall:
+            self.modelSize = 244_000_000
+        case .whisperLargeTurbo:
+            self.modelSize = 809_000_000
+        default:
+            self.modelSize = 74_000_000
+        }
+    }
 
     public var isModelDownloaded: Bool {
         get async {
             // Check if WhisperKit model directory exists with actual model files
-            // WhisperKit downloads to: downloadBase/argmaxinc/whisperkit-coreml/openai_whisper-base.en/
-            let modelDir = Self.modelPath
+            let modelDir = modelPath
             guard FileManager.default.fileExists(atPath: modelDir.path) else {
                 return false
             }
@@ -36,14 +58,26 @@ public actor WhisperKitEngine: TranscriptionEngine {
         }
     }
 
-    private static var modelPath: URL {
-        // WhisperKit downloads to: downloadBase/models/argmaxinc/whisperkit-coreml/openai_whisper-base.en
-        EngineManager.modelsDirectory
+    private var modelPath: URL {
+        // WhisperKit downloads to: downloadBase/models/argmaxinc/whisperkit-coreml/openai_whisper-{model}
+        let modelDirName: String
+        switch modelType {
+        case .whisperLargeTurbo:
+            modelDirName = "openai_whisper-large-v3-turbo"
+        default:
+            modelDirName = "openai_whisper-\(whisperModelName)"
+        }
+
+        return ModelManager.modelsDirectory
             .appendingPathComponent("whisperkit")
             .appendingPathComponent("models")
             .appendingPathComponent("argmaxinc")
             .appendingPathComponent("whisperkit-coreml")
-            .appendingPathComponent("openai_whisper-base.en")
+            .appendingPathComponent(modelDirName)
+    }
+
+    private var downloadBase: URL {
+        ModelManager.modelsDirectory.appendingPathComponent("whisperkit")
     }
 
     public func downloadModel() async throws {
@@ -54,31 +88,30 @@ public actor WhisperKitEngine: TranscriptionEngine {
         defer { isLoading = false }
 
         // Create models directory if needed
-        let modelsDir = EngineManager.modelsDirectory
-        let whisperKitDir = modelsDir.appendingPathComponent("whisperkit")
-
-        print("VoiceFox: Creating models directory at \(modelsDir.path)")
+        print("VoiceFox: Creating models directory at \(downloadBase.path)")
         try FileManager.default.createDirectory(
-            at: whisperKitDir, withIntermediateDirectories: true)
+            at: downloadBase, withIntermediateDirectories: true)
 
-        // Download and initialize WhisperKit with base.en model
+        // Download and initialize WhisperKit
         do {
-            print("VoiceFox: Starting WhisperKit download to \(whisperKitDir.path)")
+            print("VoiceFox: Starting WhisperKit download for \(whisperModelName) to \(downloadBase.path)")
 
             // Start a background task to animate progress while downloading
             // WhisperKit doesn't expose download progress, so we simulate it
+            // Adjust duration based on model size
+            let progressDuration = modelType == .whisperLargeTurbo ? 300 : (modelType == .whisperSmall ? 200 : 100)
             let progressTask = Task {
                 for i in 1...80 {
                     try Task.checkCancellation()
-                    try await Task.sleep(for: .milliseconds(200))
+                    try await Task.sleep(for: .milliseconds(progressDuration))
                     _downloadProgress = Double(i) / 100.0
                 }
             }
 
             // WhisperKit handles model download automatically
             whisperKit = try await WhisperKit(
-                model: "base.en",
-                downloadBase: whisperKitDir,
+                model: whisperModelName,
+                downloadBase: downloadBase,
                 verbose: true
             )
 
@@ -86,8 +119,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
             progressTask.cancel()
             _downloadProgress = 1.0
 
-            print("VoiceFox: WhisperKit model download complete")
-            print("VoiceFox: Model path exists: \(FileManager.default.fileExists(atPath: Self.modelPath.path))")
+            print("VoiceFox: WhisperKit \(whisperModelName) model download complete")
+            print("VoiceFox: Model path exists: \(FileManager.default.fileExists(atPath: modelPath.path))")
         } catch {
             print("VoiceFox: WhisperKit download failed: \(error)")
             throw TranscriptionError.transcriptionFailed("Failed to download model: \(error.localizedDescription)")
@@ -105,10 +138,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
             }
 
             // Load existing model
-            let modelsDir = EngineManager.modelsDirectory
             whisperKit = try await WhisperKit(
-                model: "base.en",
-                downloadBase: modelsDir.appendingPathComponent("whisperkit"),
+                model: whisperModelName,
+                downloadBase: downloadBase,
                 verbose: false
             )
         }
@@ -159,17 +191,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
             throw TranscriptionError.modelNotDownloaded
         }
 
-        print("VoiceFox: Preloading WhisperKit model...")
+        print("VoiceFox: Preloading WhisperKit \(whisperModelName) model...")
         let startTime = CFAbsoluteTimeGetCurrent()
 
-        let modelsDir = EngineManager.modelsDirectory
         whisperKit = try await WhisperKit(
-            model: "base.en",
-            downloadBase: modelsDir.appendingPathComponent("whisperkit"),
+            model: whisperModelName,
+            downloadBase: downloadBase,
             verbose: false
         )
 
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("VoiceFox: WhisperKit model preloaded in \(String(format: "%.2f", loadTime))s")
+        print("VoiceFox: WhisperKit \(whisperModelName) model preloaded in \(String(format: "%.2f", loadTime))s")
     }
 }
