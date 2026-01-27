@@ -24,6 +24,9 @@ let package = Package(
                 "WhisperKit",
                 "FluidAudio",
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
+            ],
+            resources: [
+                .process("Resources"),
             ]
         ),
         .testTarget(

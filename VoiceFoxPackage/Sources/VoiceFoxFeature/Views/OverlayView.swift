@@ -67,11 +67,6 @@ public struct OverlayView: View {
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.white.opacity(0.7))
                         .italic()
-                } else if let result = appState.lastResult, appState.isRecording == false {
-                    Text(result.text)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
                 } else {
                     Text("Listening...")
                         .font(.system(size: 13, weight: .regular))
@@ -237,10 +232,13 @@ public class OverlayWindowController {
         }
 
         isShowing = true
+        SoundEffectManager.shared.playOpen()
     }
 
     public func hideOverlay() {
         guard let window = window, isShowing else { return }
+
+        SoundEffectManager.shared.playClose()
 
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2

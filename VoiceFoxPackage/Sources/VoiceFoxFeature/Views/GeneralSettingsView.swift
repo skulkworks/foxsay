@@ -185,6 +185,7 @@ public struct GeneralSettingsView: View {
     // MARK: - Input Section
 
     @State private var showOverlay: Bool = UserDefaults.standard.object(forKey: "showInputOverlay") as? Bool ?? true
+    @State private var enableSoundEffects: Bool = UserDefaults.standard.object(forKey: "enableSoundEffects") as? Bool ?? false
     @State private var inputAmplitude: Double = {
         let stored = UserDefaults.standard.double(forKey: "inputAmplitude")
         return stored > 0 ? stored : 10.0
@@ -285,6 +286,23 @@ public struct GeneralSettingsView: View {
                             .foregroundStyle(.secondary)
                             .frame(width: 30, alignment: .trailing)
                     }
+                }
+
+                // Sound effects toggle
+                HStack {
+                    Text("Sound effects")
+
+                    Spacer()
+
+                    Toggle("", isOn: Binding(
+                        get: { enableSoundEffects },
+                        set: { newValue in
+                            enableSoundEffects = newValue
+                            UserDefaults.standard.set(newValue, forKey: "enableSoundEffects")
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
                 }
             }
             .padding(8)

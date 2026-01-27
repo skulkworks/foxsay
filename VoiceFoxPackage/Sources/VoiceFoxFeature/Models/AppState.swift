@@ -186,6 +186,12 @@ public class AppState: ObservableObject {
             }
 
             print("VoiceFox: Transcription result: \(result.text)")
+
+            // Hide overlay immediately — before updating state to avoid flashing the result text
+            OverlayWindowController.shared.hideOverlay()
+            AppDetector.shared.clearTargetApp()
+            HotkeyManager.shared.ensureEventTapActive()
+
             lastResult = result
             isTranscribing = false
 
@@ -205,15 +211,10 @@ public class AppState: ObservableObject {
                 NSLog("VoiceFox: Output text: '%@', paste: %d, copy: %d", result.text, shouldPaste ? 1 : 0, shouldCopy ? 1 : 0)
 
                 if shouldPaste {
-                    // Inject text (this also puts it on clipboard temporarily)
+                    // Inject text via clipboard + Cmd+V
+                    // If copy is disabled, restore previous clipboard after pasting
                     NSLog("VoiceFox: Injecting text at cursor...")
-                    try await TextInjector.shared.injectText(result.text)
-
-                    // If copy is also enabled, ensure it stays on clipboard
-                    if shouldCopy {
-                        NSLog("VoiceFox: Also copying to clipboard...")
-                        TextInjector.shared.copyToClipboard(result.text)
-                    }
+                    try await TextInjector.shared.injectText(result.text, restoreClipboard: !shouldCopy)
                 } else if shouldCopy {
                     // Copy only mode
                     NSLog("VoiceFox: Copying text to clipboard only...")
@@ -226,32 +227,16 @@ public class AppState: ObservableObject {
                 NSLog("VoiceFox: No text to output (empty result)")
             }
 
-            // Hide overlay after a brief delay to show result
-            Task {
-                try? await Task.sleep(nanoseconds: 800_000_000)  // 0.8 seconds
-                await MainActor.run {
-                    OverlayWindowController.shared.hideOverlay()
-                    AppDetector.shared.clearTargetApp()
-                    // Ensure hotkey tap is still active
-                    HotkeyManager.shared.ensureEventTapActive()
-                }
-            }
-
         } catch {
             print("VoiceFox: Transcription failed: \(error)")
+
+            // Hide overlay before updating state to avoid flashing error text
+            OverlayWindowController.shared.hideOverlay()
+            AppDetector.shared.clearTargetApp()
+            HotkeyManager.shared.ensureEventTapActive()
+
             setError("Transcription failed: \(error.localizedDescription)")
             isTranscribing = false
-
-            // Hide overlay on error too
-            Task {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)  // 1.5 seconds to show error
-                await MainActor.run {
-                    OverlayWindowController.shared.hideOverlay()
-                    AppDetector.shared.clearTargetApp()
-                    // Ensure hotkey tap is still active
-                    HotkeyManager.shared.ensureEventTapActive()
-                }
-            }
         }
     }
 

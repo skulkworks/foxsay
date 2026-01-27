@@ -41,10 +41,14 @@ public class TextInjector {
     }
 
     /// Inject text into the frontmost application using pasteboard + Cmd+V
-    public func injectText(_ text: String) async throws {
+    /// - Parameter restoreClipboard: If true, restores the previous clipboard contents after pasting
+    public func injectText(_ text: String, restoreClipboard: Bool = false) async throws {
         guard !text.isEmpty else { return }
 
-        NSLog("VoiceFox: injectText called with: '%@'", text)
+        NSLog("VoiceFox: injectText called with: '%@', restoreClipboard: %d", text, restoreClipboard ? 1 : 0)
+
+        // Save previous clipboard contents if we need to restore later
+        let previousContents: [NSPasteboardItem]? = restoreClipboard ? savePasteboardContents() : nil
 
         // Set new text to pasteboard
         pasteboard.clearContents()
@@ -60,8 +64,35 @@ public class TextInjector {
         // Wait for paste to complete
         try await Task.sleep(nanoseconds: 100_000_000)  // 100ms
 
-        // Don't restore previous pasteboard - let user paste again if needed
+        // Restore previous clipboard contents if requested
+        if restoreClipboard, let previousContents {
+            restorePasteboardContents(previousContents)
+            NSLog("VoiceFox: Previous clipboard contents restored")
+        }
+
         NSLog("VoiceFox: Text injection complete")
+    }
+
+    /// Save current pasteboard contents for later restoration
+    private func savePasteboardContents() -> [NSPasteboardItem]? {
+        guard let items = pasteboard.pasteboardItems, !items.isEmpty else { return nil }
+        var saved: [NSPasteboardItem] = []
+        for item in items {
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    copy.setData(data, forType: type)
+                }
+            }
+            saved.append(copy)
+        }
+        return saved
+    }
+
+    /// Restore previously saved pasteboard contents
+    private func restorePasteboardContents(_ items: [NSPasteboardItem]) {
+        pasteboard.clearContents()
+        pasteboard.writeObjects(items)
     }
 
     /// Simulate Cmd+V keystroke
