@@ -16,9 +16,10 @@ public struct StatusPaneView: View {
 
             // App icon and name
             VStack(spacing: 12) {
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(.tint)
+                Image("AppIconImage")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 96, height: 96)
 
                 Text("VoiceFox")
                     .font(.largeTitle)
@@ -93,7 +94,7 @@ public struct StatusPaneView: View {
 
     private var indicatorColor: Color {
         if appState.isRecording {
-            return .red
+            return .tertiaryAccent
         } else if appState.isTranscribing {
             return .orange
         } else {
@@ -198,7 +199,7 @@ public struct StatusPaneView: View {
             VStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 24))
-                    .foregroundColor(isReady ? .green : .orange)
+                    .foregroundColor(isReady ? .secondaryAccent : .orange)
 
                 Text(title)
                     .font(.caption)
@@ -210,7 +211,7 @@ public struct StatusPaneView: View {
                     .lineLimit(1)
             }
             .frame(width: 100, height: 90)
-            .background(Color(.textBackgroundColor))
+            .background(Color(.textBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)

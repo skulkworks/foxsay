@@ -18,7 +18,7 @@ public struct OverlayView: View {
             HStack(spacing: 6) {
                 // Pulsing red dot (opacity only, no scale)
                 Circle()
-                    .fill(Color.red)
+                    .fill(Color.tertiaryAccent)
                     .frame(width: 8, height: 8)
                     .opacity(pulseOpacity)
                     .onAppear {
@@ -109,13 +109,13 @@ public struct OverlayView: View {
         case .none:
             return .gray
         case .markdown:
-            return .blue
+            return .accentColor
         case .javascript:
             return .yellow.opacity(0.8)
         case .php:
             return .purple
         case .python:
-            return .green
+            return .secondaryAccent
         case .bash:
             return .orange
         }

@@ -62,19 +62,7 @@ public struct SidebarView: View {
     }
 
     private func iconColor(for item: SidebarItem) -> Color {
-        switch item {
-        case .status:
-            if appState.isRecording {
-                return .red
-            } else if appState.isTranscribing {
-                return .orange
-            }
-            return .accentColor
-        case .models:
-            return modelManager.isModelLoaded ? .green : .orange
-        default:
-            return .secondary
-        }
+        .secondary
     }
 
     private var statusFooter: some View {
@@ -82,7 +70,7 @@ public struct SidebarView: View {
             // Mic status
             statusDot(
                 isActive: audioEngine.hasPermission,
-                activeColor: .green,
+                activeColor: .secondaryAccent,
                 inactiveColor: .orange,
                 icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash"
             )
@@ -90,7 +78,7 @@ public struct SidebarView: View {
             // Accessibility status
             statusDot(
                 isActive: HotkeyManager.checkAccessibilityPermission(),
-                activeColor: .green,
+                activeColor: .secondaryAccent,
                 inactiveColor: .orange,
                 icon: HotkeyManager.checkAccessibilityPermission() ? "hand.raised.fill" : "hand.raised.slash"
             )
@@ -122,13 +110,13 @@ public struct SidebarView: View {
     @ViewBuilder
     private var modelStatusDot: some View {
         if modelManager.isModelLoaded {
-            statusDot(isActive: true, activeColor: .green, inactiveColor: .green, icon: "checkmark.circle.fill")
+            statusDot(isActive: true, activeColor: .secondaryAccent, inactiveColor: .secondaryAccent, icon: "checkmark.circle.fill")
         } else if modelManager.isPreloading {
-            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .blue)
+            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .accentColor)
         } else if modelManager.isModelReady {
-            statusDot(isActive: false, activeColor: .green, inactiveColor: .blue, icon: "hourglass")
+            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .accentColor, icon: "hourglass")
         } else {
-            statusDot(isActive: false, activeColor: .green, inactiveColor: .orange, icon: "arrow.down.circle")
+            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .orange, icon: "arrow.down.circle")
         }
     }
 }

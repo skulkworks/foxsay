@@ -45,7 +45,7 @@ public struct DevAppsSettingsView: View {
                                     devAppConfig.removeApp(bundleId: app.bundleId)
                                 } label: {
                                     Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                                        .foregroundColor(.tertiaryAccent)
                                 }
                                 .buttonStyle(.borderless)
                             }
@@ -164,7 +164,7 @@ public struct DevAppsSettingsView: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
             Image(systemName: "arrow.right")
-                .foregroundColor(.blue)
+                .foregroundColor(.accentColor)
                 .font(.caption)
             Text(output)
                 .fontWeight(.medium)

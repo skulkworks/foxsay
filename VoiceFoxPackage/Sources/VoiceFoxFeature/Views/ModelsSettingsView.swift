@@ -116,8 +116,8 @@ struct ModelCardView: View {
                                     .fontWeight(.medium)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Color.green)
-                                    .foregroundColor(.white)
+                                    .background(Color.secondaryAccent)
+                                    .foregroundColor(.black)
                                     .clipShape(Capsule())
                             } else if isSelected {
                                 Text("Selected")
@@ -157,14 +157,14 @@ struct ModelCardView: View {
                     metricView(
                         label: "Accuracy",
                         value: modelInfo.accuracyRating,
-                        color: .green
+                        color: .secondaryAccent
                     )
 
                     // Speed
                     metricView(
                         label: "Speed",
                         value: modelInfo.speedRating,
-                        color: .blue
+                        color: .accentColor
                     )
 
                     Spacer()
@@ -229,8 +229,8 @@ struct ModelCardView: View {
         let color: Color = {
             switch badge {
             case .recommended: return .orange
-            case .fastest: return .blue
-            case .mostAccurate: return .green
+            case .fastest: return .purple
+            case .mostAccurate: return .secondaryAccent
             case .multilingual: return .purple
             case .compact: return .gray
             }
@@ -284,11 +284,11 @@ struct ModelCardView: View {
         } else if isCurrentModel && modelManager.isModelLoaded {
             Label("Ready", systemImage: "checkmark.circle.fill")
                 .font(.caption)
-                .foregroundColor(.green)
+                .foregroundColor(.secondaryAccent)
         } else if isCurrentModel && modelManager.isModelReady {
             Label("Downloaded", systemImage: "checkmark.circle")
                 .font(.caption)
-                .foregroundColor(.blue)
+                .foregroundColor(.accentColor)
         } else if isCurrentModel && !modelManager.isModelReady {
             Button("Download") {
                 Task {

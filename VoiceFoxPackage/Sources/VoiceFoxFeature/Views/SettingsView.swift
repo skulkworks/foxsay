@@ -100,7 +100,7 @@ public struct SettingsView: View {
                     Spacer()
                     if AudioEngine.shared.hasPermission {
                         Label("Granted", systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(.secondaryAccent)
                     } else {
                         Button("Request Permission") {
                             Task {
@@ -175,7 +175,7 @@ public struct SettingsView: View {
                 } else if engineManager.isModelReady {
                     Label("Model ready", systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.secondaryAccent)
                 }
             }
 
@@ -199,7 +199,7 @@ public struct SettingsView: View {
         if let error = engineManager.downloadError {
             Text(error)
                 .font(.caption)
-                .foregroundColor(.red)
+                .foregroundColor(.tertiaryAccent)
         }
     }
 
@@ -366,7 +366,7 @@ public struct SettingsView: View {
                 } else if llmManager.isModelReady {
                     Label("Model ready", systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.secondaryAccent)
                 }
             }
 
@@ -390,7 +390,7 @@ public struct SettingsView: View {
         if let error = llmManager.downloadError {
             Text(error)
                 .font(.caption)
-                .foregroundColor(.red)
+                .foregroundColor(.tertiaryAccent)
         }
     }
 
@@ -442,7 +442,7 @@ public struct SettingsView: View {
             Text(input)
                 .foregroundColor(.secondary)
             Image(systemName: "arrow.right")
-                .foregroundColor(.blue)
+                .foregroundColor(.accentColor)
             Text(output)
                 .fontWeight(.medium)
         }

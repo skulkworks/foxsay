@@ -57,15 +57,10 @@ public class MenuBarManager: NSObject, ObservableObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
-            // Use SF Symbol for icon
-            let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
-            let icon = NSImage(
-                systemSymbolName: "waveform.circle",
-                accessibilityDescription: "VoiceFox"
-            )?.withSymbolConfiguration(config)
-
+            let icon = NSImage(named: "MenuBarIcon")
+            icon?.size = NSSize(width: 18, height: 18)
+            icon?.isTemplate = true
             button.image = icon
-            button.image?.isTemplate = true
             button.target = self
             button.action = #selector(menuBarButtonClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -137,24 +132,29 @@ public class MenuBarManager: NSObject, ObservableObject {
     private func updateIcon() {
         guard let button = statusItem?.button else { return }
 
-        let symbolName: String
+        let icon: NSImage?
         switch iconState {
         case .idle:
-            symbolName = "waveform.circle"
+            icon = NSImage(named: "MenuBarIcon")
+            icon?.size = NSSize(width: 18, height: 18)
+            icon?.isTemplate = true
         case .recording:
-            symbolName = "waveform.circle.fill"
+            let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+            icon = NSImage(
+                systemSymbolName: "waveform.circle.fill",
+                accessibilityDescription: "VoiceFox Recording"
+            )?.withSymbolConfiguration(config)
+            icon?.isTemplate = true
         case .processing:
-            symbolName = "ellipsis.circle"
+            let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+            icon = NSImage(
+                systemSymbolName: "ellipsis.circle",
+                accessibilityDescription: "VoiceFox Processing"
+            )?.withSymbolConfiguration(config)
+            icon?.isTemplate = true
         }
 
-        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
-        let icon = NSImage(
-            systemSymbolName: symbolName,
-            accessibilityDescription: "VoiceFox"
-        )?.withSymbolConfiguration(config)
-
         button.image = icon
-        button.image?.isTemplate = true
     }
 
     public func setRecording(_ recording: Bool) {

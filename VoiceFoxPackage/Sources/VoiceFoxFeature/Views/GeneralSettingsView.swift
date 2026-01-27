@@ -161,15 +161,15 @@ public struct GeneralSettingsView: View {
             HStack {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(hotkeyManager.isHotkeyPressed ? Color.green.opacity(0.2) : Color(.textBackgroundColor))
+                        .fill(hotkeyManager.isHotkeyPressed ? Color.secondaryAccent.opacity(0.2) : Color(.textBackgroundColor))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(hotkeyManager.isHotkeyPressed ? Color.green : Color.secondary.opacity(0.3), lineWidth: 1)
+                                .stroke(hotkeyManager.isHotkeyPressed ? Color.secondaryAccent : Color.secondary.opacity(0.3), lineWidth: 1)
                         )
 
                     HStack(spacing: 8) {
                         Image(systemName: hotkeyManager.isHotkeyPressed ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(hotkeyManager.isHotkeyPressed ? .green : .secondary)
+                            .foregroundColor(hotkeyManager.isHotkeyPressed ? .secondaryAccent : .secondary)
 
                         Text(hotkeyManager.isHotkeyPressed ? "Key detected! Recording..." : "Press \(hotkeyManager.selectedModifier.shortName) to test")
                             .font(.caption)

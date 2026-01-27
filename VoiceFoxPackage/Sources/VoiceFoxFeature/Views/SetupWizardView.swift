@@ -134,7 +134,7 @@ public struct SetupWizardView: View {
         VStack(spacing: 20) {
             Image(systemName: audioEngine.hasPermission ? "mic.circle.fill" : "mic.slash")
                 .font(.system(size: 64))
-                .foregroundColor(audioEngine.hasPermission ? .green : .orange)
+                .foregroundColor(audioEngine.hasPermission ? .secondaryAccent : .orange)
 
             Text("Microphone Access")
                 .font(.title2)
@@ -147,7 +147,7 @@ public struct SetupWizardView: View {
 
             if audioEngine.hasPermission {
                 Label("Microphone access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
             } else {
                 Button("Grant Microphone Access") {
                     Task {
@@ -165,7 +165,7 @@ public struct SetupWizardView: View {
         return VStack(spacing: 20) {
             Image(systemName: hasAccess ? "hand.raised.circle.fill" : "hand.raised.slash")
                 .font(.system(size: 64))
-                .foregroundColor(hasAccess ? .green : .orange)
+                .foregroundColor(hasAccess ? .secondaryAccent : .orange)
 
             Text("Accessibility Access")
                 .font(.title2)
@@ -178,7 +178,7 @@ public struct SetupWizardView: View {
 
             if hasAccess {
                 Label("Accessibility access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
             } else {
                 VStack(spacing: 12) {
                     Button("Open System Settings") {
@@ -233,7 +233,7 @@ public struct SetupWizardView: View {
                 } else if let error = downloadError {
                     Text(error)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(.tertiaryAccent)
 
                     Button("Retry") {
                         startDownload()
@@ -256,7 +256,7 @@ public struct SetupWizardView: View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
-                .foregroundColor(.green)
+                .foregroundColor(.secondaryAccent)
 
             Text("You're All Set!")
                 .font(.title)
@@ -264,11 +264,11 @@ public struct SetupWizardView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Label("Microphone ready", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
                 Label("Accessibility enabled", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
                 Label("Model downloaded", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
             }
             .padding()
 

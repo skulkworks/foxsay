@@ -67,14 +67,14 @@ public struct ModelDownloadView: View {
             if let error = errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundColor(.tertiaryAccent)
                     .multilineTextAlignment(.center)
             }
 
             // Success message
             if downloadComplete {
                 Label("Download Complete", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.secondaryAccent)
                     .font(.headline)
             }
 

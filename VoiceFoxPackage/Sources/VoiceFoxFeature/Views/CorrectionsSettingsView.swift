@@ -176,7 +176,7 @@ public struct CorrectionsSettingsView: View {
                 } else if llmManager.isModelReady {
                     Label("Model ready", systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.secondaryAccent)
                 }
             }
 
@@ -202,7 +202,7 @@ public struct CorrectionsSettingsView: View {
         if let error = llmManager.downloadError {
             Text(error)
                 .font(.caption)
-                .foregroundColor(.red)
+                .foregroundColor(.tertiaryAccent)
         }
     }
 
@@ -212,7 +212,7 @@ public struct CorrectionsSettingsView: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
             Image(systemName: "arrow.right")
-                .foregroundColor(.blue)
+                .foregroundColor(.accentColor)
                 .font(.caption)
             Text(output)
                 .fontWeight(.medium)

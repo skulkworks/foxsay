@@ -37,9 +37,10 @@ public struct ContentView: View {
             VStack(spacing: 20) {
                 // App icon and name
                 VStack(spacing: 8) {
-                    Image(systemName: "waveform.circle.fill")
-                        .font(.system(size: 56))
-                        .foregroundStyle(.tint)
+                    Image("AppIconImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 72, height: 72)
 
                     Text("VoiceFox")
                         .font(.title)
@@ -53,12 +54,12 @@ public struct ContentView: View {
                 HStack(spacing: 8) {
                     statusPill(
                         icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash",
-                        color: audioEngine.hasPermission ? .green : .orange
+                        color: audioEngine.hasPermission ? .secondaryAccent : .orange
                     )
 
                     statusPill(
                         icon: HotkeyManager.checkAccessibilityPermission() ? "hand.raised.fill" : "hand.raised.slash",
-                        color: HotkeyManager.checkAccessibilityPermission() ? .green : .orange
+                        color: HotkeyManager.checkAccessibilityPermission() ? .secondaryAccent : .orange
                     )
 
                     engineStatusPill
@@ -154,7 +155,7 @@ public struct ContentView: View {
 
     private var indicatorColor: Color {
         if appState.isRecording {
-            return .red
+            return .tertiaryAccent
         } else if appState.isTranscribing {
             return .orange
         } else {
@@ -198,9 +199,9 @@ public struct ContentView: View {
 
     private var engineStatusColor: Color {
         if engineManager.isEngineReady {
-            return .green
+            return .secondaryAccent
         } else if engineManager.isPreloading || engineManager.isModelReady {
-            return .blue
+            return .accentColor
         } else {
             return .orange
         }
@@ -240,9 +241,9 @@ public struct ContentView: View {
 
     private var llmStatusColor: Color {
         if llmManager.isLoaded {
-            return .green
+            return .secondaryAccent
         } else if llmManager.isPreloading || llmManager.isModelReady {
-            return .blue
+            return .accentColor
         } else {
             return .orange
         }
