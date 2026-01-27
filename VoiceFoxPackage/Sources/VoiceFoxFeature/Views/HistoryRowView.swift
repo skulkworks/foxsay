@@ -3,10 +3,12 @@ import SwiftUI
 /// Row view for a single history item
 public struct HistoryRowView: View {
     let item: HistoryItem
+    var onDelete: (() -> Void)?
     @ObservedObject private var playbackManager = AudioPlaybackManager.shared
 
-    public init(item: HistoryItem) {
+    public init(item: HistoryItem, onDelete: (() -> Void)? = nil) {
         self.item = item
+        self.onDelete = onDelete
     }
 
     public var body: some View {
@@ -27,7 +29,7 @@ public struct HistoryRowView: View {
                 // Timestamp
                 Text(item.formattedTimestamp)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
@@ -41,7 +43,7 @@ public struct HistoryRowView: View {
                 // Duration
                 Text(item.formattedDuration)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
 
             // Text content
@@ -60,7 +62,7 @@ public struct HistoryRowView: View {
                 // Processing time
                 Label(item.formattedProcessingTime, systemImage: "bolt")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
@@ -73,10 +75,23 @@ public struct HistoryRowView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Copy to clipboard")
+
+                // Delete button
+                if let onDelete {
+                    Button {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Delete")
+                }
             }
         }
         .padding(12)
-        .background(Color(.textBackgroundColor))
+        .background(Color(.textBackgroundColor).opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -109,7 +124,7 @@ public struct HistoryRowView: View {
                 // Time display
                 Text(formatTime(playbackManager.progress * playbackManager.duration))
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .frame(width: 35, alignment: .trailing)
             } else {
                 // Waveform placeholder when not playing

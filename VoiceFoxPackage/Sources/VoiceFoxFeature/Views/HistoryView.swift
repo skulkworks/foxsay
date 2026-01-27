@@ -103,7 +103,9 @@ public struct HistoryView: View {
         ScrollView {
             LazyVStack(spacing: 8) {
                 ForEach(filteredItems) { item in
-                    HistoryRowView(item: item)
+                    HistoryRowView(item: item, onDelete: {
+                        historyManager.deleteItem(item)
+                    })
                         .contextMenu {
                             Button {
                                 copyToClipboard(item.text)
