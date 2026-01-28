@@ -31,9 +31,9 @@ public class VoiceFoxCoordinator: ObservableObject {
         // Request permissions
         await audioEngine.checkPermission()
 
-        // Check accessibility
+        // Check accessibility (needed for auto-paste)
         if !HotkeyManager.checkAccessibilityPermission() {
-            print("VoiceFox: Accessibility permission not granted")
+            print("VoiceFox: Accessibility permission not granted - auto-paste will not work")
         }
     }
 

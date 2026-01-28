@@ -91,7 +91,7 @@ public struct DevAppsSettingsView: View {
                         Label("How it works", systemImage: "info.circle")
                             .font(.headline)
 
-                        Text("When you dictate in a developer app, VoiceFox will convert spoken programming terms:")
+                        Text("When you dictate in a developer app, FoxSay will convert spoken programming terms:")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 

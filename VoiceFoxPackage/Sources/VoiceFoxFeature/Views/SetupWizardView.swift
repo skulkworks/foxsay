@@ -17,7 +17,7 @@ public struct SetupWizardView: View {
 
         var title: String {
             switch self {
-            case .welcome: return "Welcome to VoiceFox"
+            case .welcome: return "Welcome to FoxSay"
             case .microphone: return "Microphone Access"
             case .accessibility: return "Accessibility Access"
             case .modelDownload: return "Download Model"
@@ -115,11 +115,11 @@ public struct SetupWizardView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.accentColor)
 
-            Text("Welcome to VoiceFox")
+            Text("Welcome to FoxSay")
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("VoiceFox lets you dictate text anywhere on your Mac using speech-to-text. Hold a key to record, release to transcribe.")
+            Text("FoxSay lets you dictate text anywhere on your Mac using speech-to-text. Hold a key to record, release to transcribe.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -140,7 +140,7 @@ public struct SetupWizardView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("VoiceFox needs access to your microphone to transcribe your speech.")
+            Text("FoxSay needs access to your microphone to transcribe your speech.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -171,7 +171,7 @@ public struct SetupWizardView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("VoiceFox needs accessibility access to detect when you hold the hotkey and to paste transcribed text.")
+            Text("FoxSay needs accessibility access to automatically paste transcribed text into your active application.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -186,7 +186,7 @@ public struct SetupWizardView: View {
                     }
                     .buttonStyle(.bordered)
 
-                    Text("Enable VoiceFox in the list, then return here")
+                    Text("Enable FoxSay in the list, then return here")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -213,7 +213,7 @@ public struct SetupWizardView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("VoiceFox uses a local AI model for transcription. This needs to be downloaded once (~150 MB).")
+            Text("FoxSay uses a local AI model for transcription. This needs to be downloaded once (~150 MB).")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -265,14 +265,14 @@ public struct SetupWizardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Microphone ready", systemImage: "checkmark.circle.fill")
                     .foregroundColor(.secondaryAccent)
-                Label("Accessibility enabled", systemImage: "checkmark.circle.fill")
+                Label("Auto-paste enabled", systemImage: "checkmark.circle.fill")
                     .foregroundColor(.secondaryAccent)
                 Label("Model downloaded", systemImage: "checkmark.circle.fill")
                     .foregroundColor(.secondaryAccent)
             }
             .padding()
 
-            Text("Hold Right Command to start recording. Release to transcribe and paste.")
+            Text("Hold your activation key to start recording. Release to transcribe and paste.")
                 .font(.callout)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

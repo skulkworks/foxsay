@@ -25,7 +25,7 @@ public struct ModelDownloadView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("VoiceFox needs to download a speech recognition model to work offline.")
+                Text("FoxSay needs to download a speech recognition model to work offline.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

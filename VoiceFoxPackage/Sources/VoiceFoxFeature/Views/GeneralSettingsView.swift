@@ -47,11 +47,6 @@ public struct GeneralSettingsView: View {
                 Label("Keyboard Controls", systemImage: "keyboard")
                     .font(.headline)
 
-                // Accessibility warning if needed
-                if !HotkeyManager.checkAccessibilityPermission() {
-                    accessibilityWarning
-                }
-
                 // Activation Keys Row
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -138,7 +133,7 @@ public struct GeneralSettingsView: View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(.orange)
-            Text("Accessibility permission required")
+            Text("Accessibility permission required to paste text into apps")
                 .font(.caption)
             Spacer()
             Button("Grant Access") {
@@ -373,6 +368,11 @@ public struct GeneralSettingsView: View {
                     ))
                     .labelsHidden()
                     .toggleStyle(.switch)
+                }
+
+                // Accessibility warning if paste is enabled but permission not granted
+                if pasteToActiveApp && !HotkeyManager.checkAccessibilityPermission() {
+                    accessibilityWarning
                 }
 
                 Text(outputBehaviorDescription)

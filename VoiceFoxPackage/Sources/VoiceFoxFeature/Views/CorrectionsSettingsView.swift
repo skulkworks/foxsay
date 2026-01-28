@@ -16,7 +16,7 @@ public struct CorrectionsSettingsView: View {
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
 
-                Text("Configure how VoiceFox processes transcribed text for developer apps.")
+                Text("Configure how FoxSay processes transcribed text for developer apps.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

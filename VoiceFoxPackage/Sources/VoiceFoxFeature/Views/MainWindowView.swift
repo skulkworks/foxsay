@@ -27,7 +27,7 @@ public struct MainWindowView: View {
             DetailView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 600, minHeight: 450)
+        .frame(minWidth: 600, minHeight: 500)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {

@@ -71,16 +71,16 @@ public struct SidebarView: View {
             statusDot(
                 isActive: audioEngine.hasPermission,
                 activeColor: .secondaryAccent,
-                inactiveColor: .orange,
+                inactiveColor: .gray,
                 icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash"
             )
 
-            // Accessibility status
+            // Auto-paste status (Accessibility permission)
             statusDot(
                 isActive: HotkeyManager.checkAccessibilityPermission(),
                 activeColor: .secondaryAccent,
-                inactiveColor: .orange,
-                icon: HotkeyManager.checkAccessibilityPermission() ? "hand.raised.fill" : "hand.raised.slash"
+                inactiveColor: .gray,
+                icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard"
             )
 
             // Model status
@@ -116,7 +116,7 @@ public struct SidebarView: View {
         } else if modelManager.isModelReady {
             statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .accentColor, icon: "hourglass")
         } else {
-            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .orange, icon: "arrow.down.circle")
+            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .gray, icon: "arrow.down.circle")
         }
     }
 }

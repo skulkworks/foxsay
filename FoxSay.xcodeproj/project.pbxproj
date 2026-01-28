@@ -113,7 +113,7 @@
 					};
 				};
 			};
-			buildConfigurationList = VF00001400000001 /* Build configuration list for PBXProject "VoiceFox" */;
+			buildConfigurationList = VF00001400000001 /* Build configuration list for PBXProject "FoxSay" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -289,7 +289,7 @@
 				CODE_SIGN_ENTITLEMENTS = VoiceFox/VoiceFox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -299,9 +299,9 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VoiceFox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = VoiceFox;
+				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceFox needs microphone access to transcribe your speech to text.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -323,7 +323,7 @@
 				CODE_SIGN_ENTITLEMENTS = VoiceFox/VoiceFox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -333,9 +333,9 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VoiceFox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = VoiceFox;
+				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceFox needs microphone access to transcribe your speech to text.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -361,7 +361,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		VF00001400000001 /* Build configuration list for PBXProject "VoiceFox" */ = {
+		VF00001400000001 /* Build configuration list for PBXProject "FoxSay" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				VF00001500000001 /* Debug */,

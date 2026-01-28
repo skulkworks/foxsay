@@ -42,7 +42,7 @@ public struct ContentView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 72, height: 72)
 
-                    Text("VoiceFox")
+                    Text("FoxSay")
                         .font(.title)
                         .fontWeight(.bold)
                 }
@@ -58,7 +58,7 @@ public struct ContentView: View {
                     )
 
                     statusPill(
-                        icon: HotkeyManager.checkAccessibilityPermission() ? "hand.raised.fill" : "hand.raised.slash",
+                        icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard",
                         color: HotkeyManager.checkAccessibilityPermission() ? .secondaryAccent : .orange
                     )
 

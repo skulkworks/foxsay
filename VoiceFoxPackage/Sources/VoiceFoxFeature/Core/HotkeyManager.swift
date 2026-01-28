@@ -2,7 +2,9 @@
 @preconcurrency import Carbon.HIToolbox
 import Foundation
 
-/// Manages global hotkey for hold-to-talk functionality
+/// Manages global hotkey for hold-to-talk functionality.
+/// Uses NSEvent monitors (not CGEventTap) to avoid requiring Accessibility permission for hotkey detection.
+/// Accessibility permission is only needed for text injection (auto-paste), which is a legitimate accessibility use.
 @MainActor
 public class HotkeyManager: ObservableObject {
     public static let shared = HotkeyManager()
@@ -97,7 +99,7 @@ public class HotkeyManager: ObservableObject {
             }
         }
 
-        var keyCode: CGKeyCode? {
+        var keyCode: UInt16? {
             switch self {
             case .rightCommand: return 54  // kVK_RightCommand
             case .leftCommand: return 55   // kVK_Command
@@ -111,13 +113,13 @@ public class HotkeyManager: ObservableObject {
             }
         }
 
-        var cgEventFlags: CGEventFlags {
+        var modifierFlags: NSEvent.ModifierFlags {
             switch self {
-            case .rightCommand, .leftCommand: return .maskCommand
-            case .rightOption, .leftOption: return .maskAlternate
-            case .rightShift, .leftShift: return .maskShift
-            case .rightControl, .leftControl: return .maskControl
-            case .fn: return .maskSecondaryFn
+            case .rightCommand, .leftCommand: return .command
+            case .rightOption, .leftOption: return .option
+            case .rightShift, .leftShift: return .shift
+            case .rightControl, .leftControl: return .control
+            case .fn: return .function
             }
         }
 
@@ -163,9 +165,9 @@ public class HotkeyManager: ObservableObject {
     private var keyDownTime: Date?
     private let holdThreshold: TimeInterval = 0.3  // If held longer than this, it's a hold
 
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var lastKeyDown: CGKeyCode?
+    private var globalFlagsMonitor: Any?
+    private var localMonitor: Any?
+    private var lastKeyDown: UInt16?
 
     /// Callback when hotkey is pressed (start recording)
     public var onHotkeyDown: (() -> Void)?
@@ -201,69 +203,56 @@ public class HotkeyManager: ObservableObject {
     }
 
     private func startMonitoring() {
-        guard eventTap == nil else { return }
+        guard globalFlagsMonitor == nil else { return }
 
-        // Create event tap to monitor key events
-        let eventMask =
-            (1 << CGEventType.flagsChanged.rawValue) | (1 << CGEventType.keyDown.rawValue)
-            | (1 << CGEventType.keyUp.rawValue)
-
-        // Store self reference for callback
-        let selfPointer = Unmanaged.passUnretained(self).toOpaque()
-
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: CGEventMask(eventMask),
-            callback: { _, type, event, userInfo -> Unmanaged<CGEvent>? in
-                guard let userInfo = userInfo else { return Unmanaged.passUnretained(event) }
-                let manager = Unmanaged<HotkeyManager>.fromOpaque(userInfo).takeUnretainedValue()
-
-                // Handle synchronously to avoid async issues
-                let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
-                let flags = event.flags
-
-                // Debug: log all flagsChanged events (only for modifier keys we care about)
-                if type == .flagsChanged && (keyCode == 54 || keyCode == 55 || keyCode == 58 || keyCode == 61 || keyCode == 59 || keyCode == 62 || keyCode == 63) {
-                    NSLog("VoiceFox: Event tap flagsChanged - keyCode: %d, flags: %lu", keyCode, flags.rawValue)
-                }
-
-                DispatchQueue.main.async {
-                    manager.handleEventSync(type: type, keyCode: keyCode, flags: flags)
-                }
-
-                return Unmanaged.passUnretained(event)
-            },
-            userInfo: selfPointer
-        )
-
-        guard let tap = eventTap else {
-            NSLog("VoiceFox: Failed to create event tap - accessibility permission may be required")
-            return
+        // Global monitor for modifier key changes - does NOT require Accessibility permission.
+        // NSEvent.addGlobalMonitorForEvents monitors events destined for other applications.
+        globalFlagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self else { return }
+            let keyCode = event.keyCode
+            let flags = event.modifierFlags
+            DispatchQueue.main.async {
+                self.handleFlagsChanged(keyCode: keyCode, flags: flags)
+            }
         }
 
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
+        // Local monitor for when app/overlay is frontmost - handles both modifier keys and Escape.
+        // addLocalMonitorForEvents does NOT require any special permissions.
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+            guard let self else { return event }
+            if event.type == .flagsChanged {
+                let keyCode = event.keyCode
+                let flags = event.modifierFlags
+                DispatchQueue.main.async {
+                    self.handleFlagsChanged(keyCode: keyCode, flags: flags)
+                }
+            } else if event.type == .keyDown && event.keyCode == 53 {  // 53 = Escape
+                DispatchQueue.main.async {
+                    self.handleEscapeKey()
+                }
+            }
+            return event
+        }
+
+        if globalFlagsMonitor == nil {
+            NSLog("VoiceFox: Failed to create global event monitor")
+        }
 
         NSLog("VoiceFox: Hotkey monitoring started for %@ (expecting keyCode: %d)", selectedModifier.displayName, selectedModifier.keyCode ?? 0)
     }
 
     private func stopMonitoring() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
+        if let monitor = globalFlagsMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalFlagsMonitor = nil
         }
-
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        if let monitor = localMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMonitor = nil
         }
-
-        eventTap = nil
-        runLoopSource = nil
         isHotkeyPressed = false
 
-        print("VoiceFox: Hotkey monitoring stopped")
+        NSLog("VoiceFox: Hotkey monitoring stopped")
     }
 
     private func restartMonitoring() {
@@ -273,58 +262,50 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
-    private func handleEventSync(type: CGEventType, keyCode: CGKeyCode, flags: CGEventFlags) {
+    private func handleFlagsChanged(keyCode: UInt16, flags: NSEvent.ModifierFlags) {
         guard isEnabled else { return }
 
-        // Handle Escape key to cancel recording
-        if escapeToCancel && type == .keyDown && keyCode == 53 {  // 53 = Escape
-            if isHotkeyPressed {
-                NSLog("VoiceFox: Escape pressed - cancelling recording")
-                isHotkeyPressed = false
-                lastKeyDown = nil
-                keyDownTime = nil
-                lastTapTime = nil
-                onCancel?()
-            }
-            return
-        }
+        // Check if our specific modifier key was pressed/released
+        guard let targetKeyCode = selectedModifier.keyCode else { return }
 
-        if type == .flagsChanged {
-            // Check if our specific modifier key was pressed/released
-            guard let targetKeyCode = selectedModifier.keyCode else { return }
+        // For modifier keys, we need to check if our specific key is being held
+        // flagsChanged fires for both press and release
+        let isModifierActive = flags.contains(selectedModifier.modifierFlags)
 
-            // For modifier keys, we need to check if our specific key is being held
-            // flagsChanged fires for both press and release
-            let isModifierActive = flags.contains(selectedModifier.cgEventFlags)
+        // Handle based on activation mode
+        if keyCode == targetKeyCode {
+            NSLog("VoiceFox: Target key event - keyCode: %d, isModifierActive: %d, isHotkeyPressed: %d, mode: %@",
+                  keyCode, isModifierActive ? 1 : 0, isHotkeyPressed ? 1 : 0, activationMode.rawValue)
 
-            // Debug: log events for our target key
-            if keyCode == targetKeyCode {
-                NSLog("VoiceFox: Target key event - keyCode: %d, isModifierActive: %d, isHotkeyPressed: %d, mode: %@",
-                      keyCode, isModifierActive ? 1 : 0, isHotkeyPressed ? 1 : 0, activationMode.rawValue)
-            }
+            switch activationMode {
+            case .hold:
+                handleHoldMode(isModifierActive: isModifierActive, keyCode: keyCode)
 
-            // Handle based on activation mode
-            if keyCode == targetKeyCode {
-                switch activationMode {
-                case .hold:
-                    handleHoldMode(isModifierActive: isModifierActive, keyCode: keyCode)
+            case .toggle:
+                handleToggleMode(isModifierActive: isModifierActive, keyCode: keyCode)
 
-                case .toggle:
-                    handleToggleMode(isModifierActive: isModifierActive, keyCode: keyCode)
+            case .doubleTap:
+                handleDoubleTapMode(isModifierActive: isModifierActive, keyCode: keyCode)
 
-                case .doubleTap:
-                    handleDoubleTapMode(isModifierActive: isModifierActive, keyCode: keyCode)
-
-                case .holdOrToggle:
-                    handleHoldOrToggleMode(isModifierActive: isModifierActive, keyCode: keyCode)
-                }
+            case .holdOrToggle:
+                handleHoldOrToggleMode(isModifierActive: isModifierActive, keyCode: keyCode)
             }
         }
     }
 
+    private func handleEscapeKey() {
+        guard isEnabled, escapeToCancel, isHotkeyPressed else { return }
+        NSLog("VoiceFox: Escape pressed - cancelling recording")
+        isHotkeyPressed = false
+        lastKeyDown = nil
+        keyDownTime = nil
+        lastTapTime = nil
+        onCancel?()
+    }
+
     // MARK: - Activation Mode Handlers
 
-    private func handleHoldMode(isModifierActive: Bool, keyCode: CGKeyCode) {
+    private func handleHoldMode(isModifierActive: Bool, keyCode: UInt16) {
         if isModifierActive && !isHotkeyPressed {
             NSLog("VoiceFox: [Hold] Hotkey DOWN")
             isHotkeyPressed = true
@@ -337,7 +318,7 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
-    private func handleToggleMode(isModifierActive: Bool, keyCode: CGKeyCode) {
+    private func handleToggleMode(isModifierActive: Bool, keyCode: UInt16) {
         // Only trigger on key down (press)
         if isModifierActive && lastKeyDown != keyCode {
             lastKeyDown = keyCode
@@ -355,7 +336,7 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
-    private func handleDoubleTapMode(isModifierActive: Bool, keyCode: CGKeyCode) {
+    private func handleDoubleTapMode(isModifierActive: Bool, keyCode: UInt16) {
         // Only trigger on key down (press)
         if isModifierActive && lastKeyDown != keyCode {
             lastKeyDown = keyCode
@@ -382,7 +363,7 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
-    private func handleHoldOrToggleMode(isModifierActive: Bool, keyCode: CGKeyCode) {
+    private func handleHoldOrToggleMode(isModifierActive: Bool, keyCode: UInt16) {
         if isModifierActive && lastKeyDown != keyCode {
             // Key pressed
             lastKeyDown = keyCode
@@ -430,34 +411,28 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
-    /// Check if accessibility permissions are granted (does NOT show prompt)
+    /// Check if accessibility permissions are granted (does NOT show prompt).
+    /// Note: Accessibility is needed for auto-paste (text injection), not for hotkey detection.
     @MainActor
     public static func checkAccessibilityPermission() -> Bool {
-        // Use prompt: false to just check status without showing system dialog
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         let options = [key: false] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Request accessibility permissions (opens System Settings)
+    /// Request accessibility permissions (opens System Settings).
+    /// Note: Accessibility is needed for auto-paste (text injection), not for hotkey detection.
     @MainActor
     public static func requestAccessibilityPermission() {
-        // Open System Settings directly to accessibility
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
     }
 
-    /// Check if the event tap is still active and re-enable if needed
-    public func ensureEventTapActive() {
-        if let tap = eventTap {
-            let isEnabled = CGEvent.tapIsEnabled(tap: tap)
-            if !isEnabled {
-                NSLog("VoiceFox: Event tap was disabled, re-enabling...")
-                CGEvent.tapEnable(tap: tap, enable: true)
-            }
-        } else {
-            NSLog("VoiceFox: Event tap is nil, restarting monitoring...")
+    /// Ensure monitoring is active, restart if needed
+    public func ensureMonitoringActive() {
+        if globalFlagsMonitor == nil {
+            NSLog("VoiceFox: Monitor was nil, restarting monitoring...")
             startMonitoring()
         }
     }

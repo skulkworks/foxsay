@@ -91,7 +91,7 @@ public class MenuBarManager: NSObject, ObservableObject {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(
             NSMenuItem(
-                title: "Quit VoiceFox",
+                title: "Quit FoxSay",
                 action: #selector(quitApp),
                 keyEquivalent: "q"
             ))
@@ -142,14 +142,14 @@ public class MenuBarManager: NSObject, ObservableObject {
             let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
             icon = NSImage(
                 systemSymbolName: "waveform.circle.fill",
-                accessibilityDescription: "VoiceFox Recording"
+                accessibilityDescription: "FoxSay Recording"
             )?.withSymbolConfiguration(config)
             icon?.isTemplate = true
         case .processing:
             let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
             icon = NSImage(
                 systemSymbolName: "ellipsis.circle",
-                accessibilityDescription: "VoiceFox Processing"
+                accessibilityDescription: "FoxSay Processing"
             )?.withSymbolConfiguration(config)
             icon?.isTemplate = true
         }

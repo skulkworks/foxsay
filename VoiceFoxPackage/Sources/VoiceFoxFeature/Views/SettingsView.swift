@@ -75,7 +75,7 @@ public struct SettingsView: View {
                     HStack {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text("Accessibility permission required")
+                        Text("Accessibility permission required for auto-paste")
                             .font(.caption)
                         Spacer()
                         Button("Grant") {

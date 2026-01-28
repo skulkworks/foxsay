@@ -5,6 +5,6 @@
       location = "group:VoiceFoxPackage">
    </FileRef>
    <FileRef
-      location = "container:VoiceFox.xcodeproj">
+      location = "container:FoxSay.xcodeproj">
    </FileRef>
 </Workspace>

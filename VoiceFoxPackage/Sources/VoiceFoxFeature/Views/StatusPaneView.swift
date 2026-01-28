@@ -13,6 +13,7 @@ public struct StatusPaneView: View {
     public var body: some View {
         VStack(spacing: 32) {
             Spacer()
+                .frame(maxHeight: 40)
 
             // App icon and name
             VStack(spacing: 12) {
@@ -21,7 +22,7 @@ public struct StatusPaneView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 96, height: 96)
 
-                Text("VoiceFox")
+                Text("FoxSay")
                     .font(.largeTitle)
                     .fontWeight(.bold)
             }
@@ -33,14 +34,15 @@ public struct StatusPaneView: View {
             systemStatusCards
 
             Spacer()
-
-            // Hotkey reminder
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) {
+            // Hotkey reminder pinned to bottom
             Text("Hold \(hotkeyManager.selectedModifier.displayName) to record")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .padding(.bottom, 16)
+                .padding(.bottom, 8)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.windowBackgroundColor))
     }
 
@@ -142,11 +144,11 @@ public struct StatusPaneView: View {
                 }
             }
 
-            // Accessibility
+            // Auto-paste (requires Accessibility for text injection)
             let hasAccessibility = HotkeyManager.checkAccessibilityPermission()
             statusCard(
-                title: "Hotkey",
-                icon: hasAccessibility ? "hand.raised.fill" : "hand.raised.slash",
+                title: "Auto-Paste",
+                icon: hasAccessibility ? "doc.on.clipboard.fill" : "doc.on.clipboard",
                 status: hasAccessibility ? "Enabled" : "Permission needed",
                 isReady: hasAccessibility
             ) {
@@ -199,7 +201,7 @@ public struct StatusPaneView: View {
             VStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 24))
-                    .foregroundColor(isReady ? .secondaryAccent : .orange)
+                    .foregroundColor(isReady ? .secondaryAccent : .gray)
 
                 Text(title)
                     .font(.caption)

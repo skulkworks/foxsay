@@ -190,7 +190,7 @@ public class AppState: ObservableObject {
             // Hide overlay immediately — before updating state to avoid flashing the result text
             OverlayWindowController.shared.hideOverlay()
             AppDetector.shared.clearTargetApp()
-            HotkeyManager.shared.ensureEventTapActive()
+            HotkeyManager.shared.ensureMonitoringActive()
 
             lastResult = result
             isTranscribing = false
@@ -233,7 +233,7 @@ public class AppState: ObservableObject {
             // Hide overlay before updating state to avoid flashing error text
             OverlayWindowController.shared.hideOverlay()
             AppDetector.shared.clearTargetApp()
-            HotkeyManager.shared.ensureEventTapActive()
+            HotkeyManager.shared.ensureMonitoringActive()
 
             setError("Transcription failed: \(error.localizedDescription)")
             isTranscribing = false

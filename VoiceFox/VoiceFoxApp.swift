@@ -99,8 +99,8 @@ struct VoiceFoxApp: App {
             }
 
             CommandGroup(replacing: .help) {
-                Button("VoiceFox Help") {
-                    if let url = URL(string: "https://voicefox.app") {
+                Button("FoxSay Help") {
+                    if let url = URL(string: "https://skulkworks.dev/foxsay") {
                         NSWorkspace.shared.open(url)
                     }
                 }
