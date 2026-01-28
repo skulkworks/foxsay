@@ -195,6 +195,8 @@ public class OverlayWindowController {
     private var window: NSPanel?
     private var isShowing = false
 
+    private let positionKey = "transcribeOverlayWindowPosition"
+
     private init() {}
 
     public func showOverlay() {
@@ -208,8 +210,13 @@ public class OverlayWindowController {
 
         guard let window = window else { return }
 
-        // Position at top center of main screen
-        if let screen = NSScreen.main {
+        // Restore saved position or use default position
+        if let savedPosition = UserDefaults.standard.dictionary(forKey: positionKey),
+           let x = savedPosition["x"] as? CGFloat,
+           let y = savedPosition["y"] as? CGFloat {
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else if let screen = NSScreen.main {
+            // Default: top center of main screen
             let screenFrame = screen.visibleFrame
             let windowWidth: CGFloat = 480
             let x = screenFrame.midX - windowWidth / 2
@@ -231,6 +238,13 @@ public class OverlayWindowController {
 
     public func hideOverlay() {
         guard let window = window, isShowing else { return }
+
+        // Save window position before hiding
+        let position: [String: CGFloat] = [
+            "x": window.frame.origin.x,
+            "y": window.frame.origin.y
+        ]
+        UserDefaults.standard.set(position, forKey: positionKey)
 
         SoundEffectManager.shared.playClose()
 

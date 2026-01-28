@@ -148,7 +148,7 @@ public struct PromptsSettingsView: View {
 
                 Spacer()
 
-                Button("Turn Off") {
+                Button("Deactivate") {
                     promptManager.deactivatePrompt()
                 }
                 .buttonStyle(.bordered)
@@ -209,8 +209,18 @@ public struct PromptsSettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(!aiModelManager.isModelReady)
+                    .disabled(!aiModelManager.isModelReady || !prompt.isEnabled)
                 }
+
+                // Visibility toggle (eye icon)
+                Button {
+                    promptManager.toggleEnabled(prompt)
+                } label: {
+                    Image(systemName: prompt.isEnabled ? "eye" : "eye.slash")
+                        .foregroundColor(prompt.isEnabled ? .secondary : .red.opacity(0.6))
+                }
+                .buttonStyle(.borderless)
+                .help(prompt.isEnabled ? "Hide from selector" : "Show in selector")
 
                 // Edit button
                 Button {

@@ -53,34 +53,33 @@ public class VoiceModeManager: ObservableObject {
     /// Check if text contains a markdown mode trigger
     /// Returns (triggered, enable, remainingText)
     public func detectMarkdownTrigger(in text: String) -> (triggered: Bool, enable: Bool, remainingText: String) {
-        let lowercased = text.lowercased()
-        let stripped = lowercased.trimmingCharacters(in: .punctuationCharacters.union(.whitespaces))
+        let normalized = text.normalizedForVoiceCommand
 
         // Check for markdown on triggers
         let onTriggers = ["markdown", "mark down", "md", "markdown on", "mark down on", "md on", "markdown mode", "mark down mode", "md mode"]
         for trigger in onTriggers {
-            if lowercased.hasPrefix(trigger + " ") {
-                let remaining = String(text.dropFirst(trigger.count + 1))
-                os_log(.info, log: modeLog, "Markdown ON trigger: %{public}@", trigger)
-                return (true, true, remaining)
-            }
-            if lowercased == trigger || stripped == trigger {
+            if normalized == trigger {
                 os_log(.info, log: modeLog, "Markdown ON (no content)")
                 return (true, true, "")
+            }
+            if normalized.hasPrefix(trigger + " ") {
+                let remaining = String(normalized.dropFirst(trigger.count + 1))
+                os_log(.info, log: modeLog, "Markdown ON trigger: %{public}@", trigger)
+                return (true, true, remaining)
             }
         }
 
         // Check for markdown off triggers
         let offTriggers = ["markdown off", "mark down off", "md off", "plain", "plain text"]
         for trigger in offTriggers {
-            if lowercased.hasPrefix(trigger + " ") {
-                let remaining = String(text.dropFirst(trigger.count + 1))
-                os_log(.info, log: modeLog, "Markdown OFF trigger: %{public}@", trigger)
-                return (true, false, remaining)
-            }
-            if lowercased == trigger || stripped == trigger {
+            if normalized == trigger {
                 os_log(.info, log: modeLog, "Markdown OFF (no content)")
                 return (true, false, "")
+            }
+            if normalized.hasPrefix(trigger + " ") {
+                let remaining = String(normalized.dropFirst(trigger.count + 1))
+                os_log(.info, log: modeLog, "Markdown OFF trigger: %{public}@", trigger)
+                return (true, false, remaining)
             }
         }
 
@@ -89,11 +88,17 @@ public class VoiceModeManager: ObservableObject {
 
     /// Toggle markdown mode
     public func toggleMarkdownMode() {
-        markdownModeEnabled.toggle()
+        // Defer to avoid "Publishing changes from within view updates" warning
+        Task { @MainActor in
+            self.markdownModeEnabled.toggle()
+        }
     }
 
     /// Set markdown mode explicitly
     public func setMarkdownMode(_ enabled: Bool) {
-        markdownModeEnabled = enabled
+        // Defer to avoid "Publishing changes from within view updates" warning
+        Task { @MainActor in
+            self.markdownModeEnabled = enabled
+        }
     }
 }

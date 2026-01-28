@@ -46,6 +46,11 @@ public struct AIModelsSettingsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
+                // Active model indicator
+                if let selectedModel = aiModelManager.selectedModel {
+                    activeModelIndicator(selectedModel)
+                }
+
                 // Filter chips
                 HStack(spacing: 8) {
                     ForEach(AIModelFilter.allCases) { filter in
@@ -84,6 +89,42 @@ public struct AIModelsSettingsView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private func activeModelIndicator(_ model: AIModel) -> some View {
+        GroupBox {
+            HStack(spacing: 12) {
+                Image(systemName: "brain")
+                    .font(.title2)
+                    .foregroundColor(.accentColor)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Active Model")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(model.name)
+                            .font(.headline)
+                        if aiModelManager.isPreloading {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                        } else if aiModelManager.isModelLoaded {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.secondaryAccent)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                Button("Deactivate") {
+                    aiModelManager.deactivateModel()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(8)
+        }
     }
 
     private var noModelSelectedView: some View {
@@ -126,117 +167,116 @@ struct AIModelCardView: View {
     }
 
     var body: some View {
-        Button {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header row
+            HStack(spacing: 12) {
+                // Icon
+                modelIcon
+                    .frame(width: 44, height: 44)
+
+                // Title and badges
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(model.name)
+                            .font(.headline)
+
+                        if isSelected && aiModelManager.isModelLoaded {
+                            Text("Active")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondaryAccent)
+                                .foregroundColor(.black)
+                                .clipShape(Capsule())
+                        } else if isSelected && aiModelManager.isPreloading {
+                            Text("Loading")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange)
+                                .foregroundColor(.black)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    // Capability badges
+                    HStack(spacing: 4) {
+                        ForEach(model.capabilities, id: \.self) { capability in
+                            capabilityBadge(capability)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                // Status / Action
+                statusView
+            }
+
+            // Description
+            Text(model.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            // Metrics row
+            HStack(spacing: 16) {
+                // Quality rating (based on size)
+                metricView(
+                    label: "Quality",
+                    value: qualityRating,
+                    color: .secondaryAccent
+                )
+
+                // Speed rating (inverse of size)
+                metricView(
+                    label: "Speed",
+                    value: speedRating,
+                    color: .accentColor
+                )
+
+                Spacer()
+
+                // Size
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(model.formattedSize)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    Text("Size")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                // Quantization
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("4-bit")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    Text("Precision")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(16)
+        .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Only allow selection if downloaded
             if isDownloaded {
                 aiModelManager.selectModel(model)
                 Task {
                     try? await aiModelManager.preload()
                 }
             }
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header row
-                HStack(spacing: 12) {
-                    // Icon
-                    modelIcon
-                        .frame(width: 44, height: 44)
-
-                    // Title and badges
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(model.name)
-                                .font(.headline)
-
-                            if isSelected && aiModelManager.isModelLoaded {
-                                Text("Active")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.secondaryAccent)
-                                    .foregroundColor(.black)
-                                    .clipShape(Capsule())
-                            } else if isSelected {
-                                Text("Selected")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.accentColor)
-                                    .foregroundColor(.white)
-                                    .clipShape(Capsule())
-                            }
-                        }
-
-                        // Capability badges
-                        HStack(spacing: 4) {
-                            ForEach(model.capabilities, id: \.self) { capability in
-                                capabilityBadge(capability)
-                            }
-                        }
-                    }
-
-                    Spacer()
-
-                    // Status / Action
-                    statusView
-                }
-
-                // Description
-                Text(model.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
-                // Metrics row
-                HStack(spacing: 16) {
-                    // Quality rating (based on size)
-                    metricView(
-                        label: "Quality",
-                        value: qualityRating,
-                        color: .secondaryAccent
-                    )
-
-                    // Speed rating (inverse of size)
-                    metricView(
-                        label: "Speed",
-                        value: speedRating,
-                        color: .accentColor
-                    )
-
-                    Spacer()
-
-                    // Size
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(model.formattedSize)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Text("Size")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    // Quantization
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("4-bit")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Text("Precision")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-            }
-            .padding(16)
-            .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
         }
-        .buttonStyle(.plain)
-        .disabled(!isDownloaded && !isDownloading)
     }
 
     private var qualityRating: Int {
@@ -305,6 +345,7 @@ struct AIModelCardView: View {
             VStack(spacing: 4) {
                 ProgressView(value: aiModelManager.downloadProgress)
                     .progressViewStyle(.linear)
+                    .tint(.secondaryAccent)
                     .frame(width: 70)
                 HStack(spacing: 4) {
                     Text("\(Int(aiModelManager.downloadProgress * 100))%")
@@ -321,29 +362,27 @@ struct AIModelCardView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .scaleEffect(0.6)
+                    .tint(.secondaryAccent)
                 Text("Loading...")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         } else if isSelected && aiModelManager.isModelLoaded {
+            // Active model - show deactivate and delete buttons
             HStack(spacing: 8) {
-                Label("Ready", systemImage: "checkmark.circle.fill")
+                Label("Active", systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundColor(.secondaryAccent)
 
-                Button(role: .destructive) {
-                    aiModelManager.deleteModel(model)
+                Button {
+                    aiModelManager.deactivateModel()
                 } label: {
-                    Image(systemName: "trash")
+                    Image(systemName: "stop.circle")
                         .font(.caption)
+                        .foregroundColor(.orange)
                 }
                 .buttonStyle(.borderless)
-            }
-        } else if isDownloaded {
-            HStack(spacing: 8) {
-                Label("Downloaded", systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
+                .help("Deactivate model")
 
                 Button(role: .destructive) {
                     aiModelManager.deleteModel(model)
@@ -352,13 +391,33 @@ struct AIModelCardView: View {
                         .font(.caption)
                 }
                 .buttonStyle(.borderless)
+                .help("Delete model")
+            }
+        } else if isDownloaded {
+            // Downloaded but not active - show activate and delete buttons
+            HStack(spacing: 8) {
+                Button("Activate") {
+                    aiModelManager.selectModel(model)
+                    Task {
+                        try? await aiModelManager.preload()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button(role: .destructive) {
+                    aiModelManager.deleteModel(model)
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Delete model")
             }
         } else {
             Button("Download") {
                 Task {
                     try? await aiModelManager.downloadModel(model)
-                    // Auto-select after download
-                    aiModelManager.selectModel(model)
                 }
             }
             .buttonStyle(.borderedProminent)

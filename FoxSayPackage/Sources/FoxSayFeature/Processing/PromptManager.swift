@@ -49,6 +49,11 @@ public class PromptManager: ObservableObject {
         prompts.filter { $0.isBuiltIn }
     }
 
+    /// Get only enabled prompts (for selector and voice triggers)
+    public var enabledPrompts: [Prompt] {
+        prompts.filter { $0.isEnabled }
+    }
+
     // MARK: - Initialization
 
     private init() {
@@ -118,6 +123,25 @@ public class PromptManager: ObservableObject {
         os_log(.info, log: promptLog, "Reset prompt to default: %{public}@", prompt.name)
     }
 
+    /// Toggle the enabled state of a prompt
+    public func toggleEnabled(_ prompt: Prompt) {
+        guard let index = prompts.firstIndex(where: { $0.id == prompt.id }) else { return }
+
+        // Defer to avoid "Publishing changes from within view updates" warning
+        Task { @MainActor in
+            self.prompts[index].isEnabled.toggle()
+            self.savePrompts()
+
+            // If disabling the active prompt, deactivate it
+            if !self.prompts[index].isEnabled && self.activePromptId == prompt.id {
+                self.activePromptId = nil
+            }
+
+            os_log(.info, log: promptLog, "Toggled prompt enabled: %{public}@ -> %{public}@",
+                   prompt.name, self.prompts[index].isEnabled ? "enabled" : "disabled")
+        }
+    }
+
     // MARK: - Prompt Activation
 
     /// Activate a prompt by name (for voice activation)
@@ -139,6 +163,7 @@ public class PromptManager: ObservableObject {
     public func activatePrompt(id: UUID) {
         guard prompts.contains(where: { $0.id == id }) else { return }
         activePromptId = id
+        os_log(.info, log: promptLog, "Activated prompt by ID: %{public}@", id.uuidString)
     }
 
     /// Deactivate the current prompt
@@ -157,35 +182,39 @@ public class PromptManager: ObservableObject {
     /// Detect prompt activation/deactivation commands in text
     /// Returns (command detected, prompt name or nil, remaining text)
     public func detectPromptCommand(in text: String) -> (detected: Bool, promptName: String?, remainingText: String) {
-        let lowercased = text.lowercased().trimmingCharacters(in: .whitespaces)
+        let normalized = text.normalizedForVoiceCommand
 
         // Check for deactivation commands
         let offCommands = ["prompt off", "clear prompt", "no prompt", "disable prompt"]
         for cmd in offCommands {
-            if lowercased == cmd || lowercased.hasPrefix(cmd + " ") {
-                return (true, nil, String(text.dropFirst(cmd.count)).trimmingCharacters(in: .whitespaces))
+            if normalized == cmd {
+                return (true, nil, "")
+            }
+            if normalized.hasPrefix(cmd + " ") {
+                let remaining = String(normalized.dropFirst(cmd.count + 1))
+                return (true, nil, remaining)
             }
         }
 
-        // Check for "[name] prompt" pattern
-        for prompt in prompts {
+        // Check for "[name] prompt" pattern (only enabled prompts)
+        for prompt in enabledPrompts {
             let pattern1 = "\(prompt.name.lowercased()) prompt"
-            if lowercased.hasPrefix(pattern1 + " ") {
-                let remaining = String(text.dropFirst(pattern1.count + 1))
-                return (true, prompt.name, remaining)
-            }
-            if lowercased == pattern1 {
+            if normalized == pattern1 {
                 return (true, prompt.name, "")
+            }
+            if normalized.hasPrefix(pattern1 + " ") {
+                let remaining = String(normalized.dropFirst(pattern1.count + 1))
+                return (true, prompt.name, remaining)
             }
 
             // Check for "prompt [name]" pattern
             let pattern2 = "prompt \(prompt.name.lowercased())"
-            if lowercased.hasPrefix(pattern2 + " ") {
-                let remaining = String(text.dropFirst(pattern2.count + 1))
-                return (true, prompt.name, remaining)
-            }
-            if lowercased == pattern2 {
+            if normalized == pattern2 {
                 return (true, prompt.name, "")
+            }
+            if normalized.hasPrefix(pattern2 + " ") {
+                let remaining = String(normalized.dropFirst(pattern2.count + 1))
+                return (true, prompt.name, remaining)
             }
         }
 
@@ -219,8 +248,8 @@ public class PromptManager: ObservableObject {
     }
 
     private func savePrompts() {
-        // Save custom prompts and modified built-ins
-        let toSave = prompts.filter { !$0.isBuiltIn || $0.isModified }
+        // Save custom prompts, modified built-ins, and disabled prompts
+        let toSave = prompts.filter { !$0.isBuiltIn || $0.isModified || !$0.isEnabled }
 
         if let data = try? JSONEncoder().encode(toSave) {
             UserDefaults.standard.set(data, forKey: Self.promptsKey)

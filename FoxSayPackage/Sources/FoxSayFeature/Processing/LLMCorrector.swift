@@ -24,7 +24,7 @@ public actor LLMCorrector {
     /// Transform text using the AI model with the given prompt
     /// - Parameters:
     ///   - text: The text to transform
-    ///   - prompt: The prompt template (should contain {input} placeholder)
+    ///   - prompt: The prompt template (must contain {input} placeholder)
     /// - Returns: Transformed text
     public func correct(_ text: String, prompt: String) async throws -> String {
         let manager = await AIModelManager.shared
@@ -34,6 +34,11 @@ public actor LLMCorrector {
         let promptText = prompt.replacingOccurrences(of: "{input}", with: text)
 
         os_log(.info, log: llmLog, ">>> PRE-LLM: %{public}@", text)
+        os_log(.info, log: llmLog, ">>> PROMPT: %{public}@", promptText)
+        print("FoxSay: [LLM] Full prompt being sent to model:")
+        print("---BEGIN PROMPT---")
+        print(promptText)
+        print("---END PROMPT---")
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
@@ -63,16 +68,18 @@ public actor LLMCorrector {
         }
 
         let processingTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("VoiceFox: LLM correction took \(String(format: "%.0f", processingTime * 1000))ms")
+        print("FoxSay: [LLM] Generation took \(String(format: "%.0f", processingTime * 1000))ms")
+        print("FoxSay: [LLM] Raw output: \"\(generatedText)\"")
 
         // Clean up the response
-        let corrected = cleanResponse(generatedText, originalText: text)
+        let corrected = cleanResponse(generatedText, originalText: text, promptText: promptText)
+        print("FoxSay: [LLM] Cleaned output: \"\(corrected)\"")
 
         return corrected
     }
 
     /// Clean up the LLM response to extract just the corrected text
-    private func cleanResponse(_ response: String, originalText: String) -> String {
+    private func cleanResponse(_ response: String, originalText: String, promptText: String) -> String {
         var cleaned = response
 
         // Stop at common end tokens (Gemma, Llama, Qwen, etc.)
@@ -105,20 +112,72 @@ public actor LLMCorrector {
         // Also handle ``` anywhere in the string (in case of partial blocks)
         cleaned = cleaned.replacingOccurrences(of: "```", with: "")
 
-        // Remove common prefixes the model might add
-        let prefixesToRemove = [
-            "Output:",
-            "Corrected:",
-            "Result:",
-            "Here is the corrected text:",
-            "The corrected text is:",
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Remove chatty LLM prefixes (applied repeatedly until none match)
+        // These are common phrases models use before giving the actual answer
+        let chattyPrefixes = [
+            "sure,", "sure!", "sure.",
+            "of course,", "of course!", "of course.",
+            "certainly,", "certainly!", "certainly.",
+            "absolutely,", "absolutely!", "absolutely.",
+            "okay,", "okay.", "ok,", "ok.",
+            "here you go:", "here you go.",
+            "here it is:", "here it is.",
+            "here's", "here is",
+            "the result is:", "the result is",
+            "the answer is:", "the answer is",
+            "the output is:", "the output is",
+            "the reversed text is:", "the reversed text is",
+            "the corrected text is:", "the corrected text is",
+            "output:", "result:", "answer:", "corrected:", "reversed:",
         ]
 
-        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
-        for prefix in prefixesToRemove {
-            if cleaned.lowercased().hasPrefix(prefix.lowercased()) {
-                cleaned = String(cleaned.dropFirst(prefix.count))
-                cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        var didRemovePrefix = true
+        while didRemovePrefix {
+            didRemovePrefix = false
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+            for prefix in chattyPrefixes {
+                if cleaned.lowercased().hasPrefix(prefix) {
+                    cleaned = String(cleaned.dropFirst(prefix.count))
+                    cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+                    didRemovePrefix = true
+                    break
+                }
+            }
+        }
+
+        // If the response contains a colon followed by content, and the part before
+        // the colon looks like an explanation, take only what's after
+        // e.g., "Here's the reversed order of words: actual result"
+        if let colonRange = cleaned.range(of: ":") {
+            let beforeColon = String(cleaned[..<colonRange.lowerBound]).lowercased()
+            let explanatoryPhrases = [
+                "here's the", "here is the", "the reversed", "the corrected",
+                "the result", "the answer", "the output", "your text",
+                "the words", "reversed order", "word order"
+            ]
+            if explanatoryPhrases.contains(where: { beforeColon.contains($0) }) {
+                let afterColon = String(cleaned[colonRange.upperBound...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !afterColon.isEmpty {
+                    cleaned = afterColon
+                }
+            }
+        }
+
+        // If the model echoed the prompt, try to extract just the result
+        if cleaned.hasPrefix(promptText) {
+            cleaned = String(cleaned.dropFirst(promptText.count))
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        // Some models output the original text followed by the transformation
+        if cleaned.hasPrefix(originalText) && cleaned.count > originalText.count + 5 {
+            let afterInput = String(cleaned.dropFirst(originalText.count))
+            let trimmed = afterInput.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.count > 3 {
+                cleaned = trimmed
             }
         }
 
@@ -135,9 +194,10 @@ public actor LLMCorrector {
         os_log(.info, log: llmLog, "RAW OUTPUT: %{public}@", response)
         os_log(.info, log: llmLog, "CLEANED: %{public}@", cleaned)
 
-        // If the response is empty or much longer than input, return original
-        if cleaned.isEmpty || cleaned.count > originalText.count * 3 {
-            os_log(.info, log: llmLog, "REJECTED: empty or too long, using original")
+        // If the response is empty, return original
+        // Note: We allow longer outputs since prompts like "expand" or "friendly" may generate more text
+        if cleaned.isEmpty {
+            os_log(.info, log: llmLog, "REJECTED: empty, using original")
             return originalText
         }
 

@@ -257,12 +257,14 @@ public class AudioEngine: ObservableObject {
             mElement: kAudioObjectPropertyElementMain
         )
 
-        var name: CFString?
-        var dataSize = UInt32(MemoryLayout<CFString?>.size)
+        var dataSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var unmanagedName: Unmanaged<CFString>?
 
-        let status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &dataSize, &name)
+        let status = withUnsafeMutablePointer(to: &unmanagedName) { ptr in
+            AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &dataSize, ptr)
+        }
 
-        if status == noErr, let name = name {
+        if status == noErr, let name = unmanagedName?.takeUnretainedValue() {
             return name as String
         }
         return nil
@@ -275,12 +277,14 @@ public class AudioEngine: ObservableObject {
             mElement: kAudioObjectPropertyElementMain
         )
 
-        var uid: CFString?
-        var dataSize = UInt32(MemoryLayout<CFString?>.size)
+        var dataSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var unmanagedUID: Unmanaged<CFString>?
 
-        let status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &dataSize, &uid)
+        let status = withUnsafeMutablePointer(to: &unmanagedUID) { ptr in
+            AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &dataSize, ptr)
+        }
 
-        if status == noErr, let uid = uid {
+        if status == noErr, let uid = unmanagedUID?.takeUnretainedValue() {
             return uid as String
         }
         return nil

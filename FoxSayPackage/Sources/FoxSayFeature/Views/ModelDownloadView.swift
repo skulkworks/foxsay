@@ -55,6 +55,7 @@ public struct ModelDownloadView: View {
                 VStack(spacing: 8) {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
+                        .tint(.secondaryAccent)
 
                     Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")
                         .font(.caption)

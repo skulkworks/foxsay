@@ -34,6 +34,11 @@ public struct ModelsSettingsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
+                // Active model indicator
+                if let modelInfo = ModelRegistry.info(for: modelManager.currentModelType) {
+                    activeModelIndicator(modelInfo)
+                }
+
                 // Filter chips
                 HStack(spacing: 8) {
                     ForEach(ModelFilter.allCases) { filter in
@@ -67,6 +72,40 @@ public struct ModelsSettingsView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private func activeModelIndicator(_ modelInfo: TranscriptionModelInfo) -> some View {
+        GroupBox {
+            HStack(spacing: 12) {
+                Image(systemName: "waveform")
+                    .font(.title2)
+                    .foregroundColor(.accentColor)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Active Model")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(modelInfo.displayName)
+                            .font(.headline)
+                        if modelManager.isPreloading {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                        } else if modelManager.isModelLoaded {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.secondaryAccent)
+                        } else if !modelManager.isModelReady {
+                            Text("Not Downloaded")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(8)
+        }
     }
 }
 
@@ -268,6 +307,7 @@ struct ModelCardView: View {
             VStack(spacing: 4) {
                 ProgressView(value: modelManager.downloadProgress)
                     .progressViewStyle(.linear)
+                    .tint(.secondaryAccent)
                     .frame(width: 70)
                 Text("\(Int(modelManager.downloadProgress * 100))%")
                     .font(.caption2)
@@ -277,6 +317,7 @@ struct ModelCardView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .scaleEffect(0.6)
+                    .tint(.secondaryAccent)
                 Text("Loading...")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

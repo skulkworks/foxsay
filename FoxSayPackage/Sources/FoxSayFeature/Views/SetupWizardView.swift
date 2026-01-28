@@ -225,6 +225,7 @@ public struct SetupWizardView: View {
                 if isDownloading {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
+                        .tint(.secondaryAccent)
                         .frame(width: 200)
 
                     Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")

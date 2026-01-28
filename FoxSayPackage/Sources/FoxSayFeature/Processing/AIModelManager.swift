@@ -282,6 +282,13 @@ public class AIModelManager: ObservableObject {
         isModelLoaded = false
     }
 
+    /// Deactivate the current model (unload but keep downloaded)
+    public func deactivateModel() {
+        unload()
+        selectedModelId = nil
+        print("FoxSay: AI model deactivated")
+    }
+
     /// Cancel ongoing download
     public func cancelDownload() {
         // Note: The actual download cancellation would need task management

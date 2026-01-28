@@ -11,6 +11,8 @@ public class PromptSelectorWindowController: NSObject {
     private var hostingController: NSHostingController<PromptSelectorContentView>?
     private var localMonitor: Any?
 
+    private let positionKey = "promptSelectorWindowPosition"
+
     private override init() {
         super.init()
     }
@@ -22,8 +24,13 @@ public class PromptSelectorWindowController: NSObject {
 
         guard let window = window else { return }
 
-        // Position at center of main screen, above center
-        if let screen = NSScreen.main {
+        // Restore saved position or use default center position
+        if let savedPosition = UserDefaults.standard.dictionary(forKey: positionKey),
+           let x = savedPosition["x"] as? CGFloat,
+           let y = savedPosition["y"] as? CGFloat {
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else if let screen = NSScreen.main {
+            // Default: center of screen, above center
             let screenFrame = screen.visibleFrame
             let windowWidth: CGFloat = 300
             let windowHeight: CGFloat = 400
@@ -47,6 +54,13 @@ public class PromptSelectorWindowController: NSObject {
 
     public func hideSelector() {
         guard let window = window, isShowing else { return }
+
+        // Save window position before hiding
+        let position: [String: CGFloat] = [
+            "x": window.frame.origin.x,
+            "y": window.frame.origin.y
+        ]
+        UserDefaults.standard.set(position, forKey: positionKey)
 
         stopKeyMonitor()
 
@@ -145,7 +159,9 @@ struct PromptSelectorContentView: View {
     @ObservedObject private var aiModelManager = AIModelManager.shared
     @ObservedObject private var modeManager = VoiceModeManager.shared
     @State private var selectedIndex: Int = 0
+    @State private var filterText: String = ""
     @FocusState private var isFocused: Bool
+    @FocusState private var isFilterFocused: Bool
 
     let onDismiss: () -> Void
 
@@ -155,14 +171,26 @@ struct PromptSelectorContentView: View {
 
     // Total count: 1 (markdown) + AI prompt options
     private var totalOptionCount: Int {
-        1 + promptOptions.count
+        1 + filteredPromptOptions.count
     }
 
-    private var promptOptions: [(id: UUID?, name: String, displayName: String)] {
+    private var filteredPromptOptions: [(id: UUID?, name: String, displayName: String)] {
         var options: [(id: UUID?, name: String, displayName: String)] = [
             (nil, "none", "None (No Prompt)")
         ]
-        options += promptManager.prompts.map { ($0.id, $0.name, $0.displayName) }
+        // Only show enabled prompts
+        let enabledPrompts = promptManager.enabledPrompts
+
+        // Apply filter if not empty
+        if filterText.isEmpty {
+            options += enabledPrompts.map { ($0.id, $0.name, $0.displayName) }
+        } else {
+            let filtered = enabledPrompts.filter {
+                $0.name.localizedCaseInsensitiveContains(filterText) ||
+                $0.displayName.localizedCaseInsensitiveContains(filterText)
+            }
+            options += filtered.map { ($0.id, $0.name, $0.displayName) }
+        }
         return options
     }
 
@@ -173,6 +201,7 @@ struct PromptSelectorContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             headerRow
+            filterField
             Divider().background(Color.white.opacity(0.2))
             textProcessingSection
             Divider().background(Color.white.opacity(0.2))
@@ -212,7 +241,7 @@ struct PromptSelectorContentView: View {
             if modeManager.markdownModeEnabled {
                 selectedIndex = 0
             } else if let activeId = promptManager.activePromptId,
-                      let index = promptOptions.firstIndex(where: { $0.id == activeId }) {
+                      let index = filteredPromptOptions.firstIndex(where: { $0.id == activeId }) {
                 selectedIndex = 1 + index // +1 because markdown is at index 0
             } else {
                 selectedIndex = 1 // Default to "None" in prompts
@@ -226,10 +255,46 @@ struct PromptSelectorContentView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.white.opacity(0.9))
             Spacer()
-            Text("↑↓ Navigate  ⏎ Select  ⎋ Close")
+            Text("↑↓ Navigate  ␣ Toggle  ⏎ Select  ⎋ Close")
                 .font(.system(size: 9))
                 .foregroundColor(.white.opacity(0.4))
         }
+    }
+
+    private var filterField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.white.opacity(0.4))
+                .font(.system(size: 11))
+
+            TextField("Filter prompts...", text: $filterText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+                .focused($isFilterFocused)
+                .onSubmit {
+                    // Move focus back to main view for keyboard navigation
+                    isFilterFocused = false
+                    isFocused = true
+                }
+
+            if !filterText.isEmpty {
+                Button {
+                    filterText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.white.opacity(0.4))
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.white.opacity(0.1))
+        )
     }
 
     @ViewBuilder
@@ -258,7 +323,7 @@ struct PromptSelectorContentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 2) {
-                    ForEach(Array(promptOptions.enumerated()), id: \.offset) { index, option in
+                    ForEach(Array(filteredPromptOptions.enumerated()), id: \.offset) { index, option in
                         let globalIndex = 1 + index // +1 because markdown is at 0
                         promptOptionRow(
                             option: option,
@@ -267,7 +332,7 @@ struct PromptSelectorContentView: View {
                         )
                         .id(globalIndex)
                         .onTapGesture {
-                            selectPromptOption(option)
+                            selectPromptOption(option, dismiss: true)
                         }
                     }
                 }
@@ -328,26 +393,31 @@ struct PromptSelectorContentView: View {
         }
     }
 
-    private func selectCurrentOption() {
+    private func selectCurrentOption(dismiss: Bool) {
         if selectedIndex == 0 {
             // Markdown mode toggle
             modeManager.toggleMarkdownMode()
         } else {
             // AI prompt selection
             let promptIndex = selectedIndex - 1
-            guard promptIndex >= 0 && promptIndex < promptOptions.count else { return }
-            selectPromptOption(promptOptions[promptIndex])
+            guard promptIndex >= 0 && promptIndex < filteredPromptOptions.count else { return }
+            selectPromptOption(filteredPromptOptions[promptIndex], dismiss: dismiss)
+            return
         }
-        onDismiss()
+        if dismiss {
+            onDismiss()
+        }
     }
 
-    private func selectPromptOption(_ option: (id: UUID?, name: String, displayName: String)) {
+    private func selectPromptOption(_ option: (id: UUID?, name: String, displayName: String), dismiss: Bool = true) {
         if let id = option.id {
             promptManager.activatePrompt(id: id)
         } else {
             promptManager.deactivatePrompt()
         }
-        onDismiss()
+        if dismiss {
+            onDismiss()
+        }
     }
 
     @ViewBuilder

@@ -5,7 +5,7 @@ struct LLMTestAppApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(width: 600, height: 500)
+                .frame(minWidth: 700, minHeight: 600)
         }
     }
 }

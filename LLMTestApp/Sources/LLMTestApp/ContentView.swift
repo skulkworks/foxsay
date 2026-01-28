@@ -12,6 +12,18 @@ struct ContentView: View {
     @State private var modelId = "mlx-community/Qwen2.5-Coder-1.5B-Instruct-4bit"
     @State private var output = "Enter a model ID and click Run Tests\n"
     @State private var isRunning = false
+    @State private var loadedContainer: ModelContainer?
+
+    // Interactive prompt testing
+    @State private var customPrompt = """
+        Reverse the word order of the following text. Output ONLY the reversed words, nothing else.
+
+        Text: {input}
+        """
+    @State private var customInput = "hello world this is a test"
+    @State private var promptOutput = ""
+    @State private var rawOutput = ""
+    @State private var selectedTab = 0
 
     private let testCases: [TestCase] = [
         // Markdown
@@ -79,15 +91,122 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Model selector
             HStack {
                 TextField("Model ID", text: $modelId)
                     .textFieldStyle(.roundedBorder)
 
-                Button(isRunning ? "Running..." : "Run Tests") {
-                    runTests()
+                Button(isRunning ? "Loading..." : (loadedContainer == nil ? "Load Model" : "Reload")) {
+                    loadModel()
                 }
                 .disabled(isRunning)
                 .buttonStyle(.borderedProminent)
+
+                if loadedContainer != nil {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                }
+            }
+
+            // Tab picker
+            Picker("Mode", selection: $selectedTab) {
+                Text("Prompt Tester").tag(0)
+                Text("Batch Tests").tag(1)
+            }
+            .pickerStyle(.segmented)
+
+            if selectedTab == 0 {
+                promptTesterView
+            } else {
+                batchTestsView
+            }
+        }
+        .padding()
+    }
+
+    var promptTesterView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Prompt Template (use {input} as placeholder):")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            TextEditor(text: $customPrompt)
+                .font(.system(.body, design: .monospaced))
+                .frame(height: 120)
+                .border(Color.gray.opacity(0.3))
+
+            HStack {
+                Text("Input Text:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+
+            TextField("Enter test input...", text: $customInput)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Button("Test Prompt") {
+                    testCustomPrompt()
+                }
+                .disabled(isRunning || loadedContainer == nil)
+                .buttonStyle(.borderedProminent)
+
+                if loadedContainer == nil {
+                    Text("Load a model first")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+
+                Spacer()
+            }
+
+            Divider()
+
+            Text("Raw Output:")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            ScrollView {
+                Text(rawOutput.isEmpty ? "(no output yet)" : rawOutput)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(height: 80)
+            .background(Color.black.opacity(0.05))
+            .cornerRadius(4)
+
+            Text("Cleaned Output:")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            ScrollView {
+                Text(promptOutput.isEmpty ? "(no output yet)" : promptOutput)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(height: 60)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(4)
+        }
+    }
+
+    var batchTestsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Button(isRunning ? "Running..." : "Run All Tests") {
+                    runTests()
+                }
+                .disabled(isRunning || loadedContainer == nil)
+                .buttonStyle(.borderedProminent)
+
+                if loadedContainer == nil {
+                    Text("Load a model first")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
             }
 
             ScrollView {
@@ -99,32 +218,61 @@ struct ContentView: View {
             .background(Color.black.opacity(0.05))
             .cornerRadius(8)
         }
-        .padding()
+    }
+
+    func loadModel() {
+        isRunning = true
+        output = "Loading model: \(modelId)\n"
+
+        Task {
+            do {
+                loadedContainer = try await loadModelContainer(id: modelId)
+                output += "Model loaded successfully!\n"
+            } catch {
+                output += "ERROR: \(error)\n"
+                loadedContainer = nil
+            }
+            isRunning = false
+        }
+    }
+
+    func testCustomPrompt() {
+        guard let container = loadedContainer else { return }
+
+        isRunning = true
+        rawOutput = "Processing..."
+        promptOutput = ""
+
+        Task {
+            let prompt = customPrompt.replacingOccurrences(of: "{input}", with: customInput)
+
+            do {
+                let raw = try await generate(container: container, prompt: prompt)
+                rawOutput = raw
+                promptOutput = cleanOutput(raw)
+            } catch {
+                rawOutput = "ERROR: \(error)"
+                promptOutput = ""
+            }
+
+            isRunning = false
+        }
     }
 
     func runTests() {
+        guard let container = loadedContainer else { return }
+
         isRunning = true
-        output = "Starting tests for: \(modelId)\n"
+        output = "Starting tests for: \(modelId)\n\n"
 
         Task {
-            await runTestsAsync()
+            await runTestsAsync(container: container)
             isRunning = false
         }
     }
 
     @MainActor
-    func runTestsAsync() async {
-        output += "Loading model...\n"
-
-        let container: ModelContainer
-        do {
-            container = try await loadModelContainer(id: modelId)
-            output += "Model loaded.\n\n"
-        } catch {
-            output += "ERROR: \(error)\n"
-            return
-        }
-
+    func runTestsAsync(container: ModelContainer) async {
         var passed = 0
         var categoryStats: [String: (p: Int, t: Int)] = [:]
 

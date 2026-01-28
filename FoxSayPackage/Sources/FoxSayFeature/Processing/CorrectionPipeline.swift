@@ -65,18 +65,26 @@ public class CorrectionPipeline: ObservableObject {
         }
 
         // Step 4: Apply active prompt transformation using AI
+        print("FoxSay: [PIPELINE] Checking for active prompt...")
+        print("FoxSay: [PIPELINE] activePromptId = \(String(describing: promptManager.activePromptId))")
+
         if let activePrompt = promptManager.activePrompt {
             os_log(.info, log: pipelineLog, "Active prompt: %{public}@", activePrompt.name)
+            print("FoxSay: [PIPELINE] Active prompt: \(activePrompt.name)")
+            print("FoxSay: [PIPELINE] Input text to LLM: \"\(text)\"")
+            print("FoxSay: [PIPELINE] Prompt template: \"\(activePrompt.promptText)\"")
 
             // Check if AI model is ready
+            print("FoxSay: [PIPELINE] AI model ready = \(aiModelManager.isModelReady)")
             if aiModelManager.isModelReady {
                 do {
                     let llmCorrector = LLMCorrector.shared
                     let isAvailable = await llmCorrector.available
 
                     if isAvailable {
-                        let promptText = activePrompt.buildPrompt(for: text)
-                        let transformed = try await llmCorrector.correct(text, prompt: promptText)
+                        // Pass the prompt template - LLMCorrector will substitute {input}
+                        let transformed = try await llmCorrector.correct(text, prompt: activePrompt.promptText)
+                        print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
                         text = transformed
                         os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
                     } else {
@@ -84,10 +92,14 @@ public class CorrectionPipeline: ObservableObject {
                     }
                 } catch {
                     os_log(.error, log: pipelineLog, "AI transform error: %{public}@", String(describing: error))
+                    print("FoxSay: [PIPELINE] LLM error: \(error)")
                 }
             } else {
                 os_log(.info, log: pipelineLog, "AI model not ready, skipping transform")
+                print("FoxSay: [PIPELINE] AI model not ready, skipping transform")
             }
+        } else {
+            print("FoxSay: [PIPELINE] No active prompt, skipping AI transform")
         }
 
         // Step 5: Post-processing cleanup
