@@ -21,6 +21,12 @@ public class CorrectionPipeline: ObservableObject {
     public func process(_ result: TranscriptionResult) async -> TranscriptionResult {
         var text = result.text
 
+        // Early exit if no text detected
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            os_log(.info, log: pipelineLog, "No text detected, skipping pipeline")
+            return result
+        }
+
         os_log(.info, log: pipelineLog, ">>> INPUT: %{public}@", text)
 
         // Step 1: Check for markdown mode trigger
