@@ -21,10 +21,12 @@ public struct DetailView: View {
             GeneralSettingsView()
         case .models:
             ModelsSettingsView()
-        case .devApps:
-            DevAppsSettingsView()
-        case .corrections:
-            CorrectionsSettingsView()
+        case .aiModels:
+            AIModelsSettingsView()
+        case .prompts:
+            PromptsSettingsView()
+        case .appPrompts:
+            AppPromptsSettingsView()
         case .history:
             HistoryView()
         }

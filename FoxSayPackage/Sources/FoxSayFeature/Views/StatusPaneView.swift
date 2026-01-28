@@ -6,7 +6,7 @@ public struct StatusPaneView: View {
     @ObservedObject private var audioEngine = AudioEngine.shared
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
-    @ObservedObject private var llmManager = LLMModelManager.shared
+    @ObservedObject private var aiModelManager = AIModelManager.shared
 
     public init() {}
 
@@ -129,13 +129,14 @@ public struct StatusPaneView: View {
     // MARK: - System Status
 
     private var systemStatusCards: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             // Microphone
             statusCard(
                 title: "Microphone",
                 icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash",
-                status: audioEngine.hasPermission ? "Ready" : "Permission needed",
-                isReady: audioEngine.hasPermission
+                status: audioEngine.hasPermission ? "Ready" : "Permission",
+                isReady: audioEngine.hasPermission,
+                isLoading: false
             ) {
                 if !audioEngine.hasPermission {
                     Task {
@@ -149,27 +150,42 @@ public struct StatusPaneView: View {
             statusCard(
                 title: "Auto-Paste",
                 icon: hasAccessibility ? "doc.on.clipboard.fill" : "doc.on.clipboard",
-                status: hasAccessibility ? "Enabled" : "Permission needed",
-                isReady: hasAccessibility
+                status: hasAccessibility ? "Enabled" : "Permission",
+                isReady: hasAccessibility,
+                isLoading: false
             ) {
                 if !hasAccessibility {
                     HotkeyManager.requestAccessibilityPermission()
                 }
             }
 
-            // Model
+            // Speech Model
             statusCard(
-                title: "Model",
+                title: "Speech",
                 icon: modelStatusIcon,
                 status: modelStatusText,
-                isReady: modelManager.isModelLoaded
+                isReady: modelManager.isModelLoaded,
+                isLoading: modelManager.isPreloading
             ) {
                 if !modelManager.isModelReady {
                     appState.selectedSidebarItem = .models
                 }
             }
+
+            // AI Model
+            statusCard(
+                title: "AI",
+                icon: aiModelStatusIcon,
+                status: aiModelStatusText,
+                isReady: aiModelManager.isModelLoaded,
+                isLoading: aiModelManager.isPreloading
+            ) {
+                if !aiModelManager.isModelReady {
+                    appState.selectedSidebarItem = .aiModels
+                }
+            }
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 24)
     }
 
     private var modelStatusIcon: String {
@@ -190,18 +206,48 @@ public struct StatusPaneView: View {
         } else if modelManager.isPreloading {
             return "Loading..."
         } else if modelManager.isModelReady {
-            return "Ready to load"
+            return "Ready"
         } else {
-            return "Download required"
+            return "Download"
         }
     }
 
-    private func statusCard(title: String, icon: String, status: String, isReady: Bool, action: @escaping () -> Void) -> some View {
+    private var aiModelStatusIcon: String {
+        if aiModelManager.isModelLoaded {
+            return "brain"
+        } else if aiModelManager.isPreloading {
+            return "arrow.trianglehead.2.clockwise.rotate.90"
+        } else if aiModelManager.isModelReady {
+            return "brain"
+        } else {
+            return "arrow.down.circle"
+        }
+    }
+
+    private var aiModelStatusText: String {
+        if aiModelManager.isModelLoaded {
+            return "Ready"
+        } else if aiModelManager.isPreloading {
+            return "Loading..."
+        } else if aiModelManager.isModelReady {
+            return "Ready"
+        } else if aiModelManager.selectedModelId != nil {
+            return "Download"
+        } else {
+            return "Not set"
+        }
+    }
+
+    private func statusCard(title: String, icon: String, status: String, isReady: Bool, isLoading: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(isReady ? .secondaryAccent : .gray)
+                if isLoading {
+                    SpinningIcon(icon: icon)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(isReady ? .secondaryAccent : .gray)
+                }
 
                 Text(title)
                     .font(.caption)
@@ -212,11 +258,27 @@ public struct StatusPaneView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            .frame(width: 100, height: 90)
+            .frame(width: 85, height: 85)
             .background(Color(.textBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Spinning icon for loading states using TimelineView for reliable animation
+private struct SpinningIcon: View {
+    let icon: String
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let rotation = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.0) * 360
+
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(.accentColor)
+                .rotationEffect(.degrees(rotation))
+        }
     }
 }
 

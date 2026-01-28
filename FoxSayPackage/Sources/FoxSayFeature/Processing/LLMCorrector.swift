@@ -3,42 +3,35 @@ import MLXLLM
 import MLXLMCommon
 import os.log
 
-private let llmLog = OSLog(subsystem: "com.voicefox", category: "LLM-DEBUG")
+private let llmLog = OSLog(subsystem: "com.foxsay", category: "LLM-DEBUG")
 
-/// LLM-based correction for ambiguous transcriptions
-/// Uses local MLX models for context-aware spoken-to-code corrections
+/// LLM-based text transformation using local MLX models
 public actor LLMCorrector {
     public static let shared = LLMCorrector()
 
-    /// Maximum tokens to generate for corrections
-    private let maxTokens = 100
+    /// Maximum tokens to generate
+    private let maxTokens = 200
 
     private init() {}
 
-    /// Check if LLM correction is available
+    /// Check if LLM is available (model downloaded and ready)
     public var available: Bool {
         get async {
-            await LLMModelManager.shared.isModelReady
+            await AIModelManager.shared.isModelReady
         }
     }
 
-    /// Correct text using LLM for context-aware spoken-to-code improvements
+    /// Transform text using the AI model with the given prompt
     /// - Parameters:
-    ///   - text: The text to correct
-    ///   - prompt: Optional custom prompt template (uses default if nil)
-    /// - Returns: Corrected text
-    public func correct(_ text: String, prompt: String? = nil) async throws -> String {
-        let manager = await LLMModelManager.shared
+    ///   - text: The text to transform
+    ///   - prompt: The prompt template (should contain {input} placeholder)
+    /// - Returns: Transformed text
+    public func correct(_ text: String, prompt: String) async throws -> String {
+        let manager = await AIModelManager.shared
         let container = try await manager.getModel()
 
-        // Build the prompt - use custom prompt or fall back to manager's prompt
-        let promptTemplate: String
-        if let customPrompt = prompt {
-            promptTemplate = customPrompt
-        } else {
-            promptTemplate = await manager.customPrompt
-        }
-        let promptText = promptTemplate.replacingOccurrences(of: "{input}", with: text)
+        // Build the prompt with input substituted
+        let promptText = prompt.replacingOccurrences(of: "{input}", with: text)
 
         os_log(.info, log: llmLog, ">>> PRE-LLM: %{public}@", text)
 

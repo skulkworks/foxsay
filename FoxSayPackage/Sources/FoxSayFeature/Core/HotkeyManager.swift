@@ -154,6 +154,20 @@ public class HotkeyManager: ObservableObject {
         }
     }
 
+    /// Prompt selector hotkey modifier
+    @Published public var promptSelectorModifier: HotkeyModifier {
+        didSet {
+            UserDefaults.standard.set(promptSelectorModifier.rawValue, forKey: "promptSelectorModifier")
+        }
+    }
+
+    /// Whether prompt selector hotkey is enabled
+    @Published public var promptSelectorEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(promptSelectorEnabled, forKey: "promptSelectorEnabled")
+        }
+    }
+
     @Published public private(set) var isHotkeyPressed = false
     @Published public private(set) var isEnabled = true
 
@@ -178,6 +192,9 @@ public class HotkeyManager: ObservableObject {
     /// Callback when recording is cancelled (e.g., escape key)
     public var onCancel: (() -> Void)?
 
+    /// Callback when prompt selector hotkey is pressed
+    public var onPromptSelector: (() -> Void)?
+
     private init() {
         let savedModifier = UserDefaults.standard.string(forKey: "hotkeyModifier") ?? "rightOption"
         selectedModifier = HotkeyModifier(rawValue: savedModifier) ?? .rightOption
@@ -186,6 +203,11 @@ public class HotkeyManager: ObservableObject {
         activationMode = ActivationMode(rawValue: savedMode) ?? .hold
 
         escapeToCancel = UserDefaults.standard.object(forKey: "hotkeyEscapeToCancel") as? Bool ?? true
+
+        // Prompt selector hotkey defaults
+        let savedPromptModifier = UserDefaults.standard.string(forKey: "promptSelectorModifier") ?? "rightCommand"
+        promptSelectorModifier = HotkeyModifier(rawValue: savedPromptModifier) ?? .rightCommand
+        promptSelectorEnabled = UserDefaults.standard.object(forKey: "promptSelectorEnabled") as? Bool ?? true
 
         startMonitoring()
     }
@@ -265,6 +287,19 @@ public class HotkeyManager: ObservableObject {
     private func handleFlagsChanged(keyCode: UInt16, flags: NSEvent.ModifierFlags) {
         guard isEnabled else { return }
 
+        // Check for prompt selector hotkey (separate from recording hotkey)
+        if promptSelectorEnabled,
+           let promptKeyCode = promptSelectorModifier.keyCode,
+           keyCode == promptKeyCode,
+           promptSelectorModifier != selectedModifier {  // Don't conflict with recording hotkey
+            let isPromptModifierActive = flags.contains(promptSelectorModifier.modifierFlags)
+            if isPromptModifierActive {
+                NSLog("FoxSay: Prompt selector hotkey pressed")
+                onPromptSelector?()
+            }
+            return  // Don't process as recording hotkey
+        }
+
         // Check if our specific modifier key was pressed/released
         guard let targetKeyCode = selectedModifier.keyCode else { return }
 
@@ -274,7 +309,7 @@ public class HotkeyManager: ObservableObject {
 
         // Handle based on activation mode
         if keyCode == targetKeyCode {
-            NSLog("VoiceFox: Target key event - keyCode: %d, isModifierActive: %d, isHotkeyPressed: %d, mode: %@",
+            NSLog("FoxSay: Target key event - keyCode: %d, isModifierActive: %d, isHotkeyPressed: %d, mode: %@",
                   keyCode, isModifierActive ? 1 : 0, isHotkeyPressed ? 1 : 0, activationMode.rawValue)
 
             switch activationMode {

@@ -228,10 +228,11 @@ public class AudioEngine: ObservableObject {
                 status = AudioObjectGetPropertyData(deviceID, &inputChannelsAddress, 0, nil, &inputChannelsSize, bufferListPointer)
 
                 if status == noErr {
-                    let bufferList = bufferListPointer.pointee
                     var inputChannels: UInt32 = 0
-                    let buffers = UnsafeBufferPointer(start: &bufferListPointer.pointee.mBuffers, count: Int(bufferList.mNumberBuffers))
-                    for buffer in buffers {
+
+                    // Use UnsafeMutableAudioBufferListPointer for proper iteration
+                    let audioBufferList = UnsafeMutableAudioBufferListPointer(bufferListPointer)
+                    for buffer in audioBufferList {
                         inputChannels += buffer.mNumberChannels
                     }
 

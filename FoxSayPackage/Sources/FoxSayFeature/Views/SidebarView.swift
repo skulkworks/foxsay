@@ -4,6 +4,7 @@ import SwiftUI
 public struct SidebarView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var modelManager = ModelManager.shared
+    @ObservedObject private var aiModelManager = AIModelManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
 
     @State private var selection: SidebarItem = .status
@@ -19,7 +20,7 @@ public struct SidebarView: View {
             }
 
             Section("Settings") {
-                ForEach([SidebarItem.general, .models, .devApps, .corrections]) { item in
+                ForEach([SidebarItem.general, .models, .aiModels, .prompts, .appPrompts]) { item in
                     sidebarRow(item)
                 }
             }
@@ -83,8 +84,11 @@ public struct SidebarView: View {
                 icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard"
             )
 
-            // Model status
+            // Transcription model status
             modelStatusDot
+
+            // AI model status
+            aiModelStatusDot
 
             Spacer()
 
@@ -119,27 +123,40 @@ public struct SidebarView: View {
             statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .gray, icon: "arrow.down.circle")
         }
     }
+
+    @ViewBuilder
+    private var aiModelStatusDot: some View {
+        if aiModelManager.isModelLoaded {
+            statusDot(isActive: true, activeColor: .secondaryAccent, inactiveColor: .secondaryAccent, icon: "brain")
+        } else if aiModelManager.isPreloading {
+            // Use rotating arrow icon during loading (brain is too symmetric to show rotation)
+            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .accentColor)
+        } else if aiModelManager.isModelReady {
+            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .accentColor, icon: "brain")
+        } else {
+            // No AI model selected/downloaded - gray
+            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .gray, icon: "brain")
+        }
+    }
 }
 
 /// Spinning status dot for loading states
 private struct SpinningStatusDot: View {
     let icon: String
     let color: Color
-    @State private var rotation: Double = 0
 
     var body: some View {
-        Image(systemName: icon)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(color)
-            .rotationEffect(.degrees(rotation))
-            .frame(width: 20, height: 20)
-            .background(color.opacity(0.15))
-            .clipShape(Circle())
-            .onAppear {
-                withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
-            }
+        TimelineView(.animation) { timeline in
+            let rotation = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.0) * 360
+
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(color)
+                .rotationEffect(.degrees(rotation))
+                .frame(width: 20, height: 20)
+                .background(color.opacity(0.15))
+                .clipShape(Circle())
+        }
     }
 }
 

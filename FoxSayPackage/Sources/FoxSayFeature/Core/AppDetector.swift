@@ -84,13 +84,7 @@ public class AppDetector: ObservableObject {
         targetAppIcon = nil
     }
 
-    /// Check if the current frontmost app is a developer app
-    public var isDevApp: Bool {
-        guard let bundleId = frontmostAppBundleId else { return false }
-        return DevAppConfigManager.shared.isDevApp(bundleId: bundleId)
-    }
-
-    /// Get the frontmost app that is NOT VoiceFox
+    /// Get the frontmost app that is NOT FoxSay
     public func getPreviousFrontmostApp() -> NSRunningApplication? {
         let voiceFoxBundleId = Bundle.main.bundleIdentifier
 

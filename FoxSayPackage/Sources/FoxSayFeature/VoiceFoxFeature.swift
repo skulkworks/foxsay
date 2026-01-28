@@ -95,9 +95,8 @@ public class VoiceFoxCoordinator: ObservableObject {
             // Transcribe
             var result = try await engineManager.transcribe(audioBuffer: audioBuffer)
 
-            // Apply corrections if in dev app
-            let isDevApp = appDetector.isDevApp
-            result = await correctionPipeline.process(result, isDevApp: isDevApp)
+            // Apply processing pipeline
+            result = await correctionPipeline.process(result)
 
             // Update state
             appState.setResult(result)

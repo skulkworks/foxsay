@@ -6,6 +6,7 @@ import SwiftUI
 public struct GeneralSettingsView: View {
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
+    @ObservedObject private var modeManager = VoiceModeManager.shared
     @EnvironmentObject private var appState: AppState
 
     @State private var isTestingHotkey = false
@@ -22,6 +23,9 @@ public struct GeneralSettingsView: View {
 
                 // Keyboard Controls Section
                 keyboardControlsSection
+
+                // Text Processing Section
+                textProcessingSection
 
                 // Input Section (Microphone)
                 inputSection
@@ -174,6 +178,86 @@ public struct GeneralSettingsView: View {
                 }
                 .frame(height: 36)
             }
+        }
+    }
+
+    // MARK: - Text Processing Section
+
+    private var textProcessingSection: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Text Processing", systemImage: "text.bubble")
+                    .font(.headline)
+
+                // Markdown mode toggle
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Markdown Mode")
+                        Text("Convert voice commands to markdown syntax (bold, headings, etc.)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("Enable in prompt selector or by saying \"markdown mode\"")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $modeManager.markdownModeEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                Divider()
+
+                // Prompt selector hotkey
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Prompt Selector Hotkey")
+                        Text("Open overlay to quickly select an AI prompt")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $hotkeyManager.promptSelectorEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+
+                if hotkeyManager.promptSelectorEnabled {
+                    HStack {
+                        Spacer()
+
+                        Picker("", selection: $hotkeyManager.promptSelectorModifier) {
+                            Section("Right Side") {
+                                ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
+                                    Text(modifier.shortName).tag(modifier)
+                                }
+                            }
+                            Section("Left Side") {
+                                ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
+                                    Text(modifier.shortName).tag(modifier)
+                                }
+                            }
+                            Section("Other") {
+                                Text(HotkeyManager.HotkeyModifier.fn.shortName).tag(HotkeyManager.HotkeyModifier.fn)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 140)
+                    }
+
+                    if hotkeyManager.promptSelectorModifier == hotkeyManager.selectedModifier {
+                        Text("Choose a different key than the recording hotkey")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

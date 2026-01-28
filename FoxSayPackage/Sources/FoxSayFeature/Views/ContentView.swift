@@ -6,7 +6,7 @@ public struct ContentView: View {
     @ObservedObject private var audioEngine = AudioEngine.shared
     @ObservedObject private var engineManager = EngineManager.shared
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
-    @ObservedObject private var llmManager = LLMModelManager.shared
+    @ObservedObject private var aiModelManager = AIModelManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var permissionRefreshID = UUID()
@@ -64,9 +64,9 @@ public struct ContentView: View {
 
                     engineStatusPill
 
-                    // LLM status pill (only show if LLM is enabled)
-                    if llmManager.isEnabled {
-                        llmStatusPill
+                    // AI Model status pill
+                    if aiModelManager.selectedModelId != nil {
+                        aiModelStatusPill
                     }
                 }
                 .id(permissionRefreshID)  // Force refresh when ID changes
@@ -89,12 +89,6 @@ public struct ContentView: View {
             if newPhase == .active {
                 refreshPermissions()
             }
-        }
-        .sheet(isPresented: $appState.showSettings, onDismiss: {
-            refreshPermissions()
-        }) {
-            SettingsView()
-                .environmentObject(appState)
         }
     }
 
@@ -225,24 +219,24 @@ public struct ContentView: View {
         }
     }
 
-    // MARK: - LLM Status
+    // MARK: - AI Model Status
 
-    private var llmStatusIcon: String {
-        if llmManager.isLoaded {
+    private var aiModelStatusIcon: String {
+        if aiModelManager.isModelLoaded {
             return "brain"
-        } else if llmManager.isPreloading {
+        } else if aiModelManager.isPreloading {
             return "arrow.trianglehead.2.clockwise.rotate.90"
-        } else if llmManager.isModelReady {
+        } else if aiModelManager.isModelReady {
             return "brain"
         } else {
             return "arrow.down.circle"
         }
     }
 
-    private var llmStatusColor: Color {
-        if llmManager.isLoaded {
+    private var aiModelStatusColor: Color {
+        if aiModelManager.isModelLoaded {
             return .secondaryAccent
-        } else if llmManager.isPreloading || llmManager.isModelReady {
+        } else if aiModelManager.isPreloading || aiModelManager.isModelReady {
             return .accentColor
         } else {
             return .orange
@@ -250,11 +244,11 @@ public struct ContentView: View {
     }
 
     @ViewBuilder
-    private var llmStatusPill: some View {
-        if llmManager.isPreloading {
-            SpinningIconView(icon: llmStatusIcon, color: llmStatusColor)
+    private var aiModelStatusPill: some View {
+        if aiModelManager.isPreloading {
+            SpinningIconView(icon: aiModelStatusIcon, color: aiModelStatusColor)
         } else {
-            statusPill(icon: llmStatusIcon, color: llmStatusColor)
+            statusPill(icon: aiModelStatusIcon, color: aiModelStatusColor)
         }
     }
 }

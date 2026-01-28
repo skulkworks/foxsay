@@ -6,6 +6,7 @@ public struct OverlayView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioEngine = AudioEngine.shared
     @ObservedObject private var modeManager = VoiceModeManager.shared
+    @ObservedObject private var promptManager = PromptManager.shared
     @ObservedObject private var appDetector = AppDetector.shared
 
     @State private var pulseOpacity: Double = 1.0
@@ -31,14 +32,23 @@ public struct OverlayView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white.opacity(0.9))
 
-                // Mode indicator (compact)
-                if modeManager.currentMode != .none {
-                    Text(modeManager.currentMode.displayName)
+                // Mode indicators (compact) - darker colors for better contrast
+                if modeManager.markdownModeEnabled {
+                    Text("Markdown")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(modeColor))
+                        .background(Capsule().fill(Color(red: 0.0, green: 0.55, blue: 0.55)))
+                }
+
+                if let activePrompt = promptManager.activePrompt {
+                    Text(activePrompt.displayName)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color(red: 0.45, green: 0.25, blue: 0.65)))
                 }
 
                 Spacer()
@@ -81,7 +91,7 @@ public struct OverlayView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(width: 220)
+        .frame(width: 440)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(white: 0.12))
@@ -99,22 +109,6 @@ public struct OverlayView: View {
         }
     }
 
-    private var modeColor: Color {
-        switch modeManager.currentMode {
-        case .none:
-            return .gray
-        case .markdown:
-            return .accentColor
-        case .javascript:
-            return .yellow.opacity(0.8)
-        case .php:
-            return .purple
-        case .python:
-            return .secondaryAccent
-        case .bash:
-            return .orange
-        }
-    }
 }
 
 /// Animated scrolling waveform visualization
@@ -217,7 +211,7 @@ public class OverlayWindowController {
         // Position at top center of main screen
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let windowWidth: CGFloat = 240
+            let windowWidth: CGFloat = 480
             let x = screenFrame.midX - windowWidth / 2
             let y = screenFrame.maxY - 90  // Near top of screen
             window.setFrameOrigin(NSPoint(x: x, y: y))
@@ -265,10 +259,10 @@ public class OverlayWindowController {
             .environmentObject(AppState.shared)
 
         let hostingView = NSHostingView(rootView: contentView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 240, height: 100)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 480, height: 100)
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 240, height: 100),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 100),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -290,6 +284,6 @@ public class OverlayWindowController {
 #Preview {
     OverlayView()
         .environmentObject(AppState.shared)
-        .frame(width: 240, height: 100)
+        .frame(width: 480, height: 100)
         .background(Color.gray.opacity(0.3))
 }
