@@ -4,12 +4,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "VoiceFoxFeature",
+    name: "FoxSayFeature",
     platforms: [.macOS(.v14)],
     products: [
         .library(
-            name: "VoiceFoxFeature",
-            targets: ["VoiceFoxFeature"]
+            name: "FoxSayFeature",
+            targets: ["FoxSayFeature"]
         ),
     ],
     dependencies: [
@@ -19,7 +19,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "VoiceFoxFeature",
+            name: "FoxSayFeature",
             dependencies: [
                 "WhisperKit",
                 "FluidAudio",
@@ -30,8 +30,8 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "VoiceFoxFeatureTests",
-            dependencies: ["VoiceFoxFeature"]
+            name: "FoxSayFeatureTests",
+            dependencies: ["FoxSayFeature"]
         ),
     ]
 )

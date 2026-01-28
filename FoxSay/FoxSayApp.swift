@@ -1,5 +1,5 @@
 import SwiftUI
-import VoiceFoxFeature
+import FoxSayFeature
 import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -33,7 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct VoiceFoxApp: App {
+struct FoxSayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState.shared
     @State private var showSetupWizard = false

@@ -7,30 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		VF00000100000001 /* VoiceFoxFeature in Frameworks */ = {isa = PBXBuildFile; productRef = VF00000200000001 /* VoiceFoxFeature */; };
+		VF00000100000001 /* FoxSayFeature in Frameworks */ = {isa = PBXBuildFile; productRef = VF00000200000001 /* FoxSayFeature */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		VF00000300000001 /* VoiceFox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceFox.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		VF00000300000001 /* FoxSay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoxSay.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		VF00002000000001 /* Exceptions for "VoiceFox" folder in "VoiceFox" target */ = {
+		VF00002000000001 /* Exceptions for "FoxSay" folder in "FoxSay" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = VF00000900000001 /* VoiceFox */;
+			target = VF00000900000001 /* FoxSay */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		VF00000400000001 /* VoiceFox */ = {
+		VF00000400000001 /* FoxSay */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				VF00002000000001 /* Exceptions for "VoiceFox" folder in "VoiceFox" target */,
+				VF00002000000001 /* Exceptions for "FoxSay" folder in "FoxSay" target */,
 			);
-			path = VoiceFox;
+			path = FoxSay;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				VF00000100000001 /* VoiceFoxFeature in Frameworks */,
+				VF00000100000001 /* FoxSayFeature in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,7 +57,7 @@
 		VF00000700000001 = {
 			isa = PBXGroup;
 			children = (
-				VF00000400000001 /* VoiceFox */,
+				VF00000400000001 /* FoxSay */,
 				VF00000600000001 /* Frameworks */,
 				VF00000800000001 /* Products */,
 			);
@@ -66,7 +66,7 @@
 		VF00000800000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				VF00000300000001 /* VoiceFox.app */,
+				VF00000300000001 /* FoxSay.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -74,9 +74,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		VF00000900000001 /* VoiceFox */ = {
+		VF00000900000001 /* FoxSay */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = VF00001000000001 /* Build configuration list for PBXNativeTarget "VoiceFox" */;
+			buildConfigurationList = VF00001000000001 /* Build configuration list for PBXNativeTarget "FoxSay" */;
 			buildPhases = (
 				VF00001100000001 /* Sources */,
 				VF00000500000001 /* Frameworks */,
@@ -87,14 +87,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				VF00000400000001 /* VoiceFox */,
+				VF00000400000001 /* FoxSay */,
 			);
-			name = VoiceFox;
+			name = FoxSay;
 			packageProductDependencies = (
-				VF00000200000001 /* VoiceFoxFeature */,
+				VF00000200000001 /* FoxSayFeature */,
 			);
-			productName = VoiceFox;
-			productReference = VF00000300000001 /* VoiceFox.app */;
+			productName = FoxSay;
+			productReference = VF00000300000001 /* FoxSay.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -122,12 +122,15 @@
 			);
 			mainGroup = VF00000700000001;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				VF00002100000001 /* XCLocalSwiftPackageReference "FoxSayPackage" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = VF00000800000001 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				VF00000900000001 /* VoiceFox */,
+				VF00000900000001 /* FoxSay */,
 			);
 		};
 /* End PBXProject section */
@@ -286,7 +289,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = VoiceFox/VoiceFox.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FoxSay/FoxSay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
@@ -298,7 +301,7 @@
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = VoiceFox/Info.plist;
+				INFOPLIST_FILE = FoxSay/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
@@ -320,7 +323,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = VoiceFox/VoiceFox.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FoxSay/FoxSay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
@@ -332,7 +335,7 @@
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = VoiceFox/Info.plist;
+				INFOPLIST_FILE = FoxSay/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
@@ -352,7 +355,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		VF00001000000001 /* Build configuration list for PBXNativeTarget "VoiceFox" */ = {
+		VF00001000000001 /* Build configuration list for PBXNativeTarget "FoxSay" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				VF00001700000001 /* Debug */,
@@ -373,17 +376,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		VF00002100000001 /* XCLocalSwiftPackageReference "VoiceFoxPackage" */ = {
+		VF00002100000001 /* XCLocalSwiftPackageReference "FoxSayPackage" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = VoiceFoxPackage;
+			relativePath = FoxSayPackage;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		VF00000200000001 /* VoiceFoxFeature */ = {
+		VF00000200000001 /* FoxSayFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = VF00002100000001 /* XCLocalSwiftPackageReference "VoiceFoxPackage" */;
-			productName = VoiceFoxFeature;
+			package = VF00002100000001 /* XCLocalSwiftPackageReference "FoxSayPackage" */;
+			productName = FoxSayFeature;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
