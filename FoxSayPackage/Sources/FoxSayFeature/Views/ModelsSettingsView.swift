@@ -48,8 +48,10 @@ public struct ModelsSettingsView: View {
                 }
 
                 // Model Cards
-                ForEach(filteredModels) { modelInfo in
-                    ModelCardView(modelInfo: modelInfo)
+                VStack(spacing: 12) {
+                    ForEach(filteredModels) { modelInfo in
+                        ModelCardView(modelInfo: modelInfo)
+                    }
                 }
 
                 Spacer()

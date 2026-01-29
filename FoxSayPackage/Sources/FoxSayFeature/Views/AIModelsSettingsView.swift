@@ -12,10 +12,13 @@ enum AIModelFilter: String, CaseIterable, Identifiable {
     var title: String { rawValue }
 }
 
-/// AI Models settings view for managing local LLM models
+/// AI Models settings view for managing local LLM models and remote providers
 public struct AIModelsSettingsView: View {
     @ObservedObject private var aiModelManager = AIModelManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
     @State private var selectedFilter: AIModelFilter = .all
+    @State private var editingProvider: RemoteProvider?
+    @State private var showingAddProvider = false
 
     public init() {}
 
@@ -42,31 +45,25 @@ public struct AIModelsSettingsView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Select a model for AI-powered text transformation. These models run locally using Apple Silicon's Neural Engine.")
+                Text("Select a provider for AI-powered text transformation.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                // Active model indicator
-                if let selectedModel = aiModelManager.selectedModel {
-                    activeModelIndicator(selectedModel)
-                }
+                // Unified active provider/model indicator (above the picker)
+                unifiedActiveIndicator
 
-                // Filter chips
-                HStack(spacing: 8) {
-                    ForEach(AIModelFilter.allCases) { filter in
-                        filterChip(filter)
-                    }
-                    Spacer()
+                // Provider type picker
+                Picker("Provider", selection: $providerManager.providerType) {
+                    Text("Local Models").tag(LLMProviderType.local)
+                    Text("Remote API").tag(LLMProviderType.remote)
                 }
+                .pickerStyle(.segmented)
 
-                // No model selected guidance
-                if aiModelManager.selectedModelId == nil {
-                    noModelSelectedView
-                }
-
-                // Model Cards
-                ForEach(filteredModels) { model in
-                    AIModelCardView(model: model)
+                // Conditional content based on provider type
+                if providerManager.providerType == .local {
+                    localModelsContent
+                } else {
+                    remoteProvidersContent
                 }
 
                 Spacer()
@@ -74,6 +71,228 @@ public struct AIModelsSettingsView: View {
             .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(item: $editingProvider) { provider in
+            RemoteProviderEditSheet(provider: provider) { updated in
+                providerManager.updateProvider(updated)
+                editingProvider = nil
+            } onCancel: {
+                editingProvider = nil
+            }
+        }
+        .sheet(isPresented: $showingAddProvider) {
+            RemoteProviderEditSheet(
+                provider: RemoteProvider(name: "", baseURL: ""),
+                isNew: true
+            ) { newProvider in
+                providerManager.addProvider(newProvider)
+                showingAddProvider = false
+            } onCancel: {
+                showingAddProvider = false
+            }
+        }
+    }
+
+    // MARK: - Local Models Content
+
+    @ViewBuilder
+    private var localModelsContent: some View {
+        Text("These models run locally using Apple Silicon's Neural Engine.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+        // Filter chips
+        HStack(spacing: 8) {
+            ForEach(AIModelFilter.allCases) { filter in
+                filterChip(filter)
+            }
+            Spacer()
+        }
+
+        // Model Cards
+        VStack(spacing: 12) {
+            ForEach(filteredModels) { model in
+                AIModelCardView(model: model)
+            }
+        }
+    }
+
+    // MARK: - Remote Providers Content
+
+    @ViewBuilder
+    private var remoteProvidersContent: some View {
+        Text("Connect to OpenAI-compatible APIs like LM Studio or Ollama.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+        // Provider Cards
+        VStack(spacing: 12) {
+            ForEach(providerManager.remoteProviders) { provider in
+                RemoteProviderCard(
+                    provider: provider,
+                    isSelected: provider.id == providerManager.selectedRemoteProviderId,
+                    testResult: providerManager.connectionTestResults[provider.id] ?? .idle,
+                    onActivate: {
+                        providerManager.selectProvider(provider)
+                    },
+                    onDeactivate: {
+                        providerManager.deactivate()
+                    },
+                    onTest: {
+                        Task {
+                            await providerManager.testConnection(for: provider)
+                        }
+                    },
+                    onEdit: {
+                        editingProvider = provider
+                    },
+                    onDelete: {
+                        providerManager.deleteProvider(provider)
+                    }
+                )
+            }
+        }
+
+        // Add provider button
+        Button {
+            showingAddProvider = true
+        } label: {
+            HStack {
+                Image(systemName: "plus.circle")
+                Text("Add Custom Provider")
+            }
+        }
+        .buttonStyle(.bordered)
+    }
+
+    // MARK: - Helper Views
+
+    /// Check if a local model is actually active (regardless of tab selection)
+    private var isLocalModelActive: Bool {
+        aiModelManager.isModelReady && aiModelManager.selectedModel != nil
+    }
+
+    /// Check if a remote provider is actually active (regardless of tab selection)
+    private var isRemoteProviderActive: Bool {
+        if let selectedId = providerManager.selectedRemoteProviderId,
+           let provider = providerManager.remoteProviders.first(where: { $0.id == selectedId }),
+           provider.isEnabled {
+            return true
+        }
+        return false
+    }
+
+    /// Unified indicator showing current active model or provider (displayed above the picker)
+    @ViewBuilder
+    private var unifiedActiveIndicator: some View {
+        if isLocalModelActive, let model = aiModelManager.selectedModel {
+            // Local model is active
+            GroupBox {
+                HStack(spacing: 12) {
+                    Image(systemName: "brain")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Active")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Text(model.name)
+                                .font(.headline)
+
+                            // Local badge
+                            Text("Local")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+
+                            // Status indicator
+                            if aiModelManager.isPreloading {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else if aiModelManager.isModelLoaded {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.secondaryAccent)
+                            }
+                        }
+                    }
+
+                    Spacer()
+
+                    Button("Deactivate") {
+                        providerManager.deactivate()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(8)
+            }
+        } else if isRemoteProviderActive, let provider = providerManager.selectedRemoteProvider {
+            // Remote provider is active
+            GroupBox {
+                HStack(spacing: 12) {
+                    Image(systemName: "network")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Active")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Text(provider.name)
+                                .font(.headline)
+
+                            // Remote badge
+                            Text("Remote")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.secondaryAccent)
+                        }
+                    }
+
+                    Spacer()
+
+                    Button("Deactivate") {
+                        providerManager.deactivate()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(8)
+            }
+        } else {
+            // No model/provider selected warning
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("No AI Provider Active")
+                        .font(.headline)
+                    Text("Select a local model or remote provider below to enable AI-powered text transformations.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
     }
 
     private func filterChip(_ filter: AIModelFilter) -> some View {
@@ -91,61 +310,321 @@ public struct AIModelsSettingsView: View {
         .buttonStyle(.plain)
     }
 
-    private func activeModelIndicator(_ model: AIModel) -> some View {
-        GroupBox {
-            HStack(spacing: 12) {
-                Image(systemName: "brain")
-                    .font(.title2)
-                    .foregroundColor(.accentColor)
+}
 
+/// Card view for a remote provider (unified style with local model cards)
+struct RemoteProviderCard: View {
+    let provider: RemoteProvider
+    let isSelected: Bool
+    let testResult: ConnectionTestResult
+    let onActivate: () -> Void
+    let onDeactivate: () -> Void
+    let onTest: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header row
+            HStack(spacing: 12) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: "network")
+                        .font(.system(size: 18))
+                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                }
+
+                // Title and URL
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Model")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                     HStack(spacing: 6) {
-                        Text(model.name)
+                        Text(provider.name)
                             .font(.headline)
-                        if aiModelManager.isPreloading {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                        } else if aiModelManager.isModelLoaded {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.secondaryAccent)
+
+                        // Show Active badge in title only when active (matches local model style)
+                        if isSelected {
+                            Text("Active")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondaryAccent)
+                                .foregroundColor(.black)
+                                .clipShape(Capsule())
+                        }
+
+                        if !provider.isEnabled {
+                            Text("Disabled")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.gray)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
                         }
                     }
+
+                    Text(provider.baseURL)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
                 Spacer()
 
-                Button("Deactivate") {
-                    aiModelManager.deactivateModel()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                // Status / Action buttons (unified with local model style)
+                statusView
             }
-            .padding(8)
+
+            // Connection test result
+            connectionTestResultView
+        }
+        .padding(16)
+        .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if provider.isEnabled && !isSelected {
+                onActivate()
+            }
         }
     }
 
-    private var noModelSelectedView: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.title2)
-                .foregroundColor(.orange)
+    @ViewBuilder
+    private var statusView: some View {
+        if isSelected {
+            // Active provider - show deactivate and action buttons (Active badge is already in title)
+            HStack(spacing: 8) {
+                Button {
+                    onDeactivate()
+                } label: {
+                    Image(systemName: "stop.circle")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                .buttonStyle(.borderless)
+                .help("Deactivate provider")
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("No AI Model Selected")
-                    .font(.headline)
-                Text("Download and select a model below to enable AI-powered text transformations.")
+                Button {
+                    onTest()
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Test connection")
+                .disabled(testResult == .testing)
+
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Edit provider")
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Delete provider")
+            }
+        } else if provider.isEnabled {
+            // Not active - just show borderless icons (clicking card activates)
+            HStack(spacing: 8) {
+                Button {
+                    onTest()
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Test connection")
+                .disabled(testResult == .testing)
+
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Edit provider")
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Delete provider")
+            }
+        } else {
+            // Disabled provider - borderless icons only
+            HStack(spacing: 8) {
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Edit provider")
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Delete provider")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var connectionTestResultView: some View {
+        switch testResult {
+        case .idle:
+            EmptyView()
+        case .testing:
+            HStack(spacing: 6) {
+                ProgressView()
+                    .scaleEffect(0.6)
+                Text("Testing connection...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Spacer()
+        case .success(let models):
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.secondaryAccent)
+                Text("Connected - \(models.count) model\(models.count == 1 ? "" : "s") available")
+                    .font(.caption)
+                    .foregroundColor(.secondaryAccent)
+            }
+        case .failure(let error):
+            HStack(spacing: 6) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red)
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .lineLimit(2)
+            }
         }
-        .padding(12)
-        .background(Color.orange.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// Sheet for editing or adding a remote provider
+struct RemoteProviderEditSheet: View {
+    @State private var name: String
+    @State private var baseURL: String
+    @State private var apiKey: String
+    @State private var modelName: String
+    @State private var isEnabled: Bool
+
+    let originalProvider: RemoteProvider
+    let isNew: Bool
+    let onSave: (RemoteProvider) -> Void
+    let onCancel: () -> Void
+
+    init(provider: RemoteProvider, isNew: Bool = false, onSave: @escaping (RemoteProvider) -> Void, onCancel: @escaping () -> Void) {
+        self.originalProvider = provider
+        self.isNew = isNew
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _name = State(initialValue: provider.name)
+        _baseURL = State(initialValue: provider.baseURL)
+        _apiKey = State(initialValue: provider.apiKey ?? "")
+        _modelName = State(initialValue: provider.modelName ?? "")
+        _isEnabled = State(initialValue: provider.isEnabled)
+    }
+
+    private var isValid: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text(isNew ? "Add Provider" : "Edit Provider")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") {
+                    onCancel()
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding()
+
+            Divider()
+
+            // Form
+            Form {
+                Section {
+                    TextField("Name", text: $name, prompt: Text("e.g., LM Studio"))
+                    TextField("Base URL", text: $baseURL, prompt: Text("e.g., http://localhost:1234/v1"))
+                    SecureField("API Key (optional)", text: $apiKey, prompt: Text("Leave empty if not required"))
+                    TextField("Model Name (optional)", text: $modelName, prompt: Text("Leave empty for default"))
+                }
+
+                Section {
+                    Toggle("Enabled", isOn: $isEnabled)
+                }
+
+                Section {
+                    Text("The base URL should point to an OpenAI-compatible API endpoint. Common examples:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("- LM Studio: http://localhost:1234/v1")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("- Ollama: http://localhost:11434/v1")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            // Footer
+            HStack {
+                Spacer()
+                Button("Save") {
+                    let updated = RemoteProvider(
+                        id: originalProvider.id,
+                        name: name.trimmingCharacters(in: .whitespaces),
+                        baseURL: baseURL.trimmingCharacters(in: .whitespaces),
+                        apiKey: apiKey.isEmpty ? nil : apiKey,
+                        modelName: modelName.isEmpty ? nil : modelName,
+                        isEnabled: isEnabled
+                    )
+                    onSave(updated)
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!isValid)
+            }
+            .padding()
+        }
+        .frame(width: 450, height: 400)
     }
 }
 
@@ -153,9 +632,10 @@ public struct AIModelsSettingsView: View {
 struct AIModelCardView: View {
     let model: AIModel
     @ObservedObject private var aiModelManager = AIModelManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     private var isSelected: Bool {
-        aiModelManager.selectedModelId == model.id
+        aiModelManager.selectedModelId == model.id && providerManager.providerType == .local
     }
 
     private var isDownloaded: Bool {
@@ -271,11 +751,19 @@ struct AIModelCardView: View {
         .onTapGesture {
             // Only allow selection if downloaded
             if isDownloaded {
-                aiModelManager.selectModel(model)
-                Task {
-                    try? await aiModelManager.preload()
-                }
+                activateModel()
             }
+        }
+    }
+
+    /// Activate this local model (also switches to local mode and deactivates remote provider)
+    private func activateModel() {
+        // Clear remote provider selection
+        providerManager.activateLocalMode()
+        // Select and preload this model
+        aiModelManager.selectModel(model)
+        Task {
+            try? await aiModelManager.preload()
         }
     }
 
@@ -368,14 +856,10 @@ struct AIModelCardView: View {
                     .foregroundStyle(.secondary)
             }
         } else if isSelected && aiModelManager.isModelLoaded {
-            // Active model - show deactivate and delete buttons
+            // Active model - show deactivate and delete buttons (Active badge is already in title)
             HStack(spacing: 8) {
-                Label("Active", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondaryAccent)
-
                 Button {
-                    aiModelManager.deactivateModel()
+                    providerManager.deactivate()
                 } label: {
                     Image(systemName: "stop.circle")
                         .font(.caption)
@@ -394,17 +878,8 @@ struct AIModelCardView: View {
                 .help("Delete model")
             }
         } else if isDownloaded {
-            // Downloaded but not active - show activate and delete buttons
+            // Downloaded but not active - just show delete button (clicking card activates)
             HStack(spacing: 8) {
-                Button("Activate") {
-                    aiModelManager.selectModel(model)
-                    Task {
-                        try? await aiModelManager.preload()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-
                 Button(role: .destructive) {
                     aiModelManager.deleteModel(model)
                 } label: {

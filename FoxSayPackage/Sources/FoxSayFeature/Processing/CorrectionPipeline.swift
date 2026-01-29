@@ -11,7 +11,7 @@ public class CorrectionPipeline: ObservableObject {
 
     private let modeManager = VoiceModeManager.shared
     private let promptManager = PromptManager.shared
-    private let aiModelManager = AIModelManager.shared
+    private let providerManager = LLMProviderManager.shared
 
     private init() {}
 
@@ -100,29 +100,32 @@ public class CorrectionPipeline: ObservableObject {
             print("FoxSay: [PIPELINE] Input text to LLM: \"\(text)\"")
             print("FoxSay: [PIPELINE] Prompt template: \"\(prompt.promptText)\"")
 
-            // Check if AI model is ready
-            print("FoxSay: [PIPELINE] AI model ready = \(aiModelManager.isModelReady)")
-            if aiModelManager.isModelReady {
+            // Check if LLM provider is ready
+            print("FoxSay: [PIPELINE] Provider ready = \(providerManager.isReady)")
+            if providerManager.isReady {
                 do {
-                    let llmCorrector = LLMCorrector.shared
-                    let isAvailable = await llmCorrector.available
+                    if let transformer = await providerManager.getTransformer() {
+                        let isAvailable = await transformer.isAvailable
 
-                    if isAvailable {
-                        // Pass the prompt template - LLMCorrector will substitute {input}
-                        let transformed = try await llmCorrector.correct(text, prompt: prompt.promptText)
-                        print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
-                        text = transformed
-                        os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
+                        if isAvailable {
+                            // Pass the prompt template - transformer will substitute {input}
+                            let transformed = try await transformer.transform(text, prompt: prompt.promptText)
+                            print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
+                            text = transformed
+                            os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
+                        } else {
+                            os_log(.info, log: pipelineLog, "Transformer not available, skipping transform")
+                        }
                     } else {
-                        os_log(.info, log: pipelineLog, "AI model not loaded, skipping transform")
+                        os_log(.info, log: pipelineLog, "No transformer available, skipping transform")
                     }
                 } catch {
                     os_log(.error, log: pipelineLog, "AI transform error: %{public}@", String(describing: error))
                     print("FoxSay: [PIPELINE] LLM error: \(error)")
                 }
             } else {
-                os_log(.info, log: pipelineLog, "AI model not ready, skipping transform")
-                print("FoxSay: [PIPELINE] AI model not ready, skipping transform")
+                os_log(.info, log: pipelineLog, "LLM provider not ready, skipping transform")
+                print("FoxSay: [PIPELINE] LLM provider not ready, skipping transform")
             }
         } else {
             print("FoxSay: [PIPELINE] No prompt active, skipping AI transform")

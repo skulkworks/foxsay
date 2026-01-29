@@ -3,7 +3,7 @@ import SwiftUI
 /// Prompts settings view for managing the prompt library
 public struct PromptsSettingsView: View {
     @ObservedObject private var promptManager = PromptManager.shared
-    @ObservedObject private var aiModelManager = AIModelManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     @State private var showAddPromptSheet = false
     @State private var editingPrompt: Prompt?
@@ -25,7 +25,7 @@ public struct PromptsSettingsView: View {
                     .foregroundStyle(.secondary)
 
                 // AI model requirement warning
-                if !aiModelManager.isModelReady {
+                if !providerManager.isReady {
                     aiModelWarning
                 }
 
@@ -117,9 +117,9 @@ public struct PromptsSettingsView: View {
                     .foregroundColor(.orange)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("AI Model Required")
+                    Text("AI Provider Required")
                         .font(.headline)
-                    Text("Download and select an AI model in the AI Models section to use prompts.")
+                    Text("Select a local model or remote provider in the AI Models section to use prompts.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -208,7 +208,7 @@ public struct PromptsSettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(!aiModelManager.isModelReady || !prompt.isEnabled)
+                    .disabled(!providerManager.isReady || !prompt.isEnabled)
                 }
 
                 // Visibility toggle (eye icon)
