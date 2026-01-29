@@ -19,7 +19,6 @@ public struct PromptsSettingsView: View {
                 Text("Prompts")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .padding(.bottom, 8)
 
                 Text("Manage your prompt library. Use prompts to transform transcribed text with AI assistance.")
                     .font(.subheadline)

@@ -225,8 +225,8 @@ public struct StatusPaneView: View {
     }
 
     private var aiModelStatusText: String {
-        if aiModelManager.isModelLoaded {
-            return "Ready"
+        if aiModelManager.isModelLoaded, let model = aiModelManager.selectedModel {
+            return model.shortName
         } else if aiModelManager.isPreloading {
             return "Loading..."
         } else if aiModelManager.isModelReady {

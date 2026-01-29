@@ -70,15 +70,35 @@ public class CorrectionPipeline: ObservableObject {
             text = minimalCleanup(text)
         }
 
-        // Step 4: Apply active prompt transformation using AI
-        print("FoxSay: [PIPELINE] Checking for active prompt...")
-        print("FoxSay: [PIPELINE] activePromptId = \(String(describing: promptManager.activePromptId))")
+        // Step 4: Apply prompt transformation using AI
+        // Priority: App-specific prompt > Manually activated prompt > None
+        print("FoxSay: [PIPELINE] Checking for prompt...")
 
-        if let activePrompt = promptManager.activePrompt {
-            os_log(.info, log: pipelineLog, "Active prompt: %{public}@", activePrompt.name)
-            print("FoxSay: [PIPELINE] Active prompt: \(activePrompt.name)")
+        let appDetector = AppDetector.shared
+        let appPromptManager = AppPromptManager.shared
+        let targetBundleId = appDetector.targetAppBundleId
+
+        print("FoxSay: [PIPELINE] Target app: \(targetBundleId ?? "unknown")")
+
+        // Determine which prompt to use
+        var effectivePrompt: Prompt?
+
+        // First check for app-specific prompt
+        if let bundleId = targetBundleId,
+           let appPrompt = appPromptManager.getDefaultPrompt(forBundleId: bundleId) {
+            effectivePrompt = appPrompt
+            print("FoxSay: [PIPELINE] Using app-specific prompt: \(appPrompt.name) (for \(bundleId))")
+        }
+        // Fall back to manually activated prompt
+        else if let activePrompt = promptManager.activePrompt {
+            effectivePrompt = activePrompt
+            print("FoxSay: [PIPELINE] Using active prompt: \(activePrompt.name)")
+        }
+
+        if let prompt = effectivePrompt {
+            os_log(.info, log: pipelineLog, "Using prompt: %{public}@", prompt.name)
             print("FoxSay: [PIPELINE] Input text to LLM: \"\(text)\"")
-            print("FoxSay: [PIPELINE] Prompt template: \"\(activePrompt.promptText)\"")
+            print("FoxSay: [PIPELINE] Prompt template: \"\(prompt.promptText)\"")
 
             // Check if AI model is ready
             print("FoxSay: [PIPELINE] AI model ready = \(aiModelManager.isModelReady)")
@@ -89,7 +109,7 @@ public class CorrectionPipeline: ObservableObject {
 
                     if isAvailable {
                         // Pass the prompt template - LLMCorrector will substitute {input}
-                        let transformed = try await llmCorrector.correct(text, prompt: activePrompt.promptText)
+                        let transformed = try await llmCorrector.correct(text, prompt: prompt.promptText)
                         print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
                         text = transformed
                         os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
@@ -105,7 +125,7 @@ public class CorrectionPipeline: ObservableObject {
                 print("FoxSay: [PIPELINE] AI model not ready, skipping transform")
             }
         } else {
-            print("FoxSay: [PIPELINE] No active prompt, skipping AI transform")
+            print("FoxSay: [PIPELINE] No prompt active, skipping AI transform")
         }
 
         // Step 5: Post-processing cleanup
