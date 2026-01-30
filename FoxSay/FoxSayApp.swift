@@ -67,6 +67,8 @@ struct FoxSayApp: App {
         WindowGroup {
             MainWindowView()
                 .environmentObject(appState)
+                .tint(Color("BrandOrange"))
+                .accentColor(Color("BrandOrange"))
                 .onAppear {
                     // Initialize managers
                     Task { @MainActor in
