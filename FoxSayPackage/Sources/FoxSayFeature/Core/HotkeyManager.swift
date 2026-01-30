@@ -455,12 +455,32 @@ public class HotkeyManager: ObservableObject {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Request accessibility permissions (opens System Settings).
+    /// Request accessibility permissions or open Settings if already enabled.
     /// Note: Accessibility is needed for auto-paste (text injection), not for hotkey detection.
+    /// On macOS Sonoma+, apps cannot auto-add to Accessibility list - user must add manually.
     @MainActor
     public static func requestAccessibilityPermission() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
+        let trusted = checkAccessibilityPermission()
+
+        if trusted {
+            // Already enabled - just open Settings so user can manage it
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
+        } else {
+            // Show alert with instructions
+            let alert = NSAlert()
+            alert.messageText = "Accessibility Permission Required"
+            alert.informativeText = "To enable Auto-Paste, you need to add FoxSay to the Accessibility list:\n\n1. Click 'Open Settings' below\n2. Click the '+' button at the bottom\n3. Navigate to Applications and select FoxSay\n4. Toggle FoxSay ON"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "Cancel")
+
+            if alert.runModal() == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
     }
 

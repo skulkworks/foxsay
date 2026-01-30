@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Main status pane showing recording state and system status
 public struct StatusPaneView: View {
@@ -7,6 +8,7 @@ public struct StatusPaneView: View {
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var aiModelManager = AIModelManager.shared
+    @ObservedObject private var promptManager = PromptManager.shared
 
     public init() {}
 
@@ -32,6 +34,11 @@ public struct StatusPaneView: View {
 
             // System status cards
             systemStatusCards
+
+            // Active prompt info
+            if let activePrompt = promptManager.activePrompt {
+                activePromptInfo(activePrompt)
+            }
 
             Spacer()
         }
@@ -138,7 +145,12 @@ public struct StatusPaneView: View {
                 isReady: audioEngine.hasPermission,
                 isLoading: false
             ) {
-                if !audioEngine.hasPermission {
+                if audioEngine.hasPermission {
+                    // Open System Settings > Privacy & Security > Microphone
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } else {
                     Task {
                         await audioEngine.checkPermission()
                     }
@@ -154,9 +166,8 @@ public struct StatusPaneView: View {
                 isReady: hasAccessibility,
                 isLoading: false
             ) {
-                if !hasAccessibility {
-                    HotkeyManager.requestAccessibilityPermission()
-                }
+                // Always request/re-request accessibility - handles both initial setup and re-adding
+                HotkeyManager.requestAccessibilityPermission()
             }
 
             // Speech Model
@@ -167,9 +178,7 @@ public struct StatusPaneView: View {
                 isReady: modelManager.isModelLoaded,
                 isLoading: modelManager.isPreloading
             ) {
-                if !modelManager.isModelReady {
-                    appState.selectedSidebarItem = .models
-                }
+                appState.selectedSidebarItem = .models
             }
 
             // AI Model
@@ -180,9 +189,7 @@ public struct StatusPaneView: View {
                 isReady: aiModelManager.isModelLoaded,
                 isLoading: aiModelManager.isPreloading
             ) {
-                if !aiModelManager.isModelReady {
-                    appState.selectedSidebarItem = .aiModels
-                }
+                appState.selectedSidebarItem = .aiModels
             }
         }
         .padding(.horizontal, 24)
@@ -238,25 +245,64 @@ public struct StatusPaneView: View {
         }
     }
 
+    private func activePromptInfo(_ prompt: Prompt) -> some View {
+        Button {
+            appState.selectedSidebarItem = .prompts
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("AI Prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(prompt.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(width: 376) // Match width of 4 status cards (4×85 + 3×12)
+            .background(Color(.textBackgroundColor).opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+    }
+
     private func statusCard(title: String, icon: String, status: String, isReady: Bool, isLoading: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 if isLoading {
                     SpinningIcon(icon: icon)
+                        .frame(height: 28)
                 } else {
                     Image(systemName: icon)
                         .font(.system(size: 24))
-                        .foregroundColor(isReady ? .secondaryAccent : .gray)
+                        .foregroundColor(isReady ? .accentColor : .secondary)
+                        .frame(height: 28)
                 }
 
                 Text(title)
                     .font(.caption)
                     .fontWeight(.medium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 Text(status)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(width: 85, height: 85)
             .background(Color(.textBackgroundColor).opacity(0.5))

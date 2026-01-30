@@ -30,6 +30,12 @@ public struct SidebarView: View {
                     sidebarRow(item)
                 }
             }
+
+            Section("Experimental") {
+                ForEach([SidebarItem.experimental]) { item in
+                    sidebarRow(item)
+                }
+            }
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
@@ -71,16 +77,16 @@ public struct SidebarView: View {
             // Mic status
             statusDot(
                 isActive: audioEngine.hasPermission,
-                activeColor: .secondaryAccent,
-                inactiveColor: .gray,
+                activeColor: .accentColor,
+                inactiveColor: .secondary,
                 icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash"
             )
 
             // Auto-paste status (Accessibility permission)
             statusDot(
                 isActive: HotkeyManager.checkAccessibilityPermission(),
-                activeColor: .secondaryAccent,
-                inactiveColor: .gray,
+                activeColor: .accentColor,
+                inactiveColor: .secondary,
                 icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard"
             )
 
@@ -114,28 +120,28 @@ public struct SidebarView: View {
     @ViewBuilder
     private var modelStatusDot: some View {
         if modelManager.isModelLoaded {
-            statusDot(isActive: true, activeColor: .secondaryAccent, inactiveColor: .secondaryAccent, icon: "checkmark.circle.fill")
+            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "checkmark.circle.fill")
         } else if modelManager.isPreloading {
-            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .accentColor)
+            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .secondary)
         } else if modelManager.isModelReady {
-            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .accentColor, icon: "hourglass")
+            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "hourglass")
         } else {
-            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .gray, icon: "arrow.down.circle")
+            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "arrow.down.circle")
         }
     }
 
     @ViewBuilder
     private var aiModelStatusDot: some View {
         if aiModelManager.isModelLoaded {
-            statusDot(isActive: true, activeColor: .secondaryAccent, inactiveColor: .secondaryAccent, icon: "brain")
+            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "brain")
         } else if aiModelManager.isPreloading {
             // Use rotating arrow icon during loading (brain is too symmetric to show rotation)
-            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .accentColor)
+            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .secondary)
         } else if aiModelManager.isModelReady {
-            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .accentColor, icon: "brain")
+            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "brain")
         } else {
             // No AI model selected/downloaded - gray
-            statusDot(isActive: false, activeColor: .secondaryAccent, inactiveColor: .gray, icon: "brain")
+            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "brain")
         }
     }
 }

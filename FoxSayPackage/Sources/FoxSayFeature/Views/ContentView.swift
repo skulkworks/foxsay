@@ -193,11 +193,11 @@ public struct ContentView: View {
 
     private var engineStatusColor: Color {
         if engineManager.isEngineReady {
-            return .secondaryAccent
-        } else if engineManager.isPreloading || engineManager.isModelReady {
             return .accentColor
+        } else if engineManager.isPreloading || engineManager.isModelReady {
+            return .secondary
         } else {
-            return .orange
+            return .secondary
         }
     }
 
@@ -235,11 +235,11 @@ public struct ContentView: View {
 
     private var aiModelStatusColor: Color {
         if aiModelManager.isModelLoaded {
-            return .secondaryAccent
-        } else if aiModelManager.isPreloading || aiModelManager.isModelReady {
             return .accentColor
+        } else if aiModelManager.isPreloading || aiModelManager.isModelReady {
+            return .secondary
         } else {
-            return .orange
+            return .secondary
         }
     }
 

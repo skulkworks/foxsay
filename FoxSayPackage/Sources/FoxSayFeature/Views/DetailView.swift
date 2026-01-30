@@ -29,6 +29,8 @@ public struct DetailView: View {
             AppPromptsSettingsView()
         case .history:
             HistoryView()
+        case .experimental:
+            ExperimentalSettingsView()
         }
     }
 }

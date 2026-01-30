@@ -67,8 +67,6 @@ struct FoxSayApp: App {
         WindowGroup {
             MainWindowView()
                 .environmentObject(appState)
-                .tint(Color("BrandOrange"))
-                .accentColor(Color("BrandOrange"))
                 .onAppear {
                     // Initialize managers
                     Task { @MainActor in
@@ -88,7 +86,7 @@ struct FoxSayApp: App {
         }
         .windowToolbarStyle(.unified)
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 650, height: 500)
+        .defaultSize(width: 650, height: 600)
         .commands {
             // Remove the default "New Window" command
             CommandGroup(replacing: .newItem) {}

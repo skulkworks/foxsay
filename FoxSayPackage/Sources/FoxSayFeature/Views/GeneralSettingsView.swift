@@ -6,7 +6,6 @@ import SwiftUI
 public struct GeneralSettingsView: View {
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
-    @ObservedObject private var modeManager = VoiceModeManager.shared
     @EnvironmentObject private var appState: AppState
 
     @State private var isTestingHotkey = false
@@ -188,27 +187,6 @@ public struct GeneralSettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Text Processing", systemImage: "text.bubble")
                     .font(.headline)
-
-                // Markdown mode toggle
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Markdown Mode")
-                        Text("Convert voice commands to markdown syntax (bold, headings, etc.)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("Enable in prompt selector or by saying \"markdown mode\"")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    Spacer()
-
-                    Toggle("", isOn: $modeManager.markdownModeEnabled)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                }
-
-                Divider()
 
                 // Prompt selector hotkey
                 HStack {
