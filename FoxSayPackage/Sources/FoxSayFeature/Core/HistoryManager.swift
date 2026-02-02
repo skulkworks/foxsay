@@ -21,7 +21,7 @@ public class HistoryManager: ObservableObject {
     private init() {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
-        ).first!.appendingPathComponent("VoiceFox", isDirectory: true)
+        ).first!.appendingPathComponent("FoxSay", isDirectory: true)
 
         historyFileURL = appSupport.appendingPathComponent("history.json")
         audioDirectoryURL = appSupport.appendingPathComponent("audio", isDirectory: true)
@@ -156,7 +156,7 @@ public class HistoryManager: ObservableObject {
             commonFormat: .pcmFormatFloat32,
             interleaved: false
         ) else {
-            print("VoiceFox: Failed to create audio file")
+            print("FoxSay: Failed to create audio file")
             return nil
         }
 
@@ -164,7 +164,7 @@ public class HistoryManager: ObservableObject {
             pcmFormat: format,
             frameCapacity: AVAudioFrameCount(audioBuffer.count)
         ) else {
-            print("VoiceFox: Failed to create audio buffer")
+            print("FoxSay: Failed to create audio buffer")
             return nil
         }
 
@@ -181,10 +181,10 @@ public class HistoryManager: ObservableObject {
 
         do {
             try audioFile.write(from: buffer)
-            print("VoiceFox: Saved audio file: \(fileName)")
+            print("FoxSay: Saved audio file: \(fileName)")
             return fileName
         } catch {
-            print("VoiceFox: Failed to write audio file: \(error)")
+            print("FoxSay: Failed to write audio file: \(error)")
             return nil
         }
     }
@@ -205,7 +205,7 @@ public class HistoryManager: ObservableObject {
             items = try decoder.decode([HistoryItem].self, from: data)
             applyRetentionPolicy()
         } catch {
-            print("VoiceFox: Failed to load history: \(error)")
+            print("FoxSay: Failed to load history: \(error)")
         }
     }
 
@@ -216,7 +216,7 @@ public class HistoryManager: ObservableObject {
             let data = try encoder.encode(items)
             try data.write(to: historyFileURL)
         } catch {
-            print("VoiceFox: Failed to save history: \(error)")
+            print("FoxSay: Failed to save history: \(error)")
         }
     }
 

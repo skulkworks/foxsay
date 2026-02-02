@@ -1,17 +1,17 @@
-// VoiceFox - Speech-to-Text for Developers
+// FoxSay - Speech-to-Text for Developers
 // MIT License
 
 @_exported import Foundation
 @_exported import SwiftUI
 
 // Re-export public types
-public typealias VoiceFoxAppState = AppState
-public typealias VoiceFoxTranscriptionResult = TranscriptionResult
+public typealias FoxSayAppState = AppState
+public typealias FoxSayTranscriptionResult = TranscriptionResult
 
-/// Main coordinator for VoiceFox functionality
+/// Main coordinator for FoxSay functionality
 @MainActor
-public class VoiceFoxCoordinator: ObservableObject {
-    public static let shared = VoiceFoxCoordinator()
+public class FoxSayCoordinator: ObservableObject {
+    public static let shared = FoxSayCoordinator()
 
     private let audioEngine = AudioEngine.shared
     private let engineManager = EngineManager.shared
@@ -26,14 +26,14 @@ public class VoiceFoxCoordinator: ObservableObject {
         setupHotkeyCallbacks()
     }
 
-    /// Initialize and start VoiceFox
+    /// Initialize and start FoxSay
     public func start() async {
         // Request permissions
         await audioEngine.checkPermission()
 
         // Check accessibility (needed for auto-paste)
         if !HotkeyManager.checkAccessibilityPermission() {
-            print("VoiceFox: Accessibility permission not granted - auto-paste will not work")
+            print("FoxSay: Accessibility permission not granted - auto-paste will not work")
         }
     }
 

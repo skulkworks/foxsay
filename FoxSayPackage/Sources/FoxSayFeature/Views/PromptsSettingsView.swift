@@ -195,22 +195,6 @@ public struct PromptsSettingsView: View {
             Spacer()
 
             HStack(spacing: 8) {
-                // Activate/Deactivate button
-                if promptManager.isActive(prompt) {
-                    Button("Deactivate") {
-                        promptManager.deactivatePrompt()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                } else {
-                    Button("Activate") {
-                        promptManager.activatePrompt(id: prompt.id)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(!providerManager.isReady || !prompt.isEnabled)
-                }
-
                 // Visibility toggle (eye icon)
                 Button {
                     promptManager.toggleEnabled(prompt)
@@ -219,7 +203,7 @@ public struct PromptsSettingsView: View {
                         .foregroundColor(prompt.isEnabled ? .secondary : .red.opacity(0.6))
                 }
                 .buttonStyle(.borderless)
-                .help(prompt.isEnabled ? "Hide from selector" : "Show in selector")
+                .help(prompt.isEnabled ? "Disable" : "Enable")
 
                 // Edit button
                 Button {

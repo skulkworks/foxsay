@@ -25,10 +25,10 @@ public class MenuBarManager: NSObject, ObservableObject {
 
     override private init() {
         super.init()
-        print("VoiceFox: MenuBarManager initializing...")
+        print("FoxSay: MenuBarManager initializing...")
         setupMenuBar()
         observeUserDefaults()
-        print("VoiceFox: MenuBarManager initialized")
+        print("FoxSay: MenuBarManager initialized")
     }
 
     private func observeUserDefaults() {
@@ -70,48 +70,71 @@ public class MenuBarManager: NSObject, ObservableObject {
     }
 
     @objc private func menuBarButtonClicked(_ sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
-
-        if event.type == .rightMouseUp {
-            showContextMenu()
-        } else {
-            toggleOverlay()
-        }
+        showMainMenu()
     }
 
-    private func showContextMenu() {
+    private func showMainMenu() {
         let menu = NSMenu()
 
-        menu.addItem(
-            NSMenuItem(
-                title: "Settings...",
-                action: #selector(openSettings),
-                keyEquivalent: ","
-            ))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(
-            NSMenuItem(
-                title: "Quit FoxSay",
-                action: #selector(quitApp),
-                keyEquivalent: "q"
-            ))
+        // Toggle Dictation with hotkey symbol
+        let hotkeyManager = HotkeyManager.shared
+        let dictationTitle = "Toggle Dictation (\(hotkeyManager.selectedModifier.shortName))"
+        let dictationItem = NSMenuItem(
+            title: dictationTitle,
+            action: #selector(toggleDictation),
+            keyEquivalent: ""
+        )
+        dictationItem.target = self
+        menu.addItem(dictationItem)
 
-        for item in menu.items {
-            item.target = self
+        // Prompt Selector (only if enabled)
+        if hotkeyManager.promptSelectorEnabled {
+            let promptTitle = "Prompt Selector (\(hotkeyManager.promptSelectorModifier.shortName))"
+            let promptItem = NSMenuItem(
+                title: promptTitle,
+                action: #selector(showPromptSelector),
+                keyEquivalent: ""
+            )
+            promptItem.target = self
+            menu.addItem(promptItem)
         }
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Settings
+        let settingsItem = NSMenuItem(
+            title: "Settings...",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
+        // Quit
+        let quitItem = NSMenuItem(
+            title: "Quit FoxSay",
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
+        quitItem.target = self
+        menu.addItem(quitItem)
 
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
         statusItem?.menu = nil
     }
 
-    private func toggleOverlay() {
-        AppState.shared.isOverlayVisible.toggle()
-
-        // Activate app if showing overlay
-        if AppState.shared.isOverlayVisible {
-            NSApp.activate(ignoringOtherApps: true)
+    @objc private func toggleDictation() {
+        // Simulate hotkey press to toggle recording
+        if AppState.shared.isRecording {
+            HotkeyManager.shared.stopToggleRecording()
+        } else {
+            HotkeyManager.shared.onHotkeyDown?()
         }
+    }
+
+    @objc private func showPromptSelector() {
+        HotkeyManager.shared.onPromptSelector?()
     }
 
     @objc private func openSettings() {

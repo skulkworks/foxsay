@@ -86,10 +86,10 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var shortName: String {
         switch self {
-        case .whisperTiny: return "Tiny"
-        case .whisperBase, .whisperKit: return "Base"
-        case .whisperSmall: return "Small"
-        case .whisperLargeTurbo: return "Turbo"
+        case .whisperTiny: return "Whisper Tiny"
+        case .whisperBase, .whisperKit: return "Whisper Base"
+        case .whisperSmall: return "Whisper Small"
+        case .whisperLargeTurbo: return "Whisper Turbo"
         case .parakeetV2: return "Parakeet V2"
         case .parakeetV3: return "Parakeet V3"
         }

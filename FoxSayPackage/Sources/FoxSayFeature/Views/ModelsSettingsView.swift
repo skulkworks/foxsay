@@ -232,7 +232,7 @@ struct ModelCardView: View {
                 }
             }
             .padding(16)
-            .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.textBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

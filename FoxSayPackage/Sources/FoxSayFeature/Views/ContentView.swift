@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Main content view for VoiceFox - minimal status display
+/// Main content view for FoxSay - minimal status display
 public struct ContentView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioEngine = AudioEngine.shared

@@ -134,7 +134,7 @@ public struct SetupWizardView: View {
         VStack(spacing: 20) {
             Image(systemName: audioEngine.hasPermission ? "mic.circle.fill" : "mic.slash")
                 .font(.system(size: 64))
-                .foregroundColor(audioEngine.hasPermission ? .secondaryAccent : .orange)
+                .foregroundColor(audioEngine.hasPermission ? .accentColor : .orange)
 
             Text("Microphone Access")
                 .font(.title2)
@@ -147,7 +147,7 @@ public struct SetupWizardView: View {
 
             if audioEngine.hasPermission {
                 Label("Microphone access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
+                    .foregroundColor(.accentColor)
             } else {
                 Button("Grant Microphone Access") {
                     Task {
@@ -165,7 +165,7 @@ public struct SetupWizardView: View {
         return VStack(spacing: 20) {
             Image(systemName: hasAccess ? "hand.raised.circle.fill" : "hand.raised.slash")
                 .font(.system(size: 64))
-                .foregroundColor(hasAccess ? .secondaryAccent : .orange)
+                .foregroundColor(hasAccess ? .accentColor : .orange)
 
             Text("Accessibility Access")
                 .font(.title2)
@@ -178,7 +178,7 @@ public struct SetupWizardView: View {
 
             if hasAccess {
                 Label("Accessibility access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
+                    .foregroundColor(.accentColor)
             } else {
                 VStack(spacing: 12) {
                     Button("Open System Settings") {
@@ -199,7 +199,7 @@ public struct SetupWizardView: View {
         }
         .id(refreshTrigger)  // Force view recreation when refreshTrigger changes
         .onAppear {
-            print("VoiceFox: Accessibility check = \(HotkeyManager.checkAccessibilityPermission())")
+            print("FoxSay: Accessibility check = \(HotkeyManager.checkAccessibilityPermission())")
         }
     }
 
@@ -213,19 +213,40 @@ public struct SetupWizardView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("FoxSay uses a local AI model for transcription. This needs to be downloaded once (~150 MB).")
+            Text("FoxSay uses a local AI model for transcription. Choose a model and download it.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
-            VStack(spacing: 8) {
-                Text("WhisperKit (base.en)")
-                    .font(.headline)
+            VStack(spacing: 12) {
+                // Model picker
+                Picker("Model", selection: Binding<ModelType>(
+                    get: { engineManager.currentModelType },
+                    set: { (newValue: ModelType) in
+                        Task {
+                            await engineManager.selectModel(newValue)
+                        }
+                    }
+                )) {
+                    Text("Parakeet V2 (English)").tag(ModelType.parakeetV2)
+                    Text("Parakeet V3 (Multilingual)").tag(ModelType.parakeetV3)
+                    Text("Whisper Base").tag(ModelType.whisperBase)
+                    Text("Whisper Small").tag(ModelType.whisperSmall)
+                    Text("Whisper Large Turbo").tag(ModelType.whisperLargeTurbo)
+                }
+                .pickerStyle(.menu)
+                .frame(width: 240)
+
+                Text(engineManager.currentModelType.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(height: 32)
 
                 if isDownloading {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
-                        .tint(.secondaryAccent)
+                        .tint(.accentColor)
                         .frame(width: 200)
 
                     Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")
@@ -257,7 +278,7 @@ public struct SetupWizardView: View {
         VStack(spacing: 20) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
-                .foregroundColor(.secondaryAccent)
+                .foregroundColor(.accentColor)
 
             Text("You're All Set!")
                 .font(.title)
@@ -265,11 +286,11 @@ public struct SetupWizardView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Label("Microphone ready", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
+                    .foregroundColor(.accentColor)
                 Label("Auto-paste enabled", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
+                    .foregroundColor(.accentColor)
                 Label("Model downloaded", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
+                    .foregroundColor(.accentColor)
             }
             .padding()
 

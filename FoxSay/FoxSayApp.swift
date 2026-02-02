@@ -5,7 +5,7 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("VoiceFox: applicationDidFinishLaunching")
+        print("FoxSay: applicationDidFinishLaunching")
 
         // Apply dock visibility setting
         let showInDock = UserDefaults.standard.object(forKey: "showInDock") as? Bool ?? true
@@ -15,6 +15,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             _ = MenuBarManager.shared
         }
+
+        // Hide window on launch if setting is enabled
+        let hideWindowOnLaunch = UserDefaults.standard.bool(forKey: "hideWindowOnLaunch")
+        if hideWindowOnLaunch {
+            DispatchQueue.main.async {
+                for window in NSApp.windows {
+                    window.close()
+                }
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -23,7 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        print("VoiceFox: applicationWillTerminate")
+        print("FoxSay: applicationWillTerminate")
 
         // Clean up resources
         Task { @MainActor in
@@ -54,12 +64,40 @@ struct FoxSayApp: App {
             defaults.set(true, forKey: "showInDock")
         }
 
-        if defaults.object(forKey: "selectedEngine") == nil {
-            defaults.set("whisperkit", forKey: "selectedEngine")
+        if defaults.object(forKey: "selectedEngine") == nil && defaults.object(forKey: "selectedModel") == nil {
+            defaults.set("parakeet", forKey: "selectedModel")
         }
 
         if defaults.object(forKey: "hotkeyModifier") == nil {
             defaults.set("rightCommand", forKey: "hotkeyModifier")
+        }
+    }
+
+    private func resetToDefaults() {
+        let alert = NSAlert()
+        alert.messageText = "Reset to Defaults?"
+        alert.informativeText = "This will clear all settings and restart FoxSay. The setup wizard will run again on next launch."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Reset & Restart")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            // Clear all UserDefaults for this app
+            if let bundleId = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: bundleId)
+                UserDefaults.standard.synchronize()
+            }
+
+            // Relaunch the app
+            let url = URL(fileURLWithPath: Bundle.main.resourcePath!)
+            let path = url.deletingLastPathComponent().deletingLastPathComponent().absoluteString
+            let task = Process()
+            task.launchPath = "/usr/bin/open"
+            task.arguments = [path]
+            task.launch()
+
+            // Quit current instance
+            NSApp.terminate(nil)
         }
     }
 
@@ -96,6 +134,12 @@ struct FoxSayApp: App {
                     appState.showSettings = true
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                Divider()
+
+                Button("Reset to Defaults...") {
+                    resetToDefaults()
+                }
             }
 
             CommandGroup(replacing: .help) {

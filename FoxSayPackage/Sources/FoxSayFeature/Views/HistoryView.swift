@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// History view showing past transcriptions with audio playback
 public struct HistoryView: View {
@@ -114,6 +115,12 @@ public struct HistoryView: View {
                             }
 
                             Button {
+                                downloadAsFile(item)
+                            } label: {
+                                Label("Save as File", systemImage: "square.and.arrow.down")
+                            }
+
+                            Button {
                                 historyManager.toggleStar(for: item)
                             } label: {
                                 Label(
@@ -209,6 +216,28 @@ public struct HistoryView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    private func downloadAsFile(_ item: HistoryItem) {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.plainText]
+        savePanel.canCreateDirectories = true
+
+        // Generate default filename from timestamp
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let dateString = formatter.string(from: item.timestamp)
+        savePanel.nameFieldStringValue = "transcription_\(dateString).txt"
+
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                do {
+                    try item.text.write(to: url, atomically: true, encoding: .utf8)
+                } catch {
+                    print("FoxSay: Failed to save transcription: \(error)")
+                }
+            }
+        }
     }
 }
 

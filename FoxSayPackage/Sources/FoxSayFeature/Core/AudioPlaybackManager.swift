@@ -24,7 +24,7 @@ public class AudioPlaybackManager: NSObject, ObservableObject {
         stop()
 
         guard let url = HistoryManager.shared.getAudioURL(for: item) else {
-            print("VoiceFox: No audio file for item")
+            print("FoxSay: No audio file for item")
             return
         }
 
@@ -41,9 +41,9 @@ public class AudioPlaybackManager: NSObject, ObservableObject {
             audioPlayer?.play()
             startProgressTimer()
 
-            print("VoiceFox: Playing audio for item \(item.id)")
+            print("FoxSay: Playing audio for item \(item.id)")
         } catch {
-            print("VoiceFox: Failed to play audio: \(error)")
+            print("FoxSay: Failed to play audio: \(error)")
         }
     }
 
@@ -119,7 +119,7 @@ extension AudioPlaybackManager: AVAudioPlayerDelegate {
     }
 
     nonisolated public func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        print("VoiceFox: Audio decode error: \(error?.localizedDescription ?? "unknown")")
+        print("FoxSay: Audio decode error: \(error?.localizedDescription ?? "unknown")")
         Task { @MainActor in
             self.stop()
         }

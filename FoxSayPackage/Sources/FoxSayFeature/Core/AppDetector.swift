@@ -57,7 +57,7 @@ public class AppDetector: ObservableObject {
 
     /// Capture the current target app when recording starts
     public func captureTargetApp() {
-        // Get the frontmost app that isn't VoiceFox
+        // Get the frontmost app that isn't FoxSay
         let voiceFoxBundleId = Bundle.main.bundleIdentifier
 
         if let app = NSWorkspace.shared.frontmostApplication,
@@ -88,7 +88,7 @@ public class AppDetector: ObservableObject {
     public func getPreviousFrontmostApp() -> NSRunningApplication? {
         let voiceFoxBundleId = Bundle.main.bundleIdentifier
 
-        // Get all running apps and find the most recently activated one that isn't VoiceFox
+        // Get all running apps and find the most recently activated one that isn't FoxSay
         for app in NSWorkspace.shared.runningApplications {
             guard app.activationPolicy == .regular,
                 app.bundleIdentifier != voiceFoxBundleId,

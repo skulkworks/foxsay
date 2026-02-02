@@ -37,7 +37,7 @@ public class TextInjector {
         guard !text.isEmpty else { return }
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        print("VoiceFox: Text copied to clipboard")
+        print("FoxSay: Text copied to clipboard")
     }
 
     /// Inject text into the frontmost application using pasteboard + Cmd+V
@@ -45,7 +45,7 @@ public class TextInjector {
     public func injectText(_ text: String, restoreClipboard: Bool = false) async throws {
         guard !text.isEmpty else { return }
 
-        NSLog("VoiceFox: injectText called with: '%@', restoreClipboard: %d", text, restoreClipboard ? 1 : 0)
+        NSLog("FoxSay: injectText called with: '%@', restoreClipboard: %d", text, restoreClipboard ? 1 : 0)
 
         // Save previous clipboard contents if we need to restore later
         let previousContents: [NSPasteboardItem]? = restoreClipboard ? savePasteboardContents() : nil
@@ -53,7 +53,7 @@ public class TextInjector {
         // Set new text to pasteboard
         pasteboard.clearContents()
         let success = pasteboard.setString(text, forType: .string)
-        NSLog("VoiceFox: Pasteboard setString success: %d", success ? 1 : 0)
+        NSLog("FoxSay: Pasteboard setString success: %d", success ? 1 : 0)
 
         // Small delay to ensure pasteboard is ready
         try await Task.sleep(nanoseconds: 50_000_000)  // 50ms
@@ -67,10 +67,10 @@ public class TextInjector {
         // Restore previous clipboard contents if requested
         if restoreClipboard, let previousContents {
             restorePasteboardContents(previousContents)
-            NSLog("VoiceFox: Previous clipboard contents restored")
+            NSLog("FoxSay: Previous clipboard contents restored")
         }
 
-        NSLog("VoiceFox: Text injection complete")
+        NSLog("FoxSay: Text injection complete")
     }
 
     /// Save current pasteboard contents for later restoration
@@ -107,7 +107,7 @@ public class TextInjector {
         keyUp?.flags = .maskCommand
         keyUp?.post(tap: .cghidEventTap)
 
-        NSLog("VoiceFox: Simulated Cmd+V paste")
+        NSLog("FoxSay: Simulated Cmd+V paste")
     }
 
     /// Alternative: Type text character by character (slower but more compatible)

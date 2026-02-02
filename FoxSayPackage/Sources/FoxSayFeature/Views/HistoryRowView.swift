@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Row view for a single history item
 public struct HistoryRowView: View {
@@ -76,6 +77,16 @@ public struct HistoryRowView: View {
                 .buttonStyle(.borderless)
                 .help("Copy to clipboard")
 
+                // Download button
+                Button {
+                    downloadAsFile()
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Save as file")
+
                 // Delete button
                 if let onDelete {
                     Button {
@@ -147,6 +158,28 @@ public struct HistoryRowView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(item.text, forType: .string)
+    }
+
+    private func downloadAsFile() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.plainText]
+        savePanel.canCreateDirectories = true
+
+        // Generate default filename from timestamp
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let dateString = formatter.string(from: item.timestamp)
+        savePanel.nameFieldStringValue = "transcription_\(dateString).txt"
+
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                do {
+                    try item.text.write(to: url, atomically: true, encoding: .utf8)
+                } catch {
+                    print("FoxSay: Failed to save transcription: \(error)")
+                }
+            }
+        }
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {

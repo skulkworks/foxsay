@@ -7,7 +7,7 @@ A macOS mac app for on-device speech-to-text dictation, built for developers and
 - **On-device transcription** using NVIDIA Parakeet (via FluidAudio) or OpenAI Whisper (via WhisperKit)
 - **Hold-to-talk hotkey** with configurable modifier keys and activation modes (hold, toggle, double-tap)
 - **Voice modes** for context-aware dictation for Markdown
-- **LLM-powered corrections** using Qwen2.5-Coder running locally via Apple MLX
+- **LLM-powered corrections** using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX
 - **Automatic text injection** into the frontmost app via paste
 - **Transcription history** with audio playback
 
@@ -60,6 +60,32 @@ FoxSay uses a protocol-based engine system (`TranscriptionEngine`) with two impl
 
 `ModelManager` handles engine selection, model downloads, and routing transcription requests to the active engine. Models are stored in `~/Library/Application Support/`.
 
+### Apple Silicon Acceleration
+
+All transcription engines are optimized to fully utilize Apple Silicon hardware acceleration:
+
+**Parakeet (FluidAudio)**
+- All inference runs on Apple Neural Engine (ANE) via CoreML
+- Uses `.cpuAndNeuralEngine` compute units for maximum throughput
+- Achieves real-time factor of 0.02-0.05x (20-50x faster than real-time)
+
+**Whisper (WhisperKit)**
+- Explicitly configured for Neural Engine acceleration with optimized `ModelComputeOptions`:
+  - Mel spectrogram extraction: CPU + Neural Engine
+  - Audio encoder: CPU + Neural Engine
+  - Text decoder: CPU + Neural Engine
+  - Prefill: CPU + Neural Engine
+- CoreML models are compiled for ANE execution
+- Large-v3-turbo achieves up to 72x real-time on M2 Ultra with GPU+ANE config
+
+**LLM Corrections (MLX)**
+- All AI models run on Metal GPU via Apple MLX framework
+- Available models include Qwen, Gemma, Llama, Phi, and Mistral (ranging from 1B to 12B parameters)
+- 4-bit quantization reduces memory footprint while maintaining quality
+- Unified memory architecture enables efficient CPU-GPU data sharing
+
+The combination of Neural Engine for speech recognition and Metal GPU for LLM inference allows FoxSay to run multiple AI models simultaneously with minimal power consumption.
+
 ### Parakeet Engine Details
 
 Parakeet is the default and recommended engine. It uses NVIDIA's Parakeet TDT 0.6B model converted to CoreML format for on-device inference:
@@ -73,10 +99,23 @@ Parakeet is the default and recommended engine. It uses NVIDIA's Parakeet TDT 0.
 
 When enabled, FoxSay runs a local LLM for post-transcription corrections:
 
-- **Model**: Qwen2.5-Coder-1.5B-Instruct (4-bit quantized, ~900 MB)
-- **Framework**: Apple MLX via `mlx-swift-lm`
+- **Models**: Choose from multiple models (Qwen, Gemma, Llama, Phi, Mistral) ranging from 1B to 12B parameters
+- **Framework**: Apple MLX via `mlx-swift-lm` with Metal GPU acceleration
+- **Quantization**: All models use 4-bit quantization for reduced memory footprint
 - **Purpose**: Context-aware corrections using mode-specific prompts (e.g. fixing code syntax in JavaScript mode)
-- Heuristics determine whether LLM correction is needed, or it can be set to always apply
+
+Available AI models:
+| Model | Size | Notes |
+|-------|------|-------|
+| Gemma 3 1B | 733 MB | Google's compact QAT model |
+| Qwen 2.5 1.5B | 900 MB | Fast, general-purpose |
+| Qwen 2.5 Coder 1.5B | 900 MB | Optimized for code |
+| Gemma 2 2B | 1.4 GB | Memory efficient |
+| Qwen 2.5 3B | 1.8 GB | Balanced performance |
+| Qwen 2.5 Coder 3B | 1.8 GB | Better code handling |
+| Llama 3.2 3B | 1.9 GB | Meta's latest small model |
+| Phi 4 Mini (3.8B) | 2.3 GB | Excellent reasoning |
+| Mistral NeMo 12B | 7 GB | Highest quality |
 
 ### Voice Modes
 

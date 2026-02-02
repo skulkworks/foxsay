@@ -467,6 +467,7 @@ public struct GeneralSettingsView: View {
     @State private var showInMenuBar: Bool = UserDefaults.standard.bool(forKey: "showInMenuBar")
     @State private var showInDock: Bool = UserDefaults.standard.object(forKey: "showInDock") as? Bool ?? true
     @State private var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
+    @State private var hideWindowOnLaunch: Bool = UserDefaults.standard.bool(forKey: "hideWindowOnLaunch")
 
     private var appearanceSection: some View {
         GroupBox {
@@ -490,6 +491,20 @@ public struct GeneralSettingsView: View {
                             } catch {
                                 print("Failed to update launch at login: \(error)")
                             }
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+
+                HStack {
+                    Text("Hide window on launch")
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { hideWindowOnLaunch },
+                        set: { newValue in
+                            hideWindowOnLaunch = newValue
+                            UserDefaults.standard.set(newValue, forKey: "hideWindowOnLaunch")
                         }
                     ))
                     .labelsHidden()

@@ -257,10 +257,10 @@ public class HotkeyManager: ObservableObject {
         }
 
         if globalFlagsMonitor == nil {
-            NSLog("VoiceFox: Failed to create global event monitor")
+            NSLog("FoxSay: Failed to create global event monitor")
         }
 
-        NSLog("VoiceFox: Hotkey monitoring started for %@ (expecting keyCode: %d)", selectedModifier.displayName, selectedModifier.keyCode ?? 0)
+        NSLog("FoxSay: Hotkey monitoring started for %@ (expecting keyCode: %d)", selectedModifier.displayName, selectedModifier.keyCode ?? 0)
     }
 
     private func stopMonitoring() {
@@ -274,7 +274,7 @@ public class HotkeyManager: ObservableObject {
         }
         isHotkeyPressed = false
 
-        NSLog("VoiceFox: Hotkey monitoring stopped")
+        NSLog("FoxSay: Hotkey monitoring stopped")
     }
 
     private func restartMonitoring() {
@@ -330,7 +330,7 @@ public class HotkeyManager: ObservableObject {
 
     private func handleEscapeKey() {
         guard isEnabled, escapeToCancel, isHotkeyPressed else { return }
-        NSLog("VoiceFox: Escape pressed - cancelling recording")
+        NSLog("FoxSay: Escape pressed - cancelling recording")
         isHotkeyPressed = false
         lastKeyDown = nil
         keyDownTime = nil
@@ -342,12 +342,12 @@ public class HotkeyManager: ObservableObject {
 
     private func handleHoldMode(isModifierActive: Bool, keyCode: UInt16) {
         if isModifierActive && !isHotkeyPressed {
-            NSLog("VoiceFox: [Hold] Hotkey DOWN")
+            NSLog("FoxSay: [Hold] Hotkey DOWN")
             isHotkeyPressed = true
             onHotkeyDown?()
         } else if !isModifierActive && isHotkeyPressed {
             // Release when modifier is no longer active, regardless of which key triggered the event
-            NSLog("VoiceFox: [Hold] Hotkey UP")
+            NSLog("FoxSay: [Hold] Hotkey UP")
             isHotkeyPressed = false
             onHotkeyUp?()
         }
@@ -358,11 +358,11 @@ public class HotkeyManager: ObservableObject {
         if isModifierActive && lastKeyDown != keyCode {
             lastKeyDown = keyCode
             if !isHotkeyPressed {
-                NSLog("VoiceFox: [Toggle] Starting recording")
+                NSLog("FoxSay: [Toggle] Starting recording")
                 isHotkeyPressed = true
                 onHotkeyDown?()
             } else {
-                NSLog("VoiceFox: [Toggle] Stopping recording")
+                NSLog("FoxSay: [Toggle] Stopping recording")
                 isHotkeyPressed = false
                 onHotkeyUp?()
             }
@@ -380,11 +380,11 @@ public class HotkeyManager: ObservableObject {
             if let lastTap = lastTapTime, now.timeIntervalSince(lastTap) < doubleTapThreshold {
                 // Double tap detected
                 if !isHotkeyPressed {
-                    NSLog("VoiceFox: [DoubleTap] Starting recording")
+                    NSLog("FoxSay: [DoubleTap] Starting recording")
                     isHotkeyPressed = true
                     onHotkeyDown?()
                 } else {
-                    NSLog("VoiceFox: [DoubleTap] Stopping recording")
+                    NSLog("FoxSay: [DoubleTap] Stopping recording")
                     isHotkeyPressed = false
                     onHotkeyUp?()
                 }
@@ -405,7 +405,7 @@ public class HotkeyManager: ObservableObject {
             keyDownTime = Date()
 
             if !isHotkeyPressed {
-                NSLog("VoiceFox: [HoldOrToggle] Key down - starting recording")
+                NSLog("FoxSay: [HoldOrToggle] Key down - starting recording")
                 isHotkeyPressed = true
                 onHotkeyDown?()
             }
@@ -419,11 +419,11 @@ public class HotkeyManager: ObservableObject {
 
                 if holdDuration < holdThreshold {
                     // Short press - toggle mode (keep recording)
-                    NSLog("VoiceFox: [HoldOrToggle] Short press (%.2fs) - toggle mode, continuing", holdDuration)
+                    NSLog("FoxSay: [HoldOrToggle] Short press (%.2fs) - toggle mode, continuing", holdDuration)
                     // Don't stop recording - user needs to tap again
                 } else {
                     // Long press - hold mode (stop recording)
-                    NSLog("VoiceFox: [HoldOrToggle] Long hold (%.2fs) - hold mode, stopping", holdDuration)
+                    NSLog("FoxSay: [HoldOrToggle] Long hold (%.2fs) - hold mode, stopping", holdDuration)
                     isHotkeyPressed = false
                     onHotkeyUp?()
                 }
@@ -440,7 +440,7 @@ public class HotkeyManager: ObservableObject {
     /// Stop recording if in toggle/double-tap mode (called when user taps again)
     public func stopToggleRecording() {
         if isHotkeyPressed && (activationMode == .toggle || activationMode == .doubleTap || activationMode == .holdOrToggle) {
-            NSLog("VoiceFox: Manually stopping toggle recording")
+            NSLog("FoxSay: Manually stopping toggle recording")
             isHotkeyPressed = false
             onHotkeyUp?()
         }
@@ -487,7 +487,7 @@ public class HotkeyManager: ObservableObject {
     /// Ensure monitoring is active, restart if needed
     public func ensureMonitoringActive() {
         if globalFlagsMonitor == nil {
-            NSLog("VoiceFox: Monitor was nil, restarting monitoring...")
+            NSLog("FoxSay: Monitor was nil, restarting monitoring...")
             startMonitoring()
         }
     }

@@ -93,14 +93,14 @@ public class ModelManager: ObservableObject {
         guard !isModelLoaded else { return }  // Already preloaded
 
         isPreloading = true
-        print("VoiceFox: Starting model preload...")
+        print("FoxSay: Starting model preload...")
 
         do {
             try await model.preload()
             isModelLoaded = true
-            print("VoiceFox: Model preload complete")
+            print("FoxSay: Model preload complete")
         } catch {
-            print("VoiceFox: Model preload failed: \(error)")
+            print("FoxSay: Model preload failed: \(error)")
             // Non-fatal - will load on first use
         }
 
@@ -200,7 +200,7 @@ public class ModelManager: ObservableObject {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
         ).first!
-        return appSupport.appendingPathComponent("VoiceFox/Models", isDirectory: true)
+        return appSupport.appendingPathComponent("FoxSay/Models", isDirectory: true)
     }
 }
 

@@ -27,6 +27,8 @@ public struct DetailView: View {
             PromptsSettingsView()
         case .appPrompts:
             AppPromptsSettingsView()
+        case .dictionary:
+            DictionarySettingsView()
         case .history:
             HistoryView()
         case .experimental:

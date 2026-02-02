@@ -12,6 +12,7 @@ public class CorrectionPipeline: ObservableObject {
     private let modeManager = VoiceModeManager.shared
     private let promptManager = PromptManager.shared
     private let providerManager = LLMProviderManager.shared
+    private let dictionaryManager = DictionaryManager.shared
 
     private init() {}
 
@@ -28,6 +29,19 @@ public class CorrectionPipeline: ObservableObject {
         }
 
         os_log(.info, log: pipelineLog, ">>> INPUT: %{public}@", text)
+
+        // Step 0: Apply dictionary replacements (filler words, custom terms)
+        let beforeDictionary = text
+        text = dictionaryManager.applyReplacements(text)
+        if text != beforeDictionary {
+            os_log(.info, log: pipelineLog, "After dictionary: %{public}@", text)
+        }
+
+        // Early exit if dictionary removed all content
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            os_log(.info, log: pipelineLog, "No text after dictionary processing, skipping pipeline")
+            return result.withCorrection("")
+        }
 
         // Step 1: Check for markdown mode trigger
         let (markdownTriggered, enableMarkdown, remainingAfterMarkdown) = modeManager.detectMarkdownTrigger(in: text)

@@ -69,7 +69,7 @@ public actor ParakeetEngine: TranscriptionEngine {
         _downloadProgress = 0
 
         let versionLabel = version == .v2 ? "V2" : "V3"
-        print("VoiceFox: Starting Parakeet \(versionLabel) model download via FluidAudio...")
+        print("FoxSay: Starting Parakeet \(versionLabel) model download via FluidAudio...")
 
         do {
             // Start a background task to animate progress while downloading
@@ -91,7 +91,7 @@ public actor ParakeetEngine: TranscriptionEngine {
             progressTask.cancel()
             _downloadProgress = 0.85
 
-            print("VoiceFox: Parakeet \(versionLabel) models downloaded, initializing...")
+            print("FoxSay: Parakeet \(versionLabel) models downloaded, initializing...")
 
             // Initialize ASR manager
             let manager = AsrManager(config: .default)
@@ -100,9 +100,9 @@ public actor ParakeetEngine: TranscriptionEngine {
             asrManager = manager
 
             _downloadProgress = 1.0
-            print("VoiceFox: Parakeet \(versionLabel) model download complete")
+            print("FoxSay: Parakeet \(versionLabel) model download complete")
         } catch {
-            print("VoiceFox: Parakeet \(versionLabel) download failed: \(error)")
+            print("FoxSay: Parakeet \(versionLabel) download failed: \(error)")
             throw TranscriptionError.transcriptionFailed("Failed to download Parakeet \(versionLabel) model: \(error.localizedDescription)")
         }
     }
@@ -118,7 +118,7 @@ public actor ParakeetEngine: TranscriptionEngine {
             }
 
             // Load existing model
-            print("VoiceFox: Loading Parakeet \(versionLabel) model...")
+            print("FoxSay: Loading Parakeet \(versionLabel) model...")
             models = try await AsrModels.downloadAndLoad(version: version)
             let manager = AsrManager(config: .default)
             try await manager.initialize(models: models!)
@@ -175,7 +175,7 @@ public actor ParakeetEngine: TranscriptionEngine {
         }
 
         let versionLabel = version == .v2 ? "V2" : "V3"
-        print("VoiceFox: Preloading Parakeet \(versionLabel) model...")
+        print("FoxSay: Preloading Parakeet \(versionLabel) model...")
         let startTime = CFAbsoluteTimeGetCurrent()
 
         models = try await AsrModels.downloadAndLoad(version: version)
@@ -184,6 +184,6 @@ public actor ParakeetEngine: TranscriptionEngine {
         asrManager = manager
 
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("VoiceFox: Parakeet \(versionLabel) model preloaded in \(String(format: "%.2f", loadTime))s")
+        print("FoxSay: Parakeet \(versionLabel) model preloaded in \(String(format: "%.2f", loadTime))s")
     }
 }

@@ -241,7 +241,7 @@ public struct StatusPaneView: View {
         } else if aiModelManager.selectedModelId != nil {
             return "Download"
         } else {
-            return "Not set"
+            return "Download"
         }
     }
 

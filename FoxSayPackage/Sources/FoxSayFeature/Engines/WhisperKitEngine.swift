@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import WhisperKit
+import CoreML
 
 /// WhisperKit-based transcription engine
 public actor WhisperKitEngine: TranscriptionEngine {
@@ -16,6 +17,17 @@ public actor WhisperKitEngine: TranscriptionEngine {
     // nonisolated so progress polling doesn't block on actor
     private nonisolated(unsafe) var _downloadProgress: Double = 0
     private var isCancelled = false
+
+    /// Optimized compute options for Apple Silicon
+    /// Uses Neural Engine for maximum performance and energy efficiency
+    private var computeOptions: ModelComputeOptions {
+        ModelComputeOptions(
+            melCompute: .cpuAndNeuralEngine,
+            audioEncoderCompute: .cpuAndNeuralEngine,
+            textDecoderCompute: .cpuAndNeuralEngine,
+            prefillCompute: .cpuAndNeuralEngine
+        )
+    }
 
     public init(modelType: ModelType = .whisperBase) {
         self.modelType = modelType
@@ -88,13 +100,13 @@ public actor WhisperKitEngine: TranscriptionEngine {
         defer { isLoading = false }
 
         // Create models directory if needed
-        print("VoiceFox: Creating models directory at \(downloadBase.path)")
+        print("FoxSay: Creating models directory at \(downloadBase.path)")
         try FileManager.default.createDirectory(
             at: downloadBase, withIntermediateDirectories: true)
 
         // Download and initialize WhisperKit
         do {
-            print("VoiceFox: Starting WhisperKit download for \(whisperModelName) to \(downloadBase.path)")
+            print("FoxSay: Starting WhisperKit download for \(whisperModelName) to \(downloadBase.path)")
 
             // Start a background task to animate progress while downloading
             // WhisperKit doesn't expose download progress, so we simulate it
@@ -109,9 +121,11 @@ public actor WhisperKitEngine: TranscriptionEngine {
             }
 
             // WhisperKit handles model download automatically
+            // Use optimized compute options for Apple Neural Engine acceleration
             whisperKit = try await WhisperKit(
                 model: whisperModelName,
                 downloadBase: downloadBase,
+                computeOptions: computeOptions,
                 verbose: true
             )
 
@@ -119,10 +133,10 @@ public actor WhisperKitEngine: TranscriptionEngine {
             progressTask.cancel()
             _downloadProgress = 1.0
 
-            print("VoiceFox: WhisperKit \(whisperModelName) model download complete")
-            print("VoiceFox: Model path exists: \(FileManager.default.fileExists(atPath: modelPath.path))")
+            print("FoxSay: WhisperKit \(whisperModelName) model download complete")
+            print("FoxSay: Model path exists: \(FileManager.default.fileExists(atPath: modelPath.path))")
         } catch {
-            print("VoiceFox: WhisperKit download failed: \(error)")
+            print("FoxSay: WhisperKit download failed: \(error)")
             throw TranscriptionError.transcriptionFailed("Failed to download model: \(error.localizedDescription)")
         }
     }
@@ -137,10 +151,11 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 throw TranscriptionError.modelNotDownloaded
             }
 
-            // Load existing model
+            // Load existing model with optimized compute options
             whisperKit = try await WhisperKit(
                 model: whisperModelName,
                 downloadBase: downloadBase,
+                computeOptions: computeOptions,
                 verbose: false
             )
         }
@@ -191,16 +206,18 @@ public actor WhisperKitEngine: TranscriptionEngine {
             throw TranscriptionError.modelNotDownloaded
         }
 
-        print("VoiceFox: Preloading WhisperKit \(whisperModelName) model...")
+        print("FoxSay: Preloading WhisperKit \(whisperModelName) model...")
         let startTime = CFAbsoluteTimeGetCurrent()
 
+        // Load with optimized compute options for Apple Neural Engine
         whisperKit = try await WhisperKit(
             model: whisperModelName,
             downloadBase: downloadBase,
+            computeOptions: computeOptions,
             verbose: false
         )
 
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
-        print("VoiceFox: WhisperKit \(whisperModelName) model preloaded in \(String(format: "%.2f", loadTime))s")
+        print("FoxSay: WhisperKit \(whisperModelName) model preloaded in \(String(format: "%.2f", loadTime))s")
     }
 }

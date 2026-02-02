@@ -1,4 +1,4 @@
-# VoiceFox Markdown Voice Commands
+# FoxSay Markdown Voice Commands
 
 Complete reference for voice-to-markdown conversion commands.
 

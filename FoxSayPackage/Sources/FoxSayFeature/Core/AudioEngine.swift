@@ -187,7 +187,7 @@ public class AudioEngine: ObservableObject {
         )
 
         guard status == noErr else {
-            print("VoiceFox: Failed to get audio devices data size")
+            print("FoxSay: Failed to get audio devices data size")
             availableDevices = devices
             return
         }
@@ -205,7 +205,7 @@ public class AudioEngine: ObservableObject {
         )
 
         guard status == noErr else {
-            print("VoiceFox: Failed to get audio devices")
+            print("FoxSay: Failed to get audio devices")
             availableDevices = devices
             return
         }
@@ -247,7 +247,7 @@ public class AudioEngine: ObservableObject {
         }
 
         availableDevices = devices
-        print("VoiceFox: Found \(devices.count) audio input devices")
+        print("FoxSay: Found \(devices.count) audio input devices")
     }
 
     private func getDeviceName(_ deviceID: AudioDeviceID) -> String? {
@@ -362,7 +362,7 @@ public class AudioEngine: ObservableObject {
         )
 
         guard status == noErr else {
-            print("VoiceFox: Failed to get default output device")
+            print("FoxSay: Failed to get default output device")
             return
         }
 
@@ -398,7 +398,7 @@ public class AudioEngine: ObservableObject {
                 dataSize,
                 &newVolume
             )
-            print("VoiceFox: Muted system audio (was \(currentVolume))")
+            print("FoxSay: Muted system audio (was \(currentVolume))")
         }
     }
 
@@ -445,7 +445,7 @@ public class AudioEngine: ObservableObject {
         )
 
         previousSystemVolume = nil
-        print("VoiceFox: Restored system audio to \(previousVolume)")
+        print("FoxSay: Restored system audio to \(previousVolume)")
     }
 
     /// Update permission status without prompting
@@ -508,11 +508,11 @@ public class AudioEngine: ObservableObject {
 
         // Get input format - check for valid format
         let inputFormat = node.outputFormat(forBus: 0)
-        print("VoiceFox: Input format - sampleRate: \(inputFormat.sampleRate), channels: \(inputFormat.channelCount), device: \(selectedDeviceName)")
+        print("FoxSay: Input format - sampleRate: \(inputFormat.sampleRate), channels: \(inputFormat.channelCount), device: \(selectedDeviceName)")
 
         // Validate input format
         guard inputFormat.sampleRate > 0 && inputFormat.channelCount > 0 else {
-            print("VoiceFox: Invalid input format")
+            print("FoxSay: Invalid input format")
             restoreSystemAudio()
             throw AudioEngineError.noInputNode
         }
@@ -531,12 +531,12 @@ public class AudioEngine: ObservableObject {
             isRecording = true
             recordingStartTime = Date()
             recordingDuration = 0
-            print("VoiceFox: Audio engine started successfully")
+            print("FoxSay: Audio engine started successfully")
 
             // Start timer to poll audio level for UI updates
             startLevelUpdateTimer()
         } catch {
-            print("VoiceFox: Failed to start audio engine: \(error)")
+            print("FoxSay: Failed to start audio engine: \(error)")
             // Clean up
             inputNode?.removeTap(onBus: 0)
             audioEngine = nil
@@ -561,9 +561,9 @@ public class AudioEngine: ObservableObject {
         )
 
         if status != noErr {
-            print("VoiceFox: Failed to set input device: \(status)")
+            print("FoxSay: Failed to set input device: \(status)")
         } else {
-            print("VoiceFox: Set input device to ID \(deviceID)")
+            print("FoxSay: Set input device to ID \(deviceID)")
         }
     }
 
