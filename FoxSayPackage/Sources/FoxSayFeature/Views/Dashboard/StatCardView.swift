@@ -27,7 +27,7 @@ struct StatCardView: View {
             // Icon badge with dark grey background
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(.secondary)
                 .frame(width: 28, height: 28)
                 .background(Color.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 6))

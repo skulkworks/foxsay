@@ -236,7 +236,9 @@ public class StatisticsManager: ObservableObject {
                 period: period,
                 aggregates: store.aggregates,
                 dailyData: [],
-                gridData: []
+                gridData: [],
+                thisMonth: MonthlyStatistics(),
+                lastMonth: MonthlyStatistics()
             )
         }
 
@@ -251,12 +253,55 @@ public class StatisticsManager: ObservableObject {
         // Build grid data (7 rows x N weeks)
         let gridData = buildGridData(for: period, endDate: today)
 
+        // Calculate monthly statistics for trends
+        let (thisMonth, lastMonth) = computeMonthlyStatistics(calendar: calendar, today: today)
+
         return DashboardDisplayData(
             period: period,
             aggregates: store.aggregates,
             dailyData: dailyData,
-            gridData: gridData
+            gridData: gridData,
+            thisMonth: thisMonth,
+            lastMonth: lastMonth
         )
+    }
+
+    private func computeMonthlyStatistics(calendar: Calendar, today: Date) -> (thisMonth: MonthlyStatistics, lastMonth: MonthlyStatistics) {
+        // Get first day of this month
+        let thisMonthComponents = calendar.dateComponents([.year, .month], from: today)
+        guard let thisMonthStart = calendar.date(from: thisMonthComponents) else {
+            return (MonthlyStatistics(), MonthlyStatistics())
+        }
+
+        // Get first day of last month
+        guard let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: thisMonthStart) else {
+            return (MonthlyStatistics(), MonthlyStatistics())
+        }
+
+        var thisMonth = MonthlyStatistics()
+        var lastMonth = MonthlyStatistics()
+
+        for (_, daily) in store.dailyData {
+            guard let date = dateFrom(daily.date) else { continue }
+
+            if date >= thisMonthStart && date <= today {
+                // This month
+                thisMonth.sessions += daily.sessionCount
+                thisMonth.words += daily.wordCount
+                thisMonth.durationSeconds += daily.totalDurationSeconds
+                thisMonth.confidenceSum += daily.confidenceSum
+                thisMonth.confidenceCount += daily.confidenceCount
+            } else if date >= lastMonthStart && date < thisMonthStart {
+                // Last month
+                lastMonth.sessions += daily.sessionCount
+                lastMonth.words += daily.wordCount
+                lastMonth.durationSeconds += daily.totalDurationSeconds
+                lastMonth.confidenceSum += daily.confidenceSum
+                lastMonth.confidenceCount += daily.confidenceCount
+            }
+        }
+
+        return (thisMonth, lastMonth)
     }
 
     private func buildGridData(for period: DashboardPeriod, endDate: Date) -> [[DailyAggregate?]] {

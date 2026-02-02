@@ -67,7 +67,7 @@ public struct DashboardView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
 
-            StatsGridView(aggregates: dashboardData.aggregates)
+            StatsGridView(data: dashboardData)
         }
     }
 

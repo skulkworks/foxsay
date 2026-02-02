@@ -43,6 +43,8 @@ struct ActivityGridView: View {
                     Text(position.month)
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                         .frame(width: CGFloat(position.weekSpan) * (cellSize + cellSpacing), alignment: .leading)
                 }
             }
