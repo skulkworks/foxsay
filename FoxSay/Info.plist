@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.2</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>3</string>
     <key>LSMinimumSystemVersion</key>
     <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>NSMicrophoneUsageDescription</key>
@@ -27,7 +27,7 @@
     <key>SUFeedURL</key>
     <string>https://skulkworks.github.io/foxsay/appcast.xml</string>
     <key>SUPublicEDKey</key>
-    <string></string>
+    <string>GW7X7O/4w3LNPQbFP8CfmdwK8Xu9AbU+aooc8eLc5kc=</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
 </dict>
