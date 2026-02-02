@@ -1,6 +1,6 @@
 # FoxSay
 
-A macOS mac app for on-device speech-to-text dictation, built for developers and content creators. Hold a hotkey, speak, and FoxSay transcribes your voice and pastes the result directly into any app. All processing happens locally on your Mac -- no cloud services, no data leaving your machine.
+A macOS mac app for on-device speech-to-text dictation, built for developers and content creators. Hold a hotkey, speak, and FoxSay transcribes your voice and pastes the result directly into any app. All processing happens locally on your Mac - no cloud services, no data leaving your machine.
 
 ## Features
 
@@ -26,8 +26,8 @@ open FoxSay.xcworkspace
 ```
 
 The workspace includes:
-- `FoxSay.xcodeproj` -- the app target
-- `FoxSayPackage` -- Swift package containing all feature code
+- `FoxSay.xcodeproj` - the app target
+- `FoxSayPackage` - Swift package containing all feature code
 
 ## Architecture
 
@@ -42,10 +42,10 @@ Microphone → AVAudioEngine (16kHz mono) → TranscriptionEngine → Correction
 2. **Transcription**: The audio buffer is passed to whichever `TranscriptionEngine` implementation is selected. Parakeet uses NVIDIA's TDT (Time-Domain Transducer) model accelerated on Apple Neural Engine via CoreML. Whisper uses OpenAI's Whisper models via WhisperKit.
 
 3. **Correction pipeline**: A multi-stage pipeline processes the raw transcript:
-   - **Mode detection** -- identifies voice mode triggers (e.g. saying "markdown" activates Markdown mode)
-   - **Pre-processing** -- converts spoken commands to symbols ("hash hash" to "##", "bold on/off" to "**", etc.)
-   - **LLM/rule-based correction** -- optionally applies Qwen2.5-Coder-1.5B for context-aware cleanup, with rule-based fallback
-   - **Post-processing** -- collapses consecutive symbols, trims whitespace
+   - **Mode detection** - identifies voice mode triggers (e.g. saying "markdown" activates Markdown mode)
+   - **Pre-processing** - converts spoken commands to symbols ("hash hash" to "##", "bold on/off" to "**", etc.)
+   - **LLM/rule-based correction** - optionally applies Qwen2.5-Coder-1.5B for context-aware cleanup, with rule-based fallback
+   - **Post-processing** - collapses consecutive symbols, trims whitespace
 
 4. **Text injection**: `TextInjector` copies the result to the pasteboard and simulates Cmd+V via `CGEvent` to paste into the frontmost app.
 
@@ -132,10 +132,10 @@ In Markdown mode, spoken commands like "h2", "bold on/off", "bullet", "code bloc
 `HotkeyManager` uses `NSEvent.addGlobalMonitorForEvents()` to detect modifier key presses globally without requiring Accessibility permissions (Accessibility is only needed for the paste injection step).
 
 Activation modes:
-- **Hold** -- record while key is held
-- **Toggle** -- tap to start, tap to stop
-- **Double-tap** -- double-tap to start/stop
-- **Hold or Toggle** -- auto-detects based on press duration (default 0.3s threshold)
+- **Hold** - record while key is held
+- **Toggle** - tap to start, tap to stop
+- **Double-tap** - double-tap to start/stop
+- **Hold or Toggle** - auto-detects based on press duration (default 0.3s threshold)
 
 Escape key cancels an in-progress recording.
 
