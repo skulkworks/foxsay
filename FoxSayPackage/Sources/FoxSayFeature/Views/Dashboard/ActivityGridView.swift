@@ -7,9 +7,28 @@ struct ActivityGridView: View {
 
     @State private var hoveredCell: (day: Int, week: Int)? = nil
 
-    private let cellSize: CGFloat = 12
-    private let cellSpacing: CGFloat = 3
     private let dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    // Target width for the grid (based on 6-month view as baseline)
+    private let targetGridWidth: CGFloat = 390
+
+    // Max cell size to prevent 30-day view from being too tall
+    private let maxCellSize: CGFloat = 12
+    private let maxCellSpacing: CGFloat = 3
+
+    // Dynamic cell size based on period
+    private var cellSize: CGFloat {
+        let weeks = CGFloat(period.weeks)
+        let calculated = (targetGridWidth / weeks) * 0.8
+        return min(calculated, maxCellSize)
+    }
+
+    // Dynamic spacing based on period
+    private var cellSpacing: CGFloat {
+        let weeks = CGFloat(period.weeks)
+        let calculated = (targetGridWidth / weeks) * 0.2
+        return min(calculated, maxCellSpacing)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

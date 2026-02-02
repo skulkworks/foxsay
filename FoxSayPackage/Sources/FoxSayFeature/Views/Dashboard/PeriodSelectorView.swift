@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Segmented period selector for dashboard (30d | 6mo | 1y)
+/// Segmented period selector for dashboard (6mo | 1y)
 struct PeriodSelectorView: View {
     @Binding var selectedPeriod: DashboardPeriod
 
@@ -40,7 +40,7 @@ struct PeriodSelectorView: View {
 
 #Preview {
     struct PreviewWrapper: View {
-        @State var period: DashboardPeriod = .thirtyDays
+        @State var period: DashboardPeriod = .sixMonths
 
         var body: some View {
             VStack(spacing: 20) {
