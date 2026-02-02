@@ -2,6 +2,8 @@
 
 A macOS mac app for on-device speech-to-text dictation, built for developers and content creators. Hold a hotkey, speak, and FoxSay transcribes your voice and pastes the result directly into any app. All processing happens locally on your Mac - no cloud services, no data leaving your machine.
 
+![FoxSay screenshot](screenshot-1.png)
+
 ## Features
 
 - **On-device transcription** using NVIDIA Parakeet (via FluidAudio) or OpenAI Whisper (via WhisperKit)

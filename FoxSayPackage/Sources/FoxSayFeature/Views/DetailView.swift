@@ -16,7 +16,7 @@ public struct DetailView: View {
     private var contentView: some View {
         switch appState.selectedSidebarItem {
         case .status:
-            StatusPaneView()
+            DashboardView()
         case .general:
             GeneralSettingsView()
         case .models:
