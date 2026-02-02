@@ -68,18 +68,22 @@ build_archive() {
     log_info "Building archive..."
     cd "$PROJECT_ROOT"
 
-    xcodebuild archive \
-        -workspace "$WORKSPACE" \
-        -scheme "$SCHEME" \
-        -configuration Release \
-        -archivePath "$ARCHIVE_PATH" \
-        -destination "generic/platform=macOS" \
-        SKIP_INSTALL=NO \
-        BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
-        CODE_SIGN_STYLE=Automatic \
-        DEVELOPMENT_TEAM="$TEAM_ID" \
-        CODE_SIGN_IDENTITY="Developer ID Application" \
-        | xcpretty || true
+    if command -v xcpretty &> /dev/null; then
+        xcodebuild archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            -destination "generic/platform=macOS" \
+            | xcpretty
+    else
+        xcodebuild archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            -destination "generic/platform=macOS"
+    fi
 
     if [ ! -d "$ARCHIVE_PATH" ]; then
         log_error "Archive failed"
@@ -94,13 +98,16 @@ export_app() {
     log_info "Exporting app from archive..."
 
     # Create export options plist
+    # Use "development" for testing, "developer-id" for distribution
+    EXPORT_METHOD="${EXPORT_METHOD:-developer-id}"
+
     cat > "$BUILD_DIR/ExportOptions.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>developer-id</string>
+    <string>$EXPORT_METHOD</string>
     <key>teamID</key>
     <string>$TEAM_ID</string>
     <key>signingStyle</key>
@@ -111,11 +118,18 @@ export_app() {
 </plist>
 EOF
 
-    xcodebuild -exportArchive \
-        -archivePath "$ARCHIVE_PATH" \
-        -exportPath "$EXPORT_PATH" \
-        -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist" \
-        | xcpretty || true
+    if command -v xcpretty &> /dev/null; then
+        xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist" \
+            | xcpretty
+    else
+        xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist"
+    fi
 
     if [ ! -d "$EXPORT_PATH/$APP_NAME.app" ]; then
         log_error "Export failed"
