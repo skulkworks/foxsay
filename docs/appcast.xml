@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>FoxSay Updates</title>
+        <link>https://skulkworks.github.io/foxsay/appcast.xml</link>
+        <description>Updates for FoxSay</description>
+        <language>en</language>
+        <item>
+            <title>Version 1.0.1</title>
+            <pubDate>Sun, 01 Feb 2026 23:15:43 -0700</pubDate>
+            <sparkle:version>1.0.1</sparkle:version>
+            <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure
+                url="https://github.com/skulkworks/foxsay/releases/download/v1.0.1/FoxSay.dmg"
+                length="16293418"
+                type="application/octet-stream"
+                sparkle:edSignature="OOf5yDx95tkx1xCEL0d68rVs7ws+ZSYSLYdCvgVtEaZ4PQ9W8cbpv7pOi7DJF02lvcFiAycmfSchn+GbeWyVDg=="
+            />
+        </item>
+    </channel>
+</rss>

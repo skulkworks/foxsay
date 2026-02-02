@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A412AC592F3076E8001D0414 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A412AC582F3076E8001D0414 /* Sparkle */; };
 		VF00000100000001 /* FoxSayFeature in Frameworks */ = {isa = PBXBuildFile; productRef = VF00000200000001 /* FoxSayFeature */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				VF00000100000001 /* FoxSayFeature in Frameworks */,
+				A412AC592F3076E8001D0414 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +94,7 @@
 			name = FoxSay;
 			packageProductDependencies = (
 				VF00000200000001 /* FoxSayFeature */,
+				A412AC582F3076E8001D0414 /* Sparkle */,
 			);
 			productName = FoxSay;
 			productReference = VF00000300000001 /* FoxSay.app */;
@@ -124,6 +127,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				VF00002100000001 /* XCLocalSwiftPackageReference "FoxSayPackage" */,
+				A412AC572F3076E8001D0414 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = VF00000800000001 /* Products */;
@@ -292,7 +296,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoxSay/FoxSay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -310,7 +314,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skulkworks.FoxSay;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -326,7 +330,7 @@
 				CODE_SIGN_ENTITLEMENTS = FoxSay/FoxSay.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -344,7 +348,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.skulkworks.FoxSay;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -382,7 +386,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A412AC572F3076E8001D0414 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		A412AC582F3076E8001D0414 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A412AC572F3076E8001D0414 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		VF00000200000001 /* FoxSayFeature */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = VF00002100000001 /* XCLocalSwiftPackageReference "FoxSayPackage" */;

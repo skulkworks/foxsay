@@ -43,3 +43,6 @@ Cargo.lock
 .env.local
 *.pem
 *.key
+
+# Sparkle signing keys (KEEP THESE SECRET!)
+.sparkle-keys/

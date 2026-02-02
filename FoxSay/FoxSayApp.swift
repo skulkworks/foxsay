@@ -1,6 +1,7 @@
 import SwiftUI
 import FoxSayFeature
 import AppKit
+import Sparkle
 
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -46,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct FoxSayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState.shared
+    @StateObject private var updaterController = UpdaterController.shared
     @State private var showSetupWizard = false
 
     init() {
@@ -134,6 +136,13 @@ struct FoxSayApp: App {
                     appState.showSettings = true
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                Divider()
+
+                Button("Check for Updates...") {
+                    updaterController.checkForUpdates()
+                }
+                .disabled(!updaterController.canCheckForUpdates)
 
                 Divider()
 

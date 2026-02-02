@@ -244,6 +244,9 @@ summary() {
     codesign -dvv "$APP_PATH" 2>&1 | grep -E "(Identifier|Authority|TeamIdentifier)" | head -5
 
     echo ""
+    echo "To generate appcast for Sparkle updates:"
+    echo "  ./scripts/generate-appcast.sh $VERSION"
+    echo ""
 }
 
 # Main
