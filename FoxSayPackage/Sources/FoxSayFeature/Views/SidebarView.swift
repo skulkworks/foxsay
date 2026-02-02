@@ -99,7 +99,7 @@ public struct SidebarView: View {
             Spacer()
 
             // Version
-            Text("v1.0")
+            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
