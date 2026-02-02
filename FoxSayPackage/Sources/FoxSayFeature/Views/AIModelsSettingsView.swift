@@ -760,6 +760,8 @@ struct AIModelCardView: View {
     private func activateModel() {
         // Clear remote provider selection
         providerManager.activateLocalMode()
+        // Unload any currently loaded model first
+        aiModelManager.unload()
         // Select and preload this model
         aiModelManager.selectModel(model)
         Task {

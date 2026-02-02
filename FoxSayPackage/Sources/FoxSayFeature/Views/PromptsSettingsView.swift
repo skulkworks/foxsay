@@ -158,7 +158,9 @@ public struct PromptsSettingsView: View {
     }
 
     private func promptRow(_ prompt: Prompt) -> some View {
-        HStack {
+        let isActive = promptManager.isActive(prompt)
+
+        return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(prompt.displayName)
@@ -173,7 +175,7 @@ public struct PromptsSettingsView: View {
                             .background(Capsule().fill(Color.orange.opacity(0.2)))
                     }
 
-                    if promptManager.isActive(prompt) {
+                    if isActive {
                         Text("Active")
                             .font(.caption2)
                             .foregroundColor(.white)
@@ -195,6 +197,27 @@ public struct PromptsSettingsView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                // Activate/Deactivate button
+                if isActive {
+                    Button {
+                        promptManager.deactivatePrompt()
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Deactivate")
+                } else if prompt.isEnabled {
+                    Button {
+                        promptManager.activatePrompt(id: prompt.id)
+                    } label: {
+                        Image(systemName: "circle")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Activate")
+                }
+
                 // Visibility toggle (eye icon)
                 Button {
                     promptManager.toggleEnabled(prompt)
@@ -236,6 +259,21 @@ public struct PromptsSettingsView: View {
             }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isActive ? Color.accentColor.opacity(0.1) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if prompt.isEnabled {
+                if isActive {
+                    promptManager.deactivatePrompt()
+                } else {
+                    promptManager.activatePrompt(id: prompt.id)
+                }
+            }
+        }
     }
 
     private var voiceActivationInfo: some View {

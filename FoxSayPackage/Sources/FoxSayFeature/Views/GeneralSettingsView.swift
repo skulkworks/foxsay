@@ -247,6 +247,10 @@ public struct GeneralSettingsView: View {
         let stored = UserDefaults.standard.double(forKey: "inputAmplitude")
         return stored > 0 ? stored : 10.0
     }()
+    @State private var visualizationStyle: VisualizationStyle = {
+        let stored = UserDefaults.standard.string(forKey: "visualizationStyle") ?? "scrolling"
+        return VisualizationStyle(rawValue: stored) ?? .scrolling
+    }()
 
     private var inputSection: some View {
         GroupBox {
@@ -322,8 +326,30 @@ public struct GeneralSettingsView: View {
                     .toggleStyle(.switch)
                 }
 
-                // Visual amplitude slider (only show if overlay enabled)
+                // Overlay settings (only show if overlay enabled)
                 if showOverlay {
+                    // Visualization style picker
+                    HStack {
+                        Text("Visualization style")
+
+                        Spacer()
+
+                        Picker("", selection: Binding(
+                            get: { visualizationStyle },
+                            set: { newValue in
+                                visualizationStyle = newValue
+                                UserDefaults.standard.set(newValue.rawValue, forKey: "visualizationStyle")
+                            }
+                        )) {
+                            ForEach(VisualizationStyle.allCases) { style in
+                                Text(style.displayName).tag(style)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 120)
+                    }
+
+                    // Visual amplitude slider
                     HStack {
                         Text("Visual amplitude")
 

@@ -568,7 +568,8 @@ public class AudioEngine: ObservableObject {
     }
 
     private func startLevelUpdateTimer() {
-        levelUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.025, repeats: true) { [weak self] _ in
+        // 100Hz update rate for smooth visualizations
+        levelUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.audioLevel = self.storage.currentLevel
