@@ -205,8 +205,8 @@ public class HotkeyManager: ObservableObject {
         escapeToCancel = UserDefaults.standard.object(forKey: "hotkeyEscapeToCancel") as? Bool ?? true
 
         // Prompt selector hotkey defaults
-        let savedPromptModifier = UserDefaults.standard.string(forKey: "promptSelectorModifier") ?? "rightCommand"
-        promptSelectorModifier = HotkeyModifier(rawValue: savedPromptModifier) ?? .rightCommand
+        let savedPromptModifier = UserDefaults.standard.string(forKey: "promptSelectorModifier") ?? "rightOption"
+        promptSelectorModifier = HotkeyModifier(rawValue: savedPromptModifier) ?? .rightOption
         promptSelectorEnabled = UserDefaults.standard.object(forKey: "promptSelectorEnabled") as? Bool ?? true
 
         startMonitoring()

@@ -683,6 +683,15 @@ struct AIModelCardView: View {
 
                     // Capability badges
                     HStack(spacing: 4) {
+                        if model.isRecommended {
+                            Text("Recommended")
+                                .font(.caption2)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.2))
+                                .foregroundColor(.orange)
+                                .clipShape(Capsule())
+                        }
                         ForEach(model.capabilities, id: \.self) { capability in
                             capabilityBadge(capability)
                         }
