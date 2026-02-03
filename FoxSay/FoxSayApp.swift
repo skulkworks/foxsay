@@ -18,11 +18,76 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Hide window on launch if setting is enabled
+        // In accessory mode (no dock icon), we need to be careful not to destroy the window
         let hideWindowOnLaunch = UserDefaults.standard.bool(forKey: "hideWindowOnLaunch")
-        if hideWindowOnLaunch {
-            DispatchQueue.main.async {
-                for window in NSApp.windows {
-                    window.close()
+        if hideWindowOnLaunch && showInDock {
+            // Only hide if we have a dock icon (regular mode)
+            // In accessory mode, closing/hiding windows destroys them in SwiftUI
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                    print("FoxSay: Hiding window on launch (dock mode): \(window)")
+                    window.orderOut(nil)
+                }
+            }
+        } else if hideWindowOnLaunch && !showInDock {
+            // In accessory mode, just push window to back - don't hide it
+            // The window needs to exist for openWindow to work later
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                    print("FoxSay: Pushing window to back (accessory mode): \(window)")
+                    window.orderBack(nil)
+                    window.resignMain()
+                    window.resignKey()
+                }
+            }
+        }
+
+        // Listen for request to open main window (from menubar settings)
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("OpenMainWindow"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("FoxSay: OpenMainWindow notification received")
+            // Find and show the main window
+            for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                print("FoxSay: Found window to show: \(window)")
+                window.makeKeyAndOrderFront(nil)
+                return
+            }
+            print("FoxSay: No suitable window found, creating one manually")
+            Task { @MainActor in
+                self?.createMainWindowIfNeeded()
+            }
+        }
+
+        // Listen for window close to restore accessory mode if needed
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            guard let window = notification.object as? NSWindow else {
+                print("FoxSay: willCloseNotification - no window in notification")
+                return
+            }
+            print("FoxSay: Window closing: \(type(of: window)), canBecomeMain=\(window.canBecomeMain), isPanel=\(window is NSPanel)")
+
+            guard !(window is NSPanel) && window.canBecomeMain else {
+                print("FoxSay: Ignoring non-main window close")
+                return
+            }
+            print("FoxSay: Main window closing, will check if should restore accessory mode")
+            // Small delay to allow window to fully close
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                // Check if there are no more main windows visible
+                let hasVisibleMainWindow = NSApp.windows.contains { w in
+                    !(w is NSPanel) && w.canBecomeMain && w.isVisible
+                }
+                print("FoxSay: After close - hasVisibleMainWindow=\(hasVisibleMainWindow)")
+                if !hasVisibleMainWindow {
+                    print("FoxSay: No visible main windows, restoring accessory mode")
+                    MenuBarManager.restoreAccessoryModeIfNeeded()
                 }
             }
         }
@@ -40,6 +105,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             await ModelManager.shared.cleanup()
         }
+    }
+}
+
+/// Singleton to store window opening action for use from non-SwiftUI code
+@MainActor
+class WindowOpener {
+    static let shared = WindowOpener()
+    var openWindowAction: ((String) -> Void)?
+
+    private init() {
+        // Listen for requests to open main window
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("OpenMainWindow"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("FoxSay: WindowOpener received OpenMainWindow notification")
+            Task { @MainActor in
+                if let action = self?.openWindowAction {
+                    print("FoxSay: Calling openWindow action")
+                    action("main")
+                } else {
+                    print("FoxSay: No openWindow action registered!")
+                }
+            }
+        }
+    }
+}
+
+/// Helper view to capture and store the openWindow environment action
+struct WindowOpenerCapture: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear {
+                print("FoxSay: Capturing openWindow action")
+                WindowOpener.shared.openWindowAction = { id in
+                    openWindow(id: id)
+                }
+            }
     }
 }
 
@@ -104,9 +211,10 @@ struct FoxSayApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             MainWindowView()
                 .environmentObject(appState)
+                .background(WindowOpenerCapture())
                 .onAppear {
                     // Initialize managers
                     Task { @MainActor in
@@ -160,5 +268,49 @@ struct FoxSayApp: App {
                 .keyboardShortcut("?", modifiers: .command)
             }
         }
+
+    }
+}
+
+// MARK: - Manual Window Creation for Accessory Mode
+
+extension AppDelegate {
+    /// Creates a new main window manually when SwiftUI has deallocated all windows
+    /// This is needed in accessory mode where SwiftUI doesn't maintain windows
+    @MainActor
+    func createMainWindowIfNeeded() {
+        // Check if a main window already exists
+        let hasMainWindow = NSApp.windows.contains { window in
+            !(window is NSPanel) && window.canBecomeMain
+        }
+
+        if hasMainWindow {
+            print("FoxSay: Main window already exists")
+            return
+        }
+
+        print("FoxSay: Creating main window manually")
+
+        // Create a new window with the SwiftUI view
+        let contentView = MainWindowView()
+            .environmentObject(AppState.shared)
+
+        let hostingController = NSHostingController(rootView: contentView)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 650, height: 600),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hostingController
+        window.title = "FoxSay"
+        window.center()
+        window.setFrameAutosaveName("FoxSayMainWindow")
+
+        // Make it visible
+        window.makeKeyAndOrderFront(nil)
+
+        print("FoxSay: Main window created and shown")
     }
 }

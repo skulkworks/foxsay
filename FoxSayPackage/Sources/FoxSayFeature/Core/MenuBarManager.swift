@@ -137,9 +137,96 @@ public class MenuBarManager: NSObject, ObservableObject {
         HotkeyManager.shared.onPromptSelector?()
     }
 
+    /// Track if we were in accessory mode before showing settings
+    private static var wasAccessoryMode = false
+
     @objc private func openSettings() {
+        // Debug: Log all windows
+        print("FoxSay: openSettings - All windows: \(NSApp.windows.count)")
+        for (index, window) in NSApp.windows.enumerated() {
+            print("FoxSay:   Window \(index): \(type(of: window)), isVisible=\(window.isVisible), canBecomeMain=\(window.canBecomeMain), canBecomeKey=\(window.canBecomeKey), title='\(window.title)'")
+        }
+
+        // Remember if we were in accessory mode
+        Self.wasAccessoryMode = NSApp.activationPolicy() == .accessory
+
+        // Temporarily switch to regular activation policy so windows can be shown properly
+        // This is needed because .accessory mode prevents normal window behavior
+        if Self.wasAccessoryMode {
+            print("FoxSay: Switching from accessory to regular policy temporarily")
+            NSApp.setActivationPolicy(.regular)
+        }
+
+        // Bring app to foreground
         NSApp.activate(ignoringOtherApps: true)
-        NotificationCenter.default.post(name: NSNotification.Name("ShowSettings"), object: nil)
+
+        // Use async to let activation policy change take effect
+        DispatchQueue.main.async {
+            self.showMainWindow()
+        }
+    }
+
+    /// Call this when the settings window is closed to restore accessory mode
+    public static func restoreAccessoryModeIfNeeded() {
+        if wasAccessoryMode {
+            print("FoxSay: Restoring accessory mode")
+            NSApp.setActivationPolicy(.accessory)
+            wasAccessoryMode = false
+        }
+    }
+
+    private func showMainWindow() {
+        // Find a main window to show (not panels like overlays)
+        let mainWindow = NSApp.windows.first { window in
+            // Skip panels (overlays, etc.) - we want the main WindowGroup window
+            !(window is NSPanel) && window.canBecomeMain
+        }
+
+        if let window = mainWindow {
+            print("FoxSay: Found main window, isVisible=\(window.isVisible), isMiniaturized=\(window.isMiniaturized)")
+
+            // Deminiaturize if needed (this also makes it visible)
+            if window.isMiniaturized {
+                print("FoxSay: Deminiaturizing window")
+                window.deminiaturize(nil)
+            }
+
+            // Ensure visible
+            if !window.isVisible {
+                print("FoxSay: Making window visible")
+                window.setIsVisible(true)
+            }
+
+            // Use orderFrontRegardless which is more aggressive
+            print("FoxSay: Ordering window front regardless")
+            window.orderFrontRegardless()
+            window.makeKey()
+
+            // Activate app using the newer API
+            print("FoxSay: Activating app with NSRunningApplication")
+            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+
+            // Note: We stay in .regular mode while the window is open
+            // The dock icon will be visible, but it will disappear when the window is closed
+            // (handled by the NSWindow.willCloseNotification observer in AppDelegate)
+
+            // Navigate to settings after a small delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                print("FoxSay: Posting ShowSettings notification")
+                NotificationCenter.default.post(name: NSNotification.Name("ShowSettings"), object: nil)
+            }
+        } else {
+            print("FoxSay: No main window found, requesting creation")
+            // No main window exists - post notification to create one via SwiftUI
+            NotificationCenter.default.post(name: NSNotification.Name("OpenMainWindow"), object: nil)
+
+            // Wait for window to be created, then show settings
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // Activate after window creation
+                NSApp.activate(ignoringOtherApps: true)
+                NotificationCenter.default.post(name: NSNotification.Name("ShowSettings"), object: nil)
+            }
+        }
     }
 
     @objc private func quitApp() {
