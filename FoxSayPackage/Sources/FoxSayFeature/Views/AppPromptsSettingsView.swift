@@ -1,13 +1,19 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// App Prompts settings view for assigning default prompts to applications
+/// Applications settings view for assigning default prompts and models to applications
 public struct AppPromptsSettingsView: View {
     @ObservedObject private var appPromptManager = AppPromptManager.shared
     @ObservedObject private var promptManager = PromptManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     @State private var showAddAppSheet = false
     @State private var dragOver = false
+
+    /// Enabled remote providers for the model picker
+    private var enabledProviders: [RemoteProvider] {
+        providerManager.remoteProviders.filter { $0.isEnabled }
+    }
 
     public init() {}
 
@@ -15,12 +21,12 @@ public struct AppPromptsSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
-                Text("App Prompts")
+                Text("Applications")
                     .font(.title2)
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
 
-                Text("Assign default prompts to specific applications. When you switch to an app with an assigned prompt, it will automatically activate.")
+                Text("Assign default prompts and AI models to specific applications. When you switch to an app with assignments, they will automatically activate.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -64,8 +70,8 @@ public struct AppPromptsSettingsView: View {
             handleDrop(providers: providers)
         }
         .sheet(isPresented: $showAddAppSheet) {
-            AddAppSheet { bundleId, displayName, iconData in
-                appPromptManager.addApp(bundleId: bundleId, displayName: displayName, iconData: iconData)
+            AddAppSheet { bundleId, displayName in
+                appPromptManager.addApp(bundleId: bundleId, displayName: displayName)
             }
         }
     }
@@ -121,20 +127,81 @@ public struct AppPromptsSettingsView: View {
             Spacer()
 
             // Prompt picker
-            Picker("", selection: Binding(
-                get: { assignment.defaultPromptId },
-                set: { newId in
-                    appPromptManager.assignPrompt(newId, to: assignment)
+            Menu {
+                Button {
+                    appPromptManager.assignPrompt(nil, to: assignment)
+                } label: {
+                    HStack {
+                        Text("None")
+                        if assignment.defaultPromptId == nil {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
                 }
-            )) {
-                Text("None").tag(nil as UUID?)
-                Divider()
-                ForEach(promptManager.prompts) { prompt in
-                    Text(prompt.displayName).tag(prompt.id as UUID?)
+
+                if !promptManager.prompts.isEmpty {
+                    Divider()
+                    ForEach(promptManager.prompts) { prompt in
+                        Button {
+                            appPromptManager.assignPrompt(prompt.id, to: assignment)
+                        } label: {
+                            HStack {
+                                Text(prompt.displayName)
+                                if assignment.defaultPromptId == prompt.id {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
                 }
+            } label: {
+                StyledMenuLabel(promptPickerLabel(for: assignment))
             }
-            .pickerStyle(.menu)
-            .frame(width: 150)
+            .buttonStyle(.plain)
+            .frame(width: 130)
+
+            // Model picker (using Menu for section headers)
+            Menu {
+                Section {
+                    Button {
+                        appPromptManager.assignModel(nil, to: assignment)
+                    } label: {
+                        HStack {
+                            Text("Default")
+                            if assignment.defaultModelRef == nil {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Uses active local or remote model")
+                }
+
+                if !enabledProviders.isEmpty {
+                    Section("Override with Remote") {
+                        ForEach(enabledProviders) { provider in
+                            Button {
+                                appPromptManager.assignModel(.remote(providerId: provider.id), to: assignment)
+                            } label: {
+                                HStack {
+                                    Text(provider.name)
+                                    if case .remote(let id) = assignment.defaultModelRef, id == provider.id {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } label: {
+                StyledMenuLabel(modelPickerLabel(for: assignment))
+            }
+            .buttonStyle(.plain)
+            .frame(width: 130)
 
             // Delete button
             Button(role: .destructive) {
@@ -145,6 +212,21 @@ public struct AppPromptsSettingsView: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 8)
+    }
+
+    private func promptPickerLabel(for assignment: AppPromptAssignment) -> String {
+        if let promptId = assignment.defaultPromptId,
+           let prompt = promptManager.prompts.first(where: { $0.id == promptId }) {
+            return prompt.displayName
+        }
+        return "None"
+    }
+
+    private func modelPickerLabel(for assignment: AppPromptAssignment) -> String {
+        if let modelRef = assignment.defaultModelRef {
+            return modelRef.displayName
+        }
+        return "Default"
     }
 
     private var howItWorksSection: some View {
@@ -158,21 +240,21 @@ public struct AppPromptsSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("2. Assign a default prompt to each app")
+                    Text("2. Assign a default prompt and/or AI model to each app")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("3. When you switch to that app, the prompt automatically activates")
+                    Text("3. When you switch to that app, the settings automatically activate")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("4. Your transcriptions will be transformed using that prompt")
+                    Text("4. Your transcriptions will be transformed using the assigned prompt and model")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.leading, 4)
 
-                Text("You can always manually activate a different prompt or turn prompts off with voice commands.")
+                Text("\"Default\" model uses whatever is currently active in AI Models settings. You can override this per-app with a specific remote provider.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.top, 4)
@@ -199,17 +281,10 @@ public struct AppPromptsSettingsView: View {
 
                 let displayName = FileManager.default.displayName(atPath: bundleUrl.path)
 
-                // Get icon
-                var iconData: Data?
-                if let icon = NSWorkspace.shared.icon(forFile: bundleUrl.path).tiffRepresentation {
-                    iconData = icon
-                }
-
                 DispatchQueue.main.async {
                     appPromptManager.addApp(
                         bundleId: bundleId,
-                        displayName: displayName,
-                        iconData: iconData
+                        displayName: displayName
                     )
                 }
             }
@@ -221,7 +296,7 @@ public struct AppPromptsSettingsView: View {
 
 /// Sheet for adding an app
 struct AddAppSheet: View {
-    let onAdd: (String, String, Data?) -> Void
+    let onAdd: (String, String) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -295,12 +370,7 @@ struct AddAppSheet: View {
                 Spacer()
 
                 Button("Add") {
-                    var iconData: Data?
-                    if let app = runningApps.first(where: { $0.bundleIdentifier == bundleId }),
-                       let icon = app.icon {
-                        iconData = icon.tiffRepresentation
-                    }
-                    onAdd(bundleId, displayName, iconData)
+                    onAdd(bundleId, displayName)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)

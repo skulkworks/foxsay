@@ -188,7 +188,7 @@ public class MenuBarManager: NSObject, ObservableObject {
             window.makeKey()
 
             // Activate app using the newer API
-            NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSRunningApplication.current.activate()
 
             // Note: We stay in .regular mode while the window is open
             // The dock icon will be visible, but it will disappear when the window is closed

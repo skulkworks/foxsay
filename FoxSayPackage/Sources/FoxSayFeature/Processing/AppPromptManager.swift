@@ -27,13 +27,12 @@ public class AppPromptManager: ObservableObject {
     // MARK: - Assignment Management
 
     /// Add an app with optional default prompt
-    public func addApp(bundleId: String, displayName: String, iconData: Data? = nil, promptId: UUID? = nil) {
+    public func addApp(bundleId: String, displayName: String, promptId: UUID? = nil) {
         guard !assignments.contains(where: { $0.bundleId == bundleId }) else { return }
 
         let assignment = AppPromptAssignment(
             bundleId: bundleId,
             displayName: displayName,
-            iconData: iconData,
             defaultPromptId: promptId
         )
 
@@ -48,15 +47,9 @@ public class AppPromptManager: ObservableObject {
         guard let bundleId = app.bundleIdentifier else { return }
         guard !assignments.contains(where: { $0.bundleId == bundleId }) else { return }
 
-        var iconData: Data?
-        if let icon = app.icon {
-            iconData = icon.tiffRepresentation
-        }
-
         addApp(
             bundleId: bundleId,
             displayName: app.localizedName ?? bundleId,
-            iconData: iconData,
             promptId: promptId
         )
     }
@@ -80,6 +73,42 @@ public class AppPromptManager: ObservableObject {
                promptId?.uuidString ?? "none", assignment.displayName)
     }
 
+    /// Assign a model to an app
+    public func assignModel(_ modelRef: ModelReference?, to assignment: AppPromptAssignment) {
+        guard let index = assignments.firstIndex(where: { $0.id == assignment.id }) else { return }
+
+        assignments[index].defaultModelRef = modelRef
+        saveAssignments()
+
+        let modelName: String
+        if let ref = modelRef {
+            modelName = ref.displayName
+        } else {
+            modelName = "default"
+        }
+
+        os_log(.info, log: appPromptLog, "Assigned model %{public}@ to app %{public}@",
+               modelName, assignment.displayName)
+    }
+
+    /// Get the model reference for a bundle ID
+    public func getModelReference(forBundleId bundleId: String) -> ModelReference? {
+        guard let assignment = assignments.first(where: { $0.bundleId == bundleId }),
+              let modelRef = assignment.defaultModelRef else {
+            return nil
+        }
+
+        // Verify the model is still available
+        if modelRef.isAvailable {
+            return modelRef
+        }
+
+        // Model no longer available, return nil to use default
+        os_log(.info, log: appPromptLog, "Assigned model for %{public}@ is no longer available, using default",
+               bundleId)
+        return nil
+    }
+
     /// Get the default prompt for a bundle ID
     public func getDefaultPrompt(forBundleId bundleId: String) -> Prompt? {
         guard let assignment = assignments.first(where: { $0.bundleId == bundleId }),
@@ -101,17 +130,6 @@ public class AppPromptManager: ObservableObject {
             return false
         }
         return assignment.defaultPromptId != nil
-    }
-
-    /// Update app icon data (e.g., when app is running)
-    public func updateIconData(for bundleId: String, iconData: Data?) {
-        guard let index = assignments.firstIndex(where: { $0.bundleId == bundleId }) else { return }
-
-        // Only update if we don't have icon data yet
-        if assignments[index].iconData == nil && iconData != nil {
-            assignments[index].iconData = iconData
-            saveAssignments()
-        }
     }
 
     // MARK: - Persistence

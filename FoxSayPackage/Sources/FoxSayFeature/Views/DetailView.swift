@@ -25,7 +25,7 @@ public struct DetailView: View {
             AIModelsSettingsView()
         case .prompts:
             PromptsSettingsView()
-        case .appPrompts:
+        case .applications:
             AppPromptsSettingsView()
         case .dictionary:
             DictionarySettingsView()

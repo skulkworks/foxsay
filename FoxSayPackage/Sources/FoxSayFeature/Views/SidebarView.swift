@@ -20,7 +20,7 @@ public struct SidebarView: View {
             }
 
             Section("Settings") {
-                ForEach([SidebarItem.general, .models, .aiModels, .prompts, .appPrompts, .dictionary]) { item in
+                ForEach([SidebarItem.general, .models, .aiModels, .prompts, .applications, .dictionary]) { item in
                     sidebarRow(item)
                 }
             }

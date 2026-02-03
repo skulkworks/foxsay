@@ -220,21 +220,67 @@ public struct SetupWizardView: View {
 
             VStack(spacing: 12) {
                 // Model picker
-                Picker("Model", selection: Binding<ModelType>(
-                    get: { engineManager.currentModelType },
-                    set: { (newValue: ModelType) in
-                        Task {
-                            await engineManager.selectModel(newValue)
+                Menu {
+                    Button {
+                        Task { await engineManager.selectModel(.parakeetV2) }
+                    } label: {
+                        HStack {
+                            Text("Parakeet V2 (English)")
+                            if engineManager.currentModelType == .parakeetV2 {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
-                )) {
-                    Text("Parakeet V2 (English)").tag(ModelType.parakeetV2)
-                    Text("Parakeet V3 (Multilingual)").tag(ModelType.parakeetV3)
-                    Text("Whisper Base").tag(ModelType.whisperBase)
-                    Text("Whisper Small").tag(ModelType.whisperSmall)
-                    Text("Whisper Large Turbo").tag(ModelType.whisperLargeTurbo)
+                    Button {
+                        Task { await engineManager.selectModel(.parakeetV3) }
+                    } label: {
+                        HStack {
+                            Text("Parakeet V3 (Multilingual)")
+                            if engineManager.currentModelType == .parakeetV3 {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    Divider()
+                    Button {
+                        Task { await engineManager.selectModel(.whisperBase) }
+                    } label: {
+                        HStack {
+                            Text("Whisper Base")
+                            if engineManager.currentModelType == .whisperBase {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    Button {
+                        Task { await engineManager.selectModel(.whisperSmall) }
+                    } label: {
+                        HStack {
+                            Text("Whisper Small")
+                            if engineManager.currentModelType == .whisperSmall {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    Button {
+                        Task { await engineManager.selectModel(.whisperLargeTurbo) }
+                    } label: {
+                        HStack {
+                            Text("Whisper Large Turbo")
+                            if engineManager.currentModelType == .whisperLargeTurbo {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    StyledMenuLabel(modelPickerLabel)
                 }
-                .pickerStyle(.menu)
+                .buttonStyle(.plain)
                 .frame(width: 240)
 
                 Text(engineManager.currentModelType.description)
@@ -350,6 +396,17 @@ public struct SetupWizardView: View {
             currentStep = .accessibility
         case .complete:
             currentStep = .modelDownload
+        }
+    }
+
+    private var modelPickerLabel: String {
+        switch engineManager.currentModelType {
+        case .parakeetV2: return "Parakeet V2 (English)"
+        case .parakeetV3: return "Parakeet V3 (Multilingual)"
+        case .whisperBase, .whisperKit: return "Whisper Base"
+        case .whisperSmall: return "Whisper Small"
+        case .whisperLargeTurbo: return "Whisper Large Turbo"
+        case .whisperTiny: return "Whisper Tiny"
         }
     }
 

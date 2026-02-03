@@ -114,32 +114,52 @@ public class CorrectionPipeline: ObservableObject {
             print("FoxSay: [PIPELINE] Input text to LLM: \"\(text)\"")
             print("FoxSay: [PIPELINE] Prompt template: \"\(prompt.promptText)\"")
 
-            // Check if LLM provider is ready
-            print("FoxSay: [PIPELINE] Provider ready = \(providerManager.isReady)")
-            if providerManager.isReady {
-                do {
-                    if let transformer = await providerManager.getTransformer() {
-                        let isAvailable = await transformer.isAvailable
+            // Determine which transformer to use
+            // Check for app-specific remote provider override first
+            var transformer: (any TextTransformer)?
 
-                        if isAvailable {
-                            // Pass the prompt template - transformer will substitute {input}
-                            let transformed = try await transformer.transform(text, prompt: prompt.promptText)
-                            print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
-                            text = transformed
-                            os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
-                        } else {
-                            os_log(.info, log: pipelineLog, "Transformer not available, skipping transform")
-                        }
+            if let bundleId = targetBundleId,
+               let modelRef = appPromptManager.getModelReference(forBundleId: bundleId) {
+                switch modelRef {
+                case .remote(let providerId):
+                    if let provider = LLMProviderManager.shared.remoteProviders.first(where: { $0.id == providerId && $0.isEnabled }) {
+                        transformer = RemoteLLMService(provider: provider)
+                        print("FoxSay: [PIPELINE] Using app-specific remote provider: \(provider.name)")
+                        os_log(.info, log: pipelineLog, "Using app-specific remote provider: %{public}@", provider.name)
+                    }
+                }
+            }
+
+            // Fall back to default transformer if no app-specific model
+            if transformer == nil {
+                transformer = await providerManager.getTransformer()
+                print("FoxSay: [PIPELINE] Using default provider")
+            }
+
+            // Check if LLM provider is ready
+            let isReady = transformer != nil || providerManager.isReady
+            print("FoxSay: [PIPELINE] Provider ready = \(isReady)")
+
+            if let transformer = transformer {
+                do {
+                    let isAvailable = await transformer.isAvailable
+
+                    if isAvailable {
+                        // Pass the prompt template - transformer will substitute {input}
+                        let transformed = try await transformer.transform(text, prompt: prompt.promptText)
+                        print("FoxSay: [PIPELINE] LLM output: \"\(transformed)\"")
+                        text = transformed
+                        os_log(.info, log: pipelineLog, "After AI transform: %{public}@", text)
                     } else {
-                        os_log(.info, log: pipelineLog, "No transformer available, skipping transform")
+                        os_log(.info, log: pipelineLog, "Transformer not available, skipping transform")
                     }
                 } catch {
                     os_log(.error, log: pipelineLog, "AI transform error: %{public}@", String(describing: error))
                     print("FoxSay: [PIPELINE] LLM error: \(error)")
                 }
             } else {
-                os_log(.info, log: pipelineLog, "LLM provider not ready, skipping transform")
-                print("FoxSay: [PIPELINE] LLM provider not ready, skipping transform")
+                os_log(.info, log: pipelineLog, "No transformer available, skipping transform")
+                print("FoxSay: [PIPELINE] No transformer available, skipping transform")
             }
         } else {
             print("FoxSay: [PIPELINE] No prompt active, skipping AI transform")

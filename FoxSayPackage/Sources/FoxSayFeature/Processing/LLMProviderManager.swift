@@ -103,6 +103,8 @@ public class LLMProviderManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: Self.remoteProvidersKey),
            let providers = try? JSONDecoder().decode([RemoteProvider].self, from: data) {
             remoteProviders = providers
+            // Ensure all built-in presets exist (restore any that were deleted)
+            restoreMissingPresets()
         } else {
             // Initialize with presets
             remoteProviders = RemoteProvider.presets.map { $0.createCopy() }
@@ -116,6 +118,17 @@ public class LLMProviderManager: ObservableObject {
 
         os_log(.info, log: providerLog, "LLMProviderManager initialized: type=%{public}@, providers=%d",
                providerType.rawValue, remoteProviders.count)
+    }
+
+    /// Restore any missing built-in presets
+    private func restoreMissingPresets() {
+        let existingURLs = Set(remoteProviders.map { $0.baseURL })
+        for preset in RemoteProvider.presets {
+            if !existingURLs.contains(preset.baseURL) {
+                os_log(.info, log: providerLog, "Restoring missing preset: %{public}@", preset.name)
+                remoteProviders.insert(preset.createCopy(), at: 0)
+            }
+        }
     }
 
     // MARK: - Provider Management
@@ -144,8 +157,12 @@ public class LLMProviderManager: ObservableObject {
         }
     }
 
-    /// Delete a remote provider
+    /// Delete a remote provider (built-in providers cannot be deleted)
     public func deleteProvider(_ provider: RemoteProvider) {
+        guard !provider.isBuiltIn else {
+            os_log(.info, log: providerLog, "Cannot delete built-in provider: %{public}@", provider.name)
+            return
+        }
         remoteProviders.removeAll { $0.id == provider.id }
         if selectedRemoteProviderId == provider.id {
             selectedRemoteProviderId = nil

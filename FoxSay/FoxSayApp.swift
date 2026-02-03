@@ -3,6 +3,7 @@ import FoxSayFeature
 import AppKit
 import Sparkle
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -21,7 +22,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if hideWindowOnLaunch && showInDock {
             // Only hide if we have a dock icon (regular mode)
             // In accessory mode, closing/hiding windows destroys them in SwiftUI
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
                 for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
                     window.orderOut(nil)
                 }
@@ -29,7 +31,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else if hideWindowOnLaunch && !showInDock {
             // In accessory mode, just push window to back - don't hide it
             // The window needs to exist for openWindow to work later
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
                 for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
                     window.orderBack(nil)
                     window.resignMain()
@@ -44,14 +47,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Find and show the main window
-            for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
-                window.makeKeyAndOrderFront(nil)
-                return
-            }
-            // No suitable window found, create one manually
+            guard let self else { return }
             Task { @MainActor in
-                self?.createMainWindowIfNeeded()
+                // Find and show the main window
+                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                    window.makeKeyAndOrderFront(nil)
+                    return
+                }
+                // No suitable window found, create one manually
+                self.createMainWindowIfNeeded()
             }
         }
 
@@ -61,12 +65,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { notification in
-            guard let window = notification.object as? NSWindow,
-                  !(window is NSPanel) && window.canBecomeMain else {
-                return
-            }
-            // Small delay to allow window to fully close
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let window = notification.object as? NSWindow else { return }
+            // Check panel type synchronously (not main-actor isolated)
+            guard !(window is NSPanel) else { return }
+
+            Task { @MainActor in
+                // Check canBecomeMain on main actor
+                guard window.canBecomeMain else { return }
+                // Small delay to allow window to fully close
+                try? await Task.sleep(for: .milliseconds(200))
                 // Check if there are no more main windows visible
                 let hasVisibleMainWindow = NSApp.windows.contains { w in
                     !(w is NSPanel) && w.canBecomeMain && w.isVisible

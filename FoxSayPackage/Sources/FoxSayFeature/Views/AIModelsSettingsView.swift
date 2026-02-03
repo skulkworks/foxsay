@@ -120,7 +120,7 @@ public struct AIModelsSettingsView: View {
 
     @ViewBuilder
     private var remoteProvidersContent: some View {
-        Text("Connect to OpenAI-compatible APIs like LM Studio or Ollama.")
+        Text("Connect to OpenAI or compatible APIs like LM Studio and Ollama.")
             .font(.caption)
             .foregroundStyle(.secondary)
 
@@ -432,14 +432,16 @@ struct RemoteProviderCard: View {
                 .buttonStyle(.borderless)
                 .help("Edit provider")
 
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
+                if !provider.isBuiltIn {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Delete provider")
                 }
-                .buttonStyle(.borderless)
-                .help("Delete provider")
             }
         } else if provider.isEnabled {
             // Not active - just show borderless icons (clicking card activates)
@@ -463,14 +465,16 @@ struct RemoteProviderCard: View {
                 .buttonStyle(.borderless)
                 .help("Edit provider")
 
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
+                if !provider.isBuiltIn {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Delete provider")
                 }
-                .buttonStyle(.borderless)
-                .help("Delete provider")
             }
         } else {
             // Disabled provider - borderless icons only
@@ -484,14 +488,16 @@ struct RemoteProviderCard: View {
                 .buttonStyle(.borderless)
                 .help("Edit provider")
 
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
+                if !provider.isBuiltIn {
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Delete provider")
                 }
-                .buttonStyle(.borderless)
-                .help("Delete provider")
             }
         }
     }
@@ -537,6 +543,9 @@ struct RemoteProviderEditSheet: View {
     @State private var apiKey: String
     @State private var modelName: String
     @State private var isEnabled: Bool
+    @State private var availableModels: [String] = []
+    @State private var isFetchingModels = false
+    @State private var fetchError: String?
 
     let originalProvider: RemoteProvider
     let isNew: Bool
@@ -560,6 +569,10 @@ struct RemoteProviderEditSheet: View {
         !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private var canFetchModels: Bool {
+        !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -579,10 +592,75 @@ struct RemoteProviderEditSheet: View {
             // Form
             Form {
                 Section {
-                    TextField("Name", text: $name, prompt: Text("e.g., LM Studio"))
-                    TextField("Base URL", text: $baseURL, prompt: Text("e.g., http://localhost:1234/v1"))
-                    SecureField("API Key (optional)", text: $apiKey, prompt: Text("Leave empty if not required"))
-                    TextField("Model Name (optional)", text: $modelName, prompt: Text("Leave empty for default"))
+                    TextField("Name", text: $name, prompt: Text("e.g., OpenAI"))
+                    TextField("Base URL", text: $baseURL, prompt: Text("e.g., https://api.openai.com/v1"))
+                    SecureField("API Key (optional)", text: $apiKey, prompt: Text("Required for OpenAI"))
+                }
+
+                Section {
+                    HStack {
+                        if availableModels.isEmpty {
+                            TextField("Model Name", text: $modelName, prompt: Text("e.g., gpt-4o-mini"))
+                        } else {
+                            Menu {
+                                Button {
+                                    modelName = ""
+                                } label: {
+                                    HStack {
+                                        Text("Select a model")
+                                        if modelName.isEmpty {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                                Divider()
+                                ForEach(availableModels, id: \.self) { model in
+                                    Button {
+                                        modelName = model
+                                    } label: {
+                                        HStack {
+                                            Text(model)
+                                            if modelName == model {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                StyledMenuLabel(modelName.isEmpty ? "Select a model" : modelName)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Button {
+                            fetchModels()
+                        } label: {
+                            if isFetchingModels {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(!canFetchModels || isFetchingModels)
+                        .help("Fetch available models")
+                    }
+
+                    if let error = fetchError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+
+                    if !availableModels.isEmpty {
+                        Text("\(availableModels.count) models available")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section {
@@ -593,10 +671,13 @@ struct RemoteProviderEditSheet: View {
                     Text("The base URL should point to an OpenAI-compatible API endpoint. Common examples:")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("- LM Studio: http://localhost:1234/v1")
+                    Text("• OpenAI: https://api.openai.com/v1")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("- Ollama: http://localhost:11434/v1")
+                    Text("• LM Studio: http://localhost:1234/v1")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("• Ollama: http://localhost:11434/v1")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -624,7 +705,41 @@ struct RemoteProviderEditSheet: View {
             }
             .padding()
         }
-        .frame(width: 450, height: 400)
+        .frame(width: 450, height: 480)
+    }
+
+    private func fetchModels() {
+        guard canFetchModels else { return }
+
+        isFetchingModels = true
+        fetchError = nil
+
+        let tempProvider = RemoteProvider(
+            name: "temp",
+            baseURL: baseURL.trimmingCharacters(in: .whitespaces),
+            apiKey: apiKey.isEmpty ? nil : apiKey,
+            modelName: nil,
+            isEnabled: true
+        )
+
+        Task {
+            let service = RemoteLLMService(provider: tempProvider)
+            let result = await service.testConnection()
+
+            await MainActor.run {
+                isFetchingModels = false
+                switch result {
+                case .success(let models):
+                    availableModels = models.sorted()
+                    if modelName.isEmpty, let first = models.first {
+                        modelName = first
+                    }
+                case .failure(let error):
+                    fetchError = error.localizedDescription
+                    availableModels = []
+                }
+            }
+        }
     }
 }
 

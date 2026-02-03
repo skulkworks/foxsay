@@ -86,7 +86,20 @@ public actor RemoteLLMService: TextTransformer {
             }
 
             let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
-            let modelIds = modelsResponse.data?.map { $0.id } ?? []
+
+            // Filter to only chat-capable models for OpenAI
+            // OpenAI's API doesn't provide capability metadata, so we filter by name:
+            // - Models with "chat" (case insensitive) support chat completions
+            // - Reasoning models (o1, o3, gpt-5 without chat) don't work with chat completions
+            let chatModels = modelsResponse.data?.filter { model in
+                let id = model.id.lowercased()
+                // Include if it contains "chat", or is from a local server (different naming conventions)
+                let isChatModel = id.contains("chat")
+                let isLocalServer = !provider.baseURL.contains("openai.com")
+                return isChatModel || isLocalServer
+            }
+
+            let modelIds = chatModels?.map { $0.id } ?? []
             return .success(modelIds)
         } catch let error as RemoteLLMError {
             return .failure(error)
@@ -125,12 +138,13 @@ public actor RemoteLLMService: TextTransformer {
         }
 
         // Build the request body
+        // Use max_completion_tokens (required for OpenAI's newer models: gpt-4o, gpt-5, o1, etc.)
+        // Omit temperature as reasoning models (o1, o3, gpt-5) only support the default value
         var requestBody: [String: Any] = [
             "messages": [
                 ["role": "user", "content": promptText]
             ],
-            "temperature": 0.1,
-            "max_tokens": 200
+            "max_completion_tokens": 200
         ]
 
         // Add model name if specified
@@ -160,18 +174,28 @@ public actor RemoteLLMService: TextTransformer {
             let choices: [Choice]
 
             struct Choice: Decodable {
-                let message: Message
+                let message: Message?
+                // Some models return content directly in the choice
+                let text: String?
             }
 
             struct Message: Decodable {
-                let content: String
+                let content: String?
             }
+        }
+
+        // Log raw response for debugging
+        if let rawJson = String(data: data, encoding: .utf8) {
+            print("FoxSay: [REMOTE-LLM] Raw API response: \(rawJson.prefix(500))")
         }
 
         let completionResponse: ChatCompletionResponse
         do {
             completionResponse = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
         } catch {
+            if let rawJson = String(data: data, encoding: .utf8) {
+                print("FoxSay: [REMOTE-LLM] Failed to decode response: \(rawJson)")
+            }
             throw RemoteLLMError.decodingFailed(error.localizedDescription)
         }
 
@@ -179,7 +203,8 @@ public actor RemoteLLMService: TextTransformer {
             throw RemoteLLMError.noResponse
         }
 
-        let generatedText = firstChoice.message.content
+        // Try message.content first (standard chat format), then fall back to text (completion format)
+        let generatedText = firstChoice.message?.content ?? firstChoice.text ?? ""
 
         let processingTime = CFAbsoluteTimeGetCurrent() - startTime
         print("FoxSay: [REMOTE-LLM] Generation took \(String(format: "%.0f", processingTime * 1000))ms")

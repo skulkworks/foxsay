@@ -59,31 +59,75 @@ public struct GeneralSettingsView: View {
                         Spacer()
 
                         // Activation mode picker
-                        Picker("", selection: $hotkeyManager.activationMode) {
+                        Menu {
                             ForEach(HotkeyManager.ActivationMode.allCases) { mode in
-                                Text(mode.displayName).tag(mode)
+                                Button {
+                                    hotkeyManager.activationMode = mode
+                                } label: {
+                                    HStack {
+                                        Text(mode.displayName)
+                                        if hotkeyManager.activationMode == mode {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
+                        } label: {
+                            StyledMenuLabel(hotkeyManager.activationMode.displayName)
                         }
-                        .pickerStyle(.menu)
+                        .buttonStyle(.plain)
                         .frame(width: 140)
 
                         // Key picker
-                        Picker("", selection: $hotkeyManager.selectedModifier) {
+                        Menu {
                             Section("Right Side") {
                                 ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
-                                    Text(modifier.shortName).tag(modifier)
+                                    Button {
+                                        hotkeyManager.selectedModifier = modifier
+                                    } label: {
+                                        HStack {
+                                            Text(modifier.shortName)
+                                            if hotkeyManager.selectedModifier == modifier {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             Section("Left Side") {
                                 ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
-                                    Text(modifier.shortName).tag(modifier)
+                                    Button {
+                                        hotkeyManager.selectedModifier = modifier
+                                    } label: {
+                                        HStack {
+                                            Text(modifier.shortName)
+                                            if hotkeyManager.selectedModifier == modifier {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             Section("Other") {
-                                Text(HotkeyManager.HotkeyModifier.fn.shortName).tag(HotkeyManager.HotkeyModifier.fn)
+                                Button {
+                                    hotkeyManager.selectedModifier = .fn
+                                } label: {
+                                    HStack {
+                                        Text(HotkeyManager.HotkeyModifier.fn.shortName)
+                                        if hotkeyManager.selectedModifier == .fn {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
+                        } label: {
+                            StyledMenuLabel(hotkeyManager.selectedModifier.shortName)
                         }
-                        .pickerStyle(.menu)
+                        .buttonStyle(.plain)
                         .frame(width: 120)
                     }
 
@@ -208,22 +252,54 @@ public struct GeneralSettingsView: View {
                     HStack {
                         Spacer()
 
-                        Picker("", selection: $hotkeyManager.promptSelectorModifier) {
+                        Menu {
                             Section("Right Side") {
                                 ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
-                                    Text(modifier.shortName).tag(modifier)
+                                    Button {
+                                        hotkeyManager.promptSelectorModifier = modifier
+                                    } label: {
+                                        HStack {
+                                            Text(modifier.shortName)
+                                            if hotkeyManager.promptSelectorModifier == modifier {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             Section("Left Side") {
                                 ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
-                                    Text(modifier.shortName).tag(modifier)
+                                    Button {
+                                        hotkeyManager.promptSelectorModifier = modifier
+                                    } label: {
+                                        HStack {
+                                            Text(modifier.shortName)
+                                            if hotkeyManager.promptSelectorModifier == modifier {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             Section("Other") {
-                                Text(HotkeyManager.HotkeyModifier.fn.shortName).tag(HotkeyManager.HotkeyModifier.fn)
+                                Button {
+                                    hotkeyManager.promptSelectorModifier = .fn
+                                } label: {
+                                    HStack {
+                                        Text(HotkeyManager.HotkeyModifier.fn.shortName)
+                                        if hotkeyManager.promptSelectorModifier == .fn {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
+                        } label: {
+                            StyledMenuLabel(hotkeyManager.promptSelectorModifier.shortName)
                         }
-                        .pickerStyle(.menu)
+                        .buttonStyle(.plain)
                         .frame(width: 140)
                     }
 
@@ -264,12 +340,24 @@ public struct GeneralSettingsView: View {
 
                     Spacer()
 
-                    Picker("", selection: $audioEngine.selectedDeviceUID) {
+                    Menu {
                         ForEach(audioEngine.availableDevices) { device in
-                            Text(device.name).tag(device.uid)
+                            Button {
+                                audioEngine.selectedDeviceUID = device.uid
+                            } label: {
+                                HStack {
+                                    Text(device.name)
+                                    if audioEngine.selectedDeviceUID == device.uid {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
                         }
+                    } label: {
+                        StyledMenuLabel(audioEngine.availableDevices.first { $0.uid == audioEngine.selectedDeviceUID }?.name ?? "Select...")
                     }
-                    .pickerStyle(.menu)
+                    .buttonStyle(.plain)
                     .frame(maxWidth: 200)
 
                     Button {
@@ -334,18 +422,25 @@ public struct GeneralSettingsView: View {
 
                         Spacer()
 
-                        Picker("", selection: Binding(
-                            get: { visualizationStyle },
-                            set: { newValue in
-                                visualizationStyle = newValue
-                                UserDefaults.standard.set(newValue.rawValue, forKey: "visualizationStyle")
-                            }
-                        )) {
+                        Menu {
                             ForEach(VisualizationStyle.allCases) { style in
-                                Text(style.displayName).tag(style)
+                                Button {
+                                    visualizationStyle = style
+                                    UserDefaults.standard.set(style.rawValue, forKey: "visualizationStyle")
+                                } label: {
+                                    HStack {
+                                        Text(style.displayName)
+                                        if visualizationStyle == style {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
+                        } label: {
+                            StyledMenuLabel(visualizationStyle.displayName)
                         }
-                        .pickerStyle(.menu)
+                        .buttonStyle(.plain)
                         .frame(width: 120)
                     }
 
