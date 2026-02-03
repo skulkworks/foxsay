@@ -25,10 +25,8 @@ public class MenuBarManager: NSObject, ObservableObject {
 
     override private init() {
         super.init()
-        print("FoxSay: MenuBarManager initializing...")
         setupMenuBar()
         observeUserDefaults()
-        print("FoxSay: MenuBarManager initialized")
     }
 
     private func observeUserDefaults() {
@@ -141,19 +139,12 @@ public class MenuBarManager: NSObject, ObservableObject {
     private static var wasAccessoryMode = false
 
     @objc private func openSettings() {
-        // Debug: Log all windows
-        print("FoxSay: openSettings - All windows: \(NSApp.windows.count)")
-        for (index, window) in NSApp.windows.enumerated() {
-            print("FoxSay:   Window \(index): \(type(of: window)), isVisible=\(window.isVisible), canBecomeMain=\(window.canBecomeMain), canBecomeKey=\(window.canBecomeKey), title='\(window.title)'")
-        }
-
         // Remember if we were in accessory mode
         Self.wasAccessoryMode = NSApp.activationPolicy() == .accessory
 
         // Temporarily switch to regular activation policy so windows can be shown properly
         // This is needed because .accessory mode prevents normal window behavior
         if Self.wasAccessoryMode {
-            print("FoxSay: Switching from accessory to regular policy temporarily")
             NSApp.setActivationPolicy(.regular)
         }
 
@@ -169,7 +160,6 @@ public class MenuBarManager: NSObject, ObservableObject {
     /// Call this when the settings window is closed to restore accessory mode
     public static func restoreAccessoryModeIfNeeded() {
         if wasAccessoryMode {
-            print("FoxSay: Restoring accessory mode")
             NSApp.setActivationPolicy(.accessory)
             wasAccessoryMode = false
         }
@@ -183,27 +173,21 @@ public class MenuBarManager: NSObject, ObservableObject {
         }
 
         if let window = mainWindow {
-            print("FoxSay: Found main window, isVisible=\(window.isVisible), isMiniaturized=\(window.isMiniaturized)")
-
             // Deminiaturize if needed (this also makes it visible)
             if window.isMiniaturized {
-                print("FoxSay: Deminiaturizing window")
                 window.deminiaturize(nil)
             }
 
             // Ensure visible
             if !window.isVisible {
-                print("FoxSay: Making window visible")
                 window.setIsVisible(true)
             }
 
             // Use orderFrontRegardless which is more aggressive
-            print("FoxSay: Ordering window front regardless")
             window.orderFrontRegardless()
             window.makeKey()
 
             // Activate app using the newer API
-            print("FoxSay: Activating app with NSRunningApplication")
             NSRunningApplication.current.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
 
             // Note: We stay in .regular mode while the window is open
@@ -212,11 +196,9 @@ public class MenuBarManager: NSObject, ObservableObject {
 
             // Navigate to settings after a small delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                print("FoxSay: Posting ShowSettings notification")
                 NotificationCenter.default.post(name: NSNotification.Name("ShowSettings"), object: nil)
             }
         } else {
-            print("FoxSay: No main window found, requesting creation")
             // No main window exists - post notification to create one via SwiftUI
             NotificationCenter.default.post(name: NSNotification.Name("OpenMainWindow"), object: nil)
 
