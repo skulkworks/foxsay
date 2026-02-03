@@ -158,6 +158,7 @@ struct PromptSelectorContentView: View {
     @ObservedObject private var promptManager = PromptManager.shared
     @ObservedObject private var aiModelManager = AIModelManager.shared
     @ObservedObject private var modeManager = VoiceModeManager.shared
+    @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @State private var selectedIndex: Int = 0
     @State private var filterText: String = ""
     @FocusState private var isFocused: Bool
@@ -168,6 +169,7 @@ struct PromptSelectorContentView: View {
     // Darker colors for better badge contrast
     private let markdownBadgeColor = Color(red: 0.0, green: 0.55, blue: 0.55) // Darker teal
     private let promptBadgeColor = Color(red: 0.45, green: 0.25, blue: 0.65) // Darker purple
+    private let hotkeyBadgeColor = Color(red: 0.659, green: 0.333, blue: 0.969) // Dashboard purple
 
     // Total count: 1 (markdown) + AI prompt options
     private var totalOptionCount: Int {
@@ -250,14 +252,62 @@ struct PromptSelectorContentView: View {
     }
 
     private var headerRow: some View {
-        HStack {
-            Text("Select Prompt")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.9))
-            Spacer()
-            Text("↑↓ Navigate  ␣ Toggle  ⏎ Select  ⎋ Close")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.4))
+        VStack(alignment: .leading, spacing: 8) {
+            // Hotkey indicator - clickable to go to settings
+            HStack(spacing: 6) {
+                Button {
+                    // Navigate to General settings and close overlay
+                    AppState.shared.selectedSidebarItem = .general
+                    // Bring main window to front
+                    NSApp.activate(ignoringOtherApps: true)
+                    if let window = NSApp.windows.first(where: { $0.title == "FoxSay" || $0.identifier?.rawValue == "main" }) {
+                        window.makeKeyAndOrderFront(nil)
+                    }
+                    onDismiss()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(hotkeyBadgeColor)
+
+                        Text("Prompts")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.6))
+
+                        Text(hotkeyManager.promptSelectorModifier.shortName)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(hotkeyBadgeColor.opacity(0.3))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+
+                        Image(systemName: "gear")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Click to change hotkey")
+
+                Spacer()
+
+                Text("⎋ Close")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+
+            // Title and keyboard hints
+            HStack {
+                Text("Select Prompt")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                Spacer()
+                Text("↑↓ Navigate  ␣ Toggle  ⏎ Select")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+            }
         }
     }
 

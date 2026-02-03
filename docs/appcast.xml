@@ -6,16 +6,16 @@
         <description>Updates for FoxSay</description>
         <language>en</language>
         <item>
-            <title>Version 1.0.3</title>
-            <pubDate>Mon, 02 Feb 2026 12:15:35 -0700</pubDate>
-            <sparkle:version>1.0.3</sparkle:version>
-            <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+            <title>Version 1.0.4</title>
+            <pubDate>Mon, 02 Feb 2026 18:11:05 -0700</pubDate>
+            <sparkle:version>1.0.4</sparkle:version>
+            <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure
-                url="https://github.com/skulkworks/foxsay/releases/download/v1.0.3/FoxSay.dmg"
-                length="16485399"
+                url="https://github.com/skulkworks/foxsay/releases/download/v1.0.4/FoxSay.dmg"
+                length="16544111"
                 type="application/octet-stream"
-                sparkle:edSignature="tdkLKXhRHu19uuCEPzjLZoArrosMtu0V89gpsYDSp7Cgg8N2P2DrytlUDjdl8rH7Ar33Dna6cc1kPqnCvHH0BA=="
+                sparkle:edSignature="EDZdyQlO20ssn4LlPnKcTvSckcgeWnWXjH3AIaAs0/BwbjXdSR+R2QlHwzRVEMDvt3fORzJytu4k8XC2u7msBQ=="
             />
         </item>
     </channel>

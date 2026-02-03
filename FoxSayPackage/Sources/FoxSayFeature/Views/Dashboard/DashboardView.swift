@@ -4,6 +4,7 @@ import SwiftUI
 public struct DashboardView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var statisticsManager = StatisticsManager.shared
+    @ObservedObject private var hotkeyManager = HotkeyManager.shared
 
     @State private var selectedPeriod: DashboardPeriod = .sixMonths
 
@@ -14,6 +15,9 @@ public struct DashboardView: View {
             VStack(spacing: 24) {
                 // Header
                 DashboardHeaderView()
+
+                // Hotkey indicator
+                hotkeyIndicator
 
                 // Activity Section
                 activitySection
@@ -30,6 +34,72 @@ public struct DashboardView: View {
             .padding(24)
         }
         .background(Color(.windowBackgroundColor))
+    }
+
+    // MARK: - Hotkey Indicator
+
+    private var hotkeyIndicator: some View {
+        HStack(spacing: 12) {
+            // Recording hotkey - clickable
+            Button {
+                appState.selectedSidebarItem = .general
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.dashboardOrange)
+
+                    Text("Record")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text(hotkeyManager.selectedModifier.shortName)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.dashboardOrange.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Click to change recording hotkey")
+
+            Spacer()
+
+            // Prompts hotkey (if enabled) - clickable
+            if hotkeyManager.promptSelectorEnabled {
+                Button {
+                    appState.selectedSidebarItem = .general
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.dashboardPurple)
+
+                        Text("Prompts")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                        Text(hotkeyManager.promptSelectorModifier.shortName)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.dashboardPurple.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Click to change prompts hotkey")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.textBackgroundColor).opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Activity Section
