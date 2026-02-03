@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/github/v/release/skulkworks/foxsay?label=Download&style=for-the-badge" alt="Download" height="40">
 </a>
 
-A macOS mac app for on-device speech-to-text dictation, built for developers and content creators. Hold a hotkey, speak, and FoxSay transcribes your voice and pastes the result directly into any app. All processing happens locally on your Mac - no cloud services, no data leaving your machine.
+A macOS mac app for on-device speech-to-text dictation, built for developers and content creators. Hold a hotkey, speak, and FoxSay transcribes your voice and pastes the result directly into any app. All processing happens locally on your Mac - no cloud services, no data leaving your machine (unless you want it to by connecting external AI providers).
 
 ![FoxSay screenshot](screenshot-1.webp)
 
