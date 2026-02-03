@@ -35,51 +35,52 @@ public struct PromptsSettingsView: View {
                 }
 
                 // Built-in prompts
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Built-in Prompts", systemImage: "star.fill")
-                            .font(.headline)
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Built-in Prompts", systemImage: "star.fill")
+                        .font(.headline)
+                        .padding(.leading, 4)
 
+                    VStack(spacing: 8) {
                         ForEach(promptManager.builtInPrompts) { prompt in
                             promptRow(prompt)
                         }
                     }
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Custom prompts
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Label("Custom Prompts", systemImage: "person.fill")
-                                .font(.headline)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("Custom Prompts", systemImage: "person.fill")
+                            .font(.headline)
 
-                            Spacer()
+                        Spacer()
 
-                            Button {
-                                showAddPromptSheet = true
-                            } label: {
-                                Label("Add Prompt", systemImage: "plus")
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                        Button {
+                            showAddPromptSheet = true
+                        } label: {
+                            Label("Add Prompt", systemImage: "plus")
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    .padding(.horizontal, 4)
 
-                        if promptManager.customPrompts.isEmpty {
-                            Text("No custom prompts yet. Add your own prompts to create custom text transformations.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 8)
-                        } else {
+                    if promptManager.customPrompts.isEmpty {
+                        Text("No custom prompts yet. Add your own prompts to create custom text transformations.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 4)
+                    } else {
+                        VStack(spacing: 8) {
                             ForEach(promptManager.customPrompts) { prompt in
                                 promptRow(prompt)
                             }
                         }
                     }
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Voice activation info
                 voiceActivationInfo
@@ -258,11 +259,12 @@ public struct PromptsSettingsView: View {
                 }
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isActive ? Color.accentColor.opacity(0.1) : Color.clear)
+        .padding(12)
+        .background(isActive ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isActive ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .contentShape(Rectangle())
         .onTapGesture {

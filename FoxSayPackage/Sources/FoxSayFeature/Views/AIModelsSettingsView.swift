@@ -73,8 +73,17 @@ public struct AIModelsSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(item: $editingProvider) { provider in
             RemoteProviderEditSheet(provider: provider) { updated in
-                providerManager.updateProvider(updated)
+                let credentialsChanged = providerManager.updateProvider(updated)
                 editingProvider = nil
+                // Auto-test if credentials changed and API key is set
+                if credentialsChanged && updated.apiKey != nil && !updated.apiKey!.isEmpty {
+                    Task {
+                        // Get the updated provider from the manager
+                        if let current = providerManager.remoteProviders.first(where: { $0.id == updated.id }) {
+                            await providerManager.testConnection(for: current)
+                        }
+                    }
+                }
             } onCancel: {
                 editingProvider = nil
             }
@@ -86,6 +95,12 @@ public struct AIModelsSettingsView: View {
             ) { newProvider in
                 providerManager.addProvider(newProvider)
                 showingAddProvider = false
+                // Auto-test new provider if API key is set
+                if newProvider.apiKey != nil && !newProvider.apiKey!.isEmpty {
+                    Task {
+                        await providerManager.testConnection(for: newProvider)
+                    }
+                }
             } onCancel: {
                 showingAddProvider = false
             }
@@ -324,8 +339,8 @@ struct RemoteProviderCard: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header row
+        VStack(alignment: .leading, spacing: 8) {
+            // Header row with icon, title, badges, and action buttons
             HStack(spacing: 12) {
                 // Icon
                 ZStack {
@@ -338,13 +353,12 @@ struct RemoteProviderCard: View {
                         .foregroundColor(isSelected ? .accentColor : .secondary)
                 }
 
-                // Title and URL
+                // Title and badges
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(provider.name)
                             .font(.headline)
 
-                        // Show Active badge in title only when active (matches local model style)
                         if isSelected {
                             Text("Active")
                                 .font(.caption2)
@@ -353,6 +367,17 @@ struct RemoteProviderCard: View {
                                 .padding(.vertical, 2)
                                 .background(Color.secondaryAccent)
                                 .foregroundColor(.black)
+                                .clipShape(Capsule())
+                        }
+
+                        if provider.isVerified && !isSelected {
+                            Text("Ready")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .foregroundColor(.white)
                                 .clipShape(Capsule())
                         }
 
@@ -368,20 +393,31 @@ struct RemoteProviderCard: View {
                         }
                     }
 
-                    Text(provider.baseURL)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    // Model name (prominent, like description in local cards)
+                    if let modelName = provider.modelName, !modelName.isEmpty {
+                        Text(modelName)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    }
                 }
 
                 Spacer()
 
-                // Status / Action buttons (unified with local model style)
+                // Action buttons
                 statusView
             }
 
-            // Connection test result
-            connectionTestResultView
+            // Footer: URL and connection status
+            HStack {
+                Text(provider.baseURL)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                connectionTestResultView
+            }
         }
         .padding(16)
         .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
@@ -545,6 +581,9 @@ struct RemoteProviderEditSheet: View {
     @State private var isEnabled: Bool
     @State private var availableModels: [String] = []
     @State private var isFetchingModels = false
+    @State private var modelFilter: String = ""
+    @State private var showModelPicker = false
+    @State private var showHelp = false
     @State private var fetchError: String?
 
     let originalProvider: RemoteProvider
@@ -562,6 +601,9 @@ struct RemoteProviderEditSheet: View {
         _apiKey = State(initialValue: provider.apiKey ?? "")
         _modelName = State(initialValue: provider.modelName ?? "")
         _isEnabled = State(initialValue: provider.isEnabled)
+        // Load cached models if available
+        let cached = LLMProviderManager.shared.cachedModels[provider.id] ?? []
+        _availableModels = State(initialValue: cached)
     }
 
     private var isValid: Bool {
@@ -594,40 +636,17 @@ struct RemoteProviderEditSheet: View {
                 Section {
                     TextField("Name", text: $name, prompt: Text("e.g., OpenAI"))
                     TextField("Base URL", text: $baseURL, prompt: Text("e.g., https://api.openai.com/v1"))
-                    SecureField("API Key (optional)", text: $apiKey, prompt: Text("Required for OpenAI"))
+                    SecureField("API Key", text: $apiKey)
                 }
 
                 Section {
                     HStack {
                         if availableModels.isEmpty {
-                            TextField("Model Name", text: $modelName, prompt: Text("e.g., gpt-4o-mini"))
+                            TextField("Model Name", text: $modelName, prompt: Text("e.g., gpt-5-chat-latest"))
                         } else {
-                            Menu {
-                                Button {
-                                    modelName = ""
-                                } label: {
-                                    HStack {
-                                        Text("Select a model")
-                                        if modelName.isEmpty {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                                Divider()
-                                ForEach(availableModels, id: \.self) { model in
-                                    Button {
-                                        modelName = model
-                                    } label: {
-                                        HStack {
-                                            Text(model)
-                                            if modelName == model {
-                                                Spacer()
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
+                            Button {
+                                modelFilter = ""
+                                showModelPicker = true
                             } label: {
                                 StyledMenuLabel(modelName.isEmpty ? "Select a model" : modelName)
                             }
@@ -668,18 +687,32 @@ struct RemoteProviderEditSheet: View {
                 }
 
                 Section {
-                    Text("The base URL should point to an OpenAI-compatible API endpoint. Common examples:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("• OpenAI: https://api.openai.com/v1")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("• LM Studio: http://localhost:1234/v1")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("• Ollama: http://localhost:11434/v1")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    DisclosureGroup("Help", isExpanded: $showHelp) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("The base URL should point to an OpenAI-compatible API endpoint.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("• OpenAI: https://api.openai.com/v1")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text("• Anthropic: https://api.anthropic.com/v1")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text("• Google: https://generativelanguage.googleapis.com/v1beta/openai")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text("• OpenRouter: https://openrouter.ai/api/v1")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text("• LM Studio: http://localhost:1234/v1")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text("• Ollama: http://localhost:11434/v1")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .font(.caption)
                 }
             }
             .formStyle(.grouped)
@@ -696,7 +729,9 @@ struct RemoteProviderEditSheet: View {
                         baseURL: baseURL.trimmingCharacters(in: .whitespaces),
                         apiKey: apiKey.isEmpty ? nil : apiKey,
                         modelName: modelName.isEmpty ? nil : modelName,
-                        isEnabled: isEnabled
+                        isEnabled: isEnabled,
+                        isBuiltIn: originalProvider.isBuiltIn,
+                        isVerified: originalProvider.isVerified
                     )
                     onSave(updated)
                 }
@@ -705,7 +740,19 @@ struct RemoteProviderEditSheet: View {
             }
             .padding()
         }
-        .frame(width: 450, height: 480)
+        .frame(width: 450, height: 380)
+        .sheet(isPresented: $showModelPicker) {
+            ModelPickerSheet(
+                models: availableModels,
+                selectedModel: modelName,
+                filter: $modelFilter
+            ) { selected in
+                modelName = selected
+                showModelPicker = false
+            } onCancel: {
+                showModelPicker = false
+            }
+        }
     }
 
     private func fetchModels() {
@@ -730,8 +777,11 @@ struct RemoteProviderEditSheet: View {
                 isFetchingModels = false
                 switch result {
                 case .success(let models):
-                    availableModels = models.sorted()
-                    if modelName.isEmpty, let first = models.first {
+                    let sortedModels = models.sorted()
+                    availableModels = sortedModels
+                    // Cache the models for this provider
+                    LLMProviderManager.shared.cachedModels[originalProvider.id] = sortedModels
+                    if modelName.isEmpty, let first = sortedModels.first {
                         modelName = first
                     }
                 case .failure(let error):
@@ -740,6 +790,101 @@ struct RemoteProviderEditSheet: View {
                 }
             }
         }
+    }
+}
+
+/// Sheet for picking a model with search/filter
+struct ModelPickerSheet: View {
+    let models: [String]
+    let selectedModel: String
+    @Binding var filter: String
+    let onSelect: (String) -> Void
+    let onCancel: () -> Void
+
+    private var filteredModels: [String] {
+        if filter.isEmpty {
+            return models
+        }
+        return models.filter { $0.localizedCaseInsensitiveContains(filter) }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Select Model")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") {
+                    onCancel()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding()
+
+            Divider()
+
+            // Search field
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Filter models...", text: $filter)
+                    .textFieldStyle(.plain)
+                if !filter.isEmpty {
+                    Button {
+                        filter = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(8)
+            .background(Color(.textBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            // Model count
+            Text("\(filteredModels.count) of \(models.count) models")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+
+            Divider()
+
+            // Model list
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(filteredModels, id: \.self) { model in
+                        Button {
+                            onSelect(model)
+                        } label: {
+                            HStack {
+                                Text(model)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                if model == selectedModel {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(model == selectedModel ? Color.accentColor.opacity(0.1) : Color.clear)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+                            .padding(.leading)
+                    }
+                }
+            }
+        }
+        .frame(width: 400, height: 450)
     }
 }
 

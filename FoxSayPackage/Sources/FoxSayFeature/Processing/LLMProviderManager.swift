@@ -53,6 +53,9 @@ public class LLMProviderManager: ObservableObject {
     /// Connection test result for each provider (keyed by UUID)
     @Published public var connectionTestResults: [UUID: ConnectionTestResult] = [:]
 
+    /// Cached available models for each provider (keyed by UUID) - persists for session
+    @Published public var cachedModels: [UUID: [String]] = [:]
+
     // MARK: - Computed Properties
 
     /// Whether ANY provider is ready to use (local model OR remote provider)
@@ -151,10 +154,27 @@ public class LLMProviderManager: ObservableObject {
     }
 
     /// Update an existing remote provider
-    public func updateProvider(_ provider: RemoteProvider) {
-        if let index = remoteProviders.firstIndex(where: { $0.id == provider.id }) {
-            remoteProviders[index] = provider
+    /// Returns true if credentials changed (API key, URL, or model)
+    @discardableResult
+    public func updateProvider(_ provider: RemoteProvider) -> Bool {
+        guard let index = remoteProviders.firstIndex(where: { $0.id == provider.id }) else {
+            return false
         }
+
+        let oldProvider = remoteProviders[index]
+        let credentialsChanged = oldProvider.apiKey != provider.apiKey ||
+                                 oldProvider.baseURL != provider.baseURL ||
+                                 oldProvider.modelName != provider.modelName
+
+        var updatedProvider = provider
+        // Reset verification if credentials changed
+        if credentialsChanged {
+            updatedProvider.isVerified = false
+            connectionTestResults[provider.id] = .idle
+        }
+
+        remoteProviders[index] = updatedProvider
+        return credentialsChanged
     }
 
     /// Delete a remote provider (built-in providers cannot be deleted)
@@ -210,10 +230,20 @@ public class LLMProviderManager: ObservableObject {
         switch result {
         case .success(let models):
             connectionTestResults[provider.id] = .success(models)
+            // Cache the models for this provider
+            cachedModels[provider.id] = models
+            // Mark provider as verified on success
+            if let index = remoteProviders.firstIndex(where: { $0.id == provider.id }) {
+                remoteProviders[index].isVerified = true
+            }
             os_log(.info, log: providerLog, "Connection test succeeded for %{public}@: %d models",
                    provider.name, models.count)
         case .failure(let error):
             connectionTestResults[provider.id] = .failure(error.localizedDescription)
+            // Mark provider as not verified on failure
+            if let index = remoteProviders.firstIndex(where: { $0.id == provider.id }) {
+                remoteProviders[index].isVerified = false
+            }
             os_log(.error, log: providerLog, "Connection test failed for %{public}@: %{public}@",
                    provider.name, error.localizedDescription)
         }

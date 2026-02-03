@@ -6,6 +6,7 @@ public struct SidebarView: View {
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var aiModelManager = AIModelManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     @State private var selection: SidebarItem = .status
 
@@ -132,7 +133,10 @@ public struct SidebarView: View {
 
     @ViewBuilder
     private var aiModelStatusDot: some View {
-        if aiModelManager.isModelLoaded {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady {
+            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "globe")
+        } else if aiModelManager.isModelLoaded {
             statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "brain")
         } else if aiModelManager.isPreloading {
             // Use rotating arrow icon during loading (brain is too symmetric to show rotation)

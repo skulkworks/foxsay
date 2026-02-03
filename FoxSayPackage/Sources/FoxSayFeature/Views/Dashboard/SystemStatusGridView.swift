@@ -6,6 +6,7 @@ struct SystemStatusGridView: View {
     @ObservedObject private var audioEngine = AudioEngine.shared
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var aiModelManager = AIModelManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     private let columns = [
         GridItem(.flexible()),
@@ -131,6 +132,11 @@ struct SystemStatusGridView: View {
     // MARK: - AI Model
 
     private var aiModelIcon: String {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady {
+            return "globe"
+        }
+        // Then check local
         if aiModelManager.isModelLoaded {
             return "brain"
         } else if aiModelManager.isPreloading {
@@ -145,6 +151,12 @@ struct SystemStatusGridView: View {
     }
 
     private var aiModelValue: String {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady,
+           let provider = providerManager.selectedRemoteProvider {
+            return provider.name
+        }
+        // Then check local
         if aiModelManager.isModelLoaded, let model = aiModelManager.selectedModel {
             return model.shortName
         } else if aiModelManager.isPreloading {
@@ -159,6 +171,11 @@ struct SystemStatusGridView: View {
     }
 
     private var aiModelStatusColor: Color {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady {
+            return .dashboardBlue
+        }
+        // Then check local
         if aiModelManager.isModelLoaded {
             return .dashboardBlue
         } else if aiModelManager.isPreloading {

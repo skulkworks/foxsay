@@ -50,6 +50,19 @@ public actor RemoteLLMService: TextTransformer {
         }
     }
 
+    /// Add authentication header based on provider type
+    private func addAuthenticationHeader(to request: inout URLRequest) {
+        guard let apiKey = provider.apiKey, !apiKey.isEmpty else { return }
+
+        // Anthropic uses x-api-key header instead of Authorization: Bearer
+        if provider.baseURL.contains("anthropic.com") {
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        } else {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+    }
+
     /// Test connection to the remote server by fetching available models
     public func testConnection() async -> Result<[String], RemoteLLMError> {
         guard let baseURL = URL(string: provider.baseURL) else {
@@ -60,9 +73,8 @@ public actor RemoteLLMService: TextTransformer {
         var request = URLRequest(url: modelsURL)
         request.httpMethod = "GET"
 
-        if let apiKey = provider.apiKey, !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
+        // Add authentication header based on provider
+        addAuthenticationHeader(to: &request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -87,16 +99,15 @@ public actor RemoteLLMService: TextTransformer {
 
             let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
 
-            // Filter to only chat-capable models for OpenAI
-            // OpenAI's API doesn't provide capability metadata, so we filter by name:
-            // - Models with "chat" (case insensitive) support chat completions
-            // - Reasoning models (o1, o3, gpt-5 without chat) don't work with chat completions
+            // Filter models based on provider
+            // OpenAI needs filtering to exclude non-chat models (reasoning models like o1, o3)
+            // Other providers: include all models
+            let isOpenAI = provider.baseURL.contains("openai.com")
             let chatModels = modelsResponse.data?.filter { model in
+                guard isOpenAI else { return true }
                 let id = model.id.lowercased()
-                // Include if it contains "chat", or is from a local server (different naming conventions)
-                let isChatModel = id.contains("chat")
-                let isLocalServer = !provider.baseURL.contains("openai.com")
-                return isChatModel || isLocalServer
+                // For OpenAI, include chat models (gpt-5-chat, gpt-4o, gpt-3.5-turbo, etc.)
+                return id.contains("chat") || id.contains("gpt-4o") || id.contains("gpt-3.5") || id.contains("turbo")
             }
 
             let modelIds = chatModels?.map { $0.id } ?? []
@@ -133,9 +144,8 @@ public actor RemoteLLMService: TextTransformer {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        if let apiKey = provider.apiKey, !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
+        // Add authentication header based on provider
+        addAuthenticationHeader(to: &request)
 
         // Build the request body
         // Use max_completion_tokens (required for OpenAI's newer models: gpt-4o, gpt-5, o1, etc.)

@@ -101,117 +101,134 @@ public struct AppPromptsSettingsView: View {
     }
 
     private func appRow(_ assignment: AppPromptAssignment) -> some View {
-        HStack(spacing: 12) {
-            // App icon
-            if let icon = assignment.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 32, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            } else {
-                Image(systemName: "app")
-                    .font(.title)
-                    .frame(width: 32, height: 32)
-                    .foregroundColor(.secondary)
-            }
-
-            // App name
-            VStack(alignment: .leading, spacing: 2) {
-                Text(assignment.displayName)
-                    .fontWeight(.medium)
-                Text(assignment.bundleId)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            // Prompt picker
-            Menu {
-                Button {
-                    appPromptManager.assignPrompt(nil, to: assignment)
-                } label: {
-                    HStack {
-                        Text("None")
-                        if assignment.defaultPromptId == nil {
-                            Spacer()
-                            Image(systemName: "checkmark")
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            // Top row: Icon, name, delete button
+            HStack(spacing: 12) {
+                // App icon
+                if let icon = assignment.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(systemName: "app")
+                        .font(.title)
+                        .frame(width: 40, height: 40)
+                        .foregroundColor(.secondary)
                 }
 
-                if !promptManager.prompts.isEmpty {
-                    Divider()
-                    ForEach(promptManager.prompts) { prompt in
+                // App name and bundle ID
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(assignment.displayName)
+                        .fontWeight(.medium)
+                    Text(assignment.bundleId)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                // Delete button
+                Button(role: .destructive) {
+                    appPromptManager.removeApp(assignment)
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+            }
+
+            // Bottom row: Dropdowns
+            HStack(spacing: 16) {
+                // Prompt picker
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Menu {
                         Button {
-                            appPromptManager.assignPrompt(prompt.id, to: assignment)
+                            appPromptManager.assignPrompt(nil, to: assignment)
                         } label: {
                             HStack {
-                                Text(prompt.displayName)
-                                if assignment.defaultPromptId == prompt.id {
+                                Text("None")
+                                if assignment.defaultPromptId == nil {
                                     Spacer()
                                     Image(systemName: "checkmark")
                                 }
                             }
                         }
-                    }
-                }
-            } label: {
-                StyledMenuLabel(promptPickerLabel(for: assignment))
-            }
-            .buttonStyle(.plain)
-            .frame(width: 130)
 
-            // Model picker (using Menu for section headers)
-            Menu {
-                Section {
-                    Button {
-                        appPromptManager.assignModel(nil, to: assignment)
-                    } label: {
-                        HStack {
-                            Text("Default")
-                            if assignment.defaultModelRef == nil {
-                                Spacer()
-                                Image(systemName: "checkmark")
+                        if !promptManager.prompts.isEmpty {
+                            Divider()
+                            ForEach(promptManager.prompts) { prompt in
+                                Button {
+                                    appPromptManager.assignPrompt(prompt.id, to: assignment)
+                                } label: {
+                                    HStack {
+                                        Text(prompt.displayName)
+                                        if assignment.defaultPromptId == prompt.id {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
                         }
+                    } label: {
+                        StyledMenuLabel(promptPickerLabel(for: assignment))
                     }
-                } header: {
-                    Text("Uses active local or remote model")
+                    .buttonStyle(.plain)
                 }
 
-                if !enabledProviders.isEmpty {
-                    Section("Override with Remote") {
-                        ForEach(enabledProviders) { provider in
+                // Model picker
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Model")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Menu {
+                        Section {
                             Button {
-                                appPromptManager.assignModel(.remote(providerId: provider.id), to: assignment)
+                                appPromptManager.assignModel(nil, to: assignment)
                             } label: {
                                 HStack {
-                                    Text(provider.name)
-                                    if case .remote(let id) = assignment.defaultModelRef, id == provider.id {
+                                    Text("Default")
+                                    if assignment.defaultModelRef == nil {
                                         Spacer()
                                         Image(systemName: "checkmark")
                                     }
                                 }
                             }
+                        } header: {
+                            Text("Uses active local or remote model")
                         }
-                    }
-                }
-            } label: {
-                StyledMenuLabel(modelPickerLabel(for: assignment))
-            }
-            .buttonStyle(.plain)
-            .frame(width: 130)
 
-            // Delete button
-            Button(role: .destructive) {
-                appPromptManager.removeApp(assignment)
-            } label: {
-                Image(systemName: "trash")
+                        if !enabledProviders.isEmpty {
+                            Section("Override with Remote") {
+                                ForEach(enabledProviders) { provider in
+                                    Button {
+                                        appPromptManager.assignModel(.remote(providerId: provider.id), to: assignment)
+                                    } label: {
+                                        HStack {
+                                            Text(provider.name)
+                                            if case .remote(let id) = assignment.defaultModelRef, id == provider.id {
+                                                Spacer()
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        StyledMenuLabel(modelPickerLabel(for: assignment))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
             }
-            .buttonStyle(.borderless)
         }
-        .padding(.vertical, 8)
+        .padding(12)
     }
 
     private func promptPickerLabel(for assignment: AppPromptAssignment) -> String {

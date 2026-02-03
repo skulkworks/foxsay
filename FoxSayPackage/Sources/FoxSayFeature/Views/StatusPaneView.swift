@@ -9,6 +9,7 @@ public struct StatusPaneView: View {
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var aiModelManager = AIModelManager.shared
     @ObservedObject private var promptManager = PromptManager.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
 
     public init() {}
 
@@ -186,7 +187,7 @@ public struct StatusPaneView: View {
                 title: "AI",
                 icon: aiModelStatusIcon,
                 status: aiModelStatusText,
-                isReady: aiModelManager.isModelLoaded,
+                isReady: aiModelReady,
                 isLoading: aiModelManager.isPreloading
             ) {
                 appState.selectedSidebarItem = .aiModels
@@ -220,6 +221,11 @@ public struct StatusPaneView: View {
     }
 
     private var aiModelStatusIcon: String {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady {
+            return "globe"
+        }
+        // Then check local
         if aiModelManager.isModelLoaded {
             return "brain"
         } else if aiModelManager.isPreloading {
@@ -232,6 +238,12 @@ public struct StatusPaneView: View {
     }
 
     private var aiModelStatusText: String {
+        // Check remote provider first
+        if providerManager.providerType == .remote && providerManager.isRemoteReady,
+           let provider = providerManager.selectedRemoteProvider {
+            return provider.name
+        }
+        // Then check local
         if aiModelManager.isModelLoaded, let model = aiModelManager.selectedModel {
             return model.shortName
         } else if aiModelManager.isPreloading {
@@ -243,6 +255,15 @@ public struct StatusPaneView: View {
         } else {
             return "Download"
         }
+    }
+
+    private var aiModelReady: Bool {
+        // Remote provider is ready
+        if providerManager.providerType == .remote && providerManager.isRemoteReady {
+            return true
+        }
+        // Local model is loaded
+        return aiModelManager.isModelLoaded
     }
 
     private func activePromptInfo(_ prompt: Prompt) -> some View {
