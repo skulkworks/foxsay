@@ -1,5 +1,8 @@
 # FoxSay
 
+<a href="https://discord.gg/vUShQGeUPC">
+  <img src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" height="40">
+</a>
 <a href="https://github.com/skulkworks/foxsay/releases/latest">
   <img src="https://img.shields.io/github/v/release/skulkworks/foxsay?label=Download&style=for-the-badge" alt="Download" height="40">
 </a>
