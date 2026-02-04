@@ -16,10 +16,11 @@ A macOS mac app for on-device speech-to-text dictation, built for developers and
 - **On-device transcription** using NVIDIA Parakeet (via FluidAudio) or OpenAI Whisper (via WhisperKit)
 - **Hold-to-talk hotkey** with configurable modifier keys and activation modes (hold, toggle, double-tap)
 - **Voice modes** for context-aware dictation for Markdown
+- **Three unique visual input options** for a more interactive experience when dictating
 - **LLM-powered text modifications** using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX, or remote models via API (BYOK)
 - **Automatic text injection** into the frontmost app via paste
 - **Prompts** preset prompts provided to enhance your text, or create your own
-- **Application Overrides** to allow you to configure the prompt and model for specific applications
+- **Application overrides** to allow you to configure the prompt and model for specific applications
 - **Transcription history** with audio playback
 - **Dictionary** to create your own custom simple text transformations
 
