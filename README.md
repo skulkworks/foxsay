@@ -16,9 +16,12 @@ A macOS mac app for on-device speech-to-text dictation, built for developers and
 - **On-device transcription** using NVIDIA Parakeet (via FluidAudio) or OpenAI Whisper (via WhisperKit)
 - **Hold-to-talk hotkey** with configurable modifier keys and activation modes (hold, toggle, double-tap)
 - **Voice modes** for context-aware dictation for Markdown
-- **LLM-powered corrections** using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX
+- **LLM-powered text modifications** using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX, or remote models via API (BYOK)
 - **Automatic text injection** into the frontmost app via paste
+- **Prompts** preset prompts provided to enhance your text, or create your own
+- **Application Overrides** to allow you to configure the prompt and model for specific applications
 - **Transcription history** with audio playback
+- **Dictionary** to create your own custom simple text transformations
 
 ## Requirements
 
@@ -87,7 +90,7 @@ All transcription engines are optimized to fully utilize Apple Silicon hardware 
 - CoreML models are compiled for ANE execution
 - Large-v3-turbo achieves up to 72x real-time on M2 Ultra with GPU+ANE config
 
-**LLM Corrections (MLX)**
+**LLM Text Modifications (MLX)**
 - All AI models run on Metal GPU via Apple MLX framework
 - Available models include Qwen, Gemma, Llama, Phi, and Mistral (ranging from 1B to 12B parameters)
 - 4-bit quantization reduces memory footprint while maintaining quality
