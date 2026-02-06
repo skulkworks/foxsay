@@ -97,6 +97,20 @@ public class MenuBarManager: NSObject, ObservableObject {
             menu.addItem(promptItem)
         }
 
+        #if DEBUG
+        menu.addItem(NSMenuItem.separator())
+
+        let simNoMic = AudioEngine.shared.simulateNoMicrophone
+        let simItem = NSMenuItem(
+            title: "Simulate No Microphone",
+            action: #selector(toggleSimulateNoMicrophone),
+            keyEquivalent: ""
+        )
+        simItem.target = self
+        simItem.state = simNoMic ? .on : .off
+        menu.addItem(simItem)
+        #endif
+
         menu.addItem(NSMenuItem.separator())
 
         // Settings
@@ -134,6 +148,13 @@ public class MenuBarManager: NSObject, ObservableObject {
     @objc private func showPromptSelector() {
         HotkeyManager.shared.onPromptSelector?()
     }
+
+    #if DEBUG
+    @objc private func toggleSimulateNoMicrophone() {
+        AudioEngine.shared.simulateNoMicrophone.toggle()
+        print("FoxSay: Simulate no microphone = \(AudioEngine.shared.simulateNoMicrophone)")
+    }
+    #endif
 
     /// Track if we were in accessory mode before showing settings
     private static var wasAccessoryMode = false

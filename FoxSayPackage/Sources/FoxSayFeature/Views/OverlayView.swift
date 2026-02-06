@@ -15,87 +15,112 @@ public struct OverlayView: View {
 
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Background visualization - fills entire overlay
-            WaveformView(audioLevel: audioEngine.audioLevel, isActive: appState.isRecording)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(0.85)
+            if appState.overlayErrorMessage != nil {
+                // Error state - no waveform, just error message
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "mic.slash.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.35))
 
-            // Text content floating on top
-            VStack(alignment: .leading, spacing: 8) {
-                // Header row: status left, app icon+name right
-                HStack(spacing: 6) {
-                    // Pulsing red dot (opacity only, no scale)
-                    Circle()
-                        .fill(Color.tertiaryAccent)
-                        .frame(width: 8, height: 8)
-                        .opacity(pulseOpacity)
-                        .onAppear {
-                            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
-                                pulseOpacity = 0.4
-                            }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("No Microphone Detected")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white)
+                            Text("Connect a microphone and try again")
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.white.opacity(0.6))
                         }
 
-                    Text(statusText)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white)
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            } else {
+                // Normal recording state
+                // Background visualization - fills entire overlay
+                WaveformView(audioLevel: audioEngine.audioLevel, isActive: appState.isRecording)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(0.85)
 
-                    // Mode indicators (compact) - darker colors for better contrast
-                    if modeManager.markdownModeEnabled {
-                        Text("Markdown")
-                            .font(.system(size: 9, weight: .semibold))
+                // Text content floating on top
+                VStack(alignment: .leading, spacing: 8) {
+                    // Header row: status left, app icon+name right
+                    HStack(spacing: 6) {
+                        // Pulsing red dot (opacity only, no scale)
+                        Circle()
+                            .fill(Color.tertiaryAccent)
+                            .frame(width: 8, height: 8)
+                            .opacity(pulseOpacity)
+                            .onAppear {
+                                withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                                    pulseOpacity = 0.4
+                                }
+                            }
+
+                        Text(statusText)
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(red: 0.0, green: 0.55, blue: 0.55)))
+
+                        // Mode indicators (compact) - darker colors for better contrast
+                        if modeManager.markdownModeEnabled {
+                            Text("Markdown")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color(red: 0.0, green: 0.55, blue: 0.55)))
+                        }
+
+                        if let activePrompt = promptManager.activePrompt {
+                            Text(activePrompt.displayName)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color(red: 0.45, green: 0.25, blue: 0.65)))
+                        }
+
+                        Spacer()
+
+                        // Target app icon + name (right side)
+                        if let appName = appDetector.targetAppName {
+                            HStack(spacing: 4) {
+                                if let icon = appDetector.targetAppIcon {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .frame(width: 14, height: 14)
+                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                }
+                                Text(appName)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .lineLimit(1)
+                            }
+                        }
                     }
 
-                    if let activePrompt = promptManager.activePrompt {
-                        Text(activePrompt.displayName)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(red: 0.45, green: 0.25, blue: 0.65)))
+                    // Status text
+                    Group {
+                        if appState.isTranscribing {
+                            Text("Transcribing...")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.white.opacity(0.85))
+                                .italic()
+                        } else {
+                            Text("Listening...")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.white.opacity(0.75))
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Spacer()
-
-                    // Target app icon + name (right side)
-                    if let appName = appDetector.targetAppName {
-                        HStack(spacing: 4) {
-                            if let icon = appDetector.targetAppIcon {
-                                Image(nsImage: icon)
-                                    .resizable()
-                                    .frame(width: 14, height: 14)
-                                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                            }
-                            Text(appName)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.white.opacity(0.7))
-                                .lineLimit(1)
-                        }
-                    }
                 }
-
-                // Status text
-                Group {
-                    if appState.isTranscribing {
-                        Text("Transcribing...")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.white.opacity(0.85))
-                            .italic()
-                    } else {
-                        Text("Listening...")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.white.opacity(0.75))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
         }
         .frame(width: 440, height: 80)
         .background(

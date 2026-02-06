@@ -128,6 +128,11 @@ public class AudioEngine: ObservableObject {
     private let storage = AudioBufferStorage()
     private var tapProcessor: AudioTapProcessor?
 
+    #if DEBUG
+    /// Debug flag to simulate no microphone being connected
+    public var simulateNoMicrophone = false
+    #endif
+
     @Published public private(set) var isRecording = false
     @Published public private(set) var hasPermission = false
     @Published public private(set) var audioLevel: Float = 0
@@ -474,6 +479,32 @@ public class AudioEngine: ObservableObject {
         }
     }
 
+    /// Check if a default audio input device exists (must check before accessing AVAudioEngine.inputNode)
+    private func hasDefaultInputDevice() -> Bool {
+        var deviceID = AudioDeviceID()
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var dataSize = UInt32(MemoryLayout<AudioDeviceID>.size)
+
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0,
+            nil,
+            &dataSize,
+            &deviceID
+        )
+
+        #if DEBUG
+        if simulateNoMicrophone { return false }
+        #endif
+
+        return status == noErr && deviceID != kAudioDeviceUnknown
+    }
+
     /// Start recording audio
     public func startRecording() throws {
         guard hasPermission else {
@@ -481,6 +512,13 @@ public class AudioEngine: ObservableObject {
         }
 
         guard !isRecording else { return }
+
+        // Check if any audio input device is available before creating the engine.
+        // Accessing AVAudioEngine.inputNode without an input device causes an
+        // uncatchable Objective-C exception crash.
+        guard hasDefaultInputDevice() else {
+            throw AudioEngineError.noMicrophoneDetected
+        }
 
         // Clear previous buffer
         storage.clear()
@@ -634,6 +672,7 @@ public enum AudioEngineError: LocalizedError {
     case noPermission
     case engineCreationFailed
     case noInputNode
+    case noMicrophoneDetected
 
     public var errorDescription: String? {
         switch self {
@@ -643,6 +682,8 @@ public enum AudioEngineError: LocalizedError {
             return "Failed to create audio engine"
         case .noInputNode:
             return "No audio input device available"
+        case .noMicrophoneDetected:
+            return "No microphone detected"
         }
     }
 }
