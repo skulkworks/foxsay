@@ -12,7 +12,7 @@
             <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure
-                url="https://github.com/skulkworks/foxsay/releases/download/v1.0.8/FoxSay.dmg"
+                url="https://github.com/skulkworks/foxsay/releases/download/1.0.8/FoxSay.dmg"
                 length="16748665"
                 type="application/octet-stream"
                 sparkle:edSignature="qUPpxdwLzFW0zMxES1ndidSgBYMIovbElF6jxzptIhJpxGzIIMt7UYkIm/J78xuD+F6vVpEMBK+LQ+EoYRwpCg=="

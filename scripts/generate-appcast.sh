@@ -91,7 +91,7 @@ log_info "Signature: ${SIGNATURE:0:30}..."
 mkdir -p "$APPCAST_DIR"
 
 # GitHub release download URL
-DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$VERSION/$APP_NAME.dmg"
+DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$VERSION/$APP_NAME.dmg"
 
 # Get current date in RFC 2822 format
 PUB_DATE=$(date -R)
