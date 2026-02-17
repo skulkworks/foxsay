@@ -2,6 +2,19 @@
 
 All notable changes to FoxSay will be documented in this file.
 
+## [1.0.8] - 2026-02-17
+
+### Fixed
+- App silently failing when a speech model's files are deleted from disk
+- Overlay getting stuck when no audio is captured (quick press-release)
+- No visible feedback when microphone permission is denied
+- No visible feedback when recording or transcription fails unexpectedly
+
+### Improved
+- All error states now show descriptive overlay messages that auto-dismiss after 3 seconds
+- Speech model availability is verified from disk before each recording session
+- Overlay error display is now dynamic, supporting different icons and messages per error type
+
 ## [1.0.7] - 2026-02-06
 
 ### Fixed

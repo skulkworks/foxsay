@@ -15,19 +15,19 @@ public struct OverlayView: View {
 
     public var body: some View {
         ZStack(alignment: .bottom) {
-            if appState.overlayErrorMessage != nil {
+            if let error = appState.overlayError {
                 // Error state - no waveform, just error message
                 VStack(spacing: 6) {
                     HStack(spacing: 8) {
-                        Image(systemName: "mic.slash.fill")
+                        Image(systemName: error.icon)
                             .font(.system(size: 20))
                             .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.35))
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("No Microphone Detected")
+                            Text(error.title)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.white)
-                            Text("Connect a microphone and try again")
+                            Text(error.subtitle)
                                 .font(.system(size: 11, weight: .regular))
                                 .foregroundColor(.white.opacity(0.6))
                         }
