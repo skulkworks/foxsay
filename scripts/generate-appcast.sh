@@ -34,11 +34,12 @@ if [ ! -f "$DMG_PATH" ]; then
     exit 1
 fi
 
-# Try to get version from Info.plist if not provided
-if [ -z "$VERSION" ]; then
-    if [ -d "$BUILD_DIR/$APP_NAME.app" ]; then
+# Try to get version and build number from Info.plist if not provided
+if [ -d "$BUILD_DIR/$APP_NAME.app" ]; then
+    if [ -z "$VERSION" ]; then
         VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$BUILD_DIR/$APP_NAME.app/Contents/Info.plist" 2>/dev/null || echo "")
     fi
+    BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$BUILD_DIR/$APP_NAME.app/Contents/Info.plist" 2>/dev/null || echo "")
 fi
 
 if [ -z "$VERSION" ]; then
@@ -47,7 +48,13 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-log_info "Generating appcast for version $VERSION"
+if [ -z "$BUILD_NUMBER" ]; then
+    log_error "Could not determine build number from $BUILD_DIR/$APP_NAME.app"
+    echo "Make sure the app exists in the build directory."
+    exit 1
+fi
+
+log_info "Generating appcast for version $VERSION (build $BUILD_NUMBER)"
 
 # Find Sparkle's sign_update tool
 SIGN_TOOL=""
@@ -110,7 +117,7 @@ cat > "$APPCAST_DIR/appcast.xml" << EOF
         <item>
             <title>Version $VERSION</title>
             <pubDate>$PUB_DATE</pubDate>
-            <sparkle:version>$VERSION</sparkle:version>
+            <sparkle:version>$BUILD_NUMBER</sparkle:version>
             <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure
