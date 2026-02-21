@@ -25,11 +25,21 @@ public class PromptSelectorWindowController: NSObject {
         guard let window = window else { return }
 
         // Restore saved position or use default center position
+        var useDefault = true
         if let savedPosition = UserDefaults.standard.dictionary(forKey: positionKey),
            let x = savedPosition["x"] as? CGFloat,
            let y = savedPosition["y"] as? CGFloat {
-            window.setFrameOrigin(NSPoint(x: x, y: y))
-        } else if let screen = NSScreen.main {
+            // Validate that the saved position is on a currently connected screen
+            let savedFrame = NSRect(x: x, y: y, width: window.frame.width, height: window.frame.height)
+            let isOnScreen = NSScreen.screens.contains { screen in
+                screen.frame.intersects(savedFrame)
+            }
+            if isOnScreen {
+                window.setFrameOrigin(NSPoint(x: x, y: y))
+                useDefault = false
+            }
+        }
+        if useDefault, let screen = NSScreen.main {
             // Default: center of screen, above center
             let screenFrame = screen.visibleFrame
             let windowWidth: CGFloat = 300

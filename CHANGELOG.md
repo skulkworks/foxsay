@@ -2,6 +2,14 @@
 
 All notable changes to FoxSay will be documented in this file.
 
+## [1.0.9] - 2026-02-20
+
+### Fixed
+- Recording overlay not appearing after disconnecting external monitors (saved position was off-screen)
+
+### Improved
+- Smoother audio visualization animations in recording overlay
+
 ## [1.0.8] - 2026-02-17
 
 ### Fixed

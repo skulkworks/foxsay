@@ -225,7 +225,9 @@ struct ScrollingWaveformView: View {
         }
         .onChange(of: audioLevel) { _, newLevel in
             if isActive {
-                updateLevels(with: newLevel)
+                withAnimation(.linear(duration: 1.0 / 30.0)) {
+                    updateLevels(with: newLevel)
+                }
             }
         }
         .onChange(of: isActive) { _, active in
@@ -353,7 +355,9 @@ struct SpectrumVisualizationView: View {
         }
         .onChange(of: audioLevel) { _, newLevel in
             if isActive {
-                updateSpectrum(with: newLevel)
+                withAnimation(.linear(duration: 1.0 / 30.0)) {
+                    updateSpectrum(with: newLevel)
+                }
             }
         }
         .onChange(of: isActive) { _, active in
@@ -506,7 +510,9 @@ struct PulsingVisualizationView: View {
         }
         .onChange(of: audioLevel) { _, newLevel in
             if isActive {
-                updatePulse(with: newLevel)
+                withAnimation(.linear(duration: 1.0 / 30.0)) {
+                    updatePulse(with: newLevel)
+                }
             }
         }
         .onChange(of: isActive) { _, active in
@@ -638,11 +644,21 @@ public class OverlayWindowController {
         guard let window = window else { return }
 
         // Restore saved position or use default position
+        var useDefault = true
         if let savedPosition = UserDefaults.standard.dictionary(forKey: positionKey),
            let x = savedPosition["x"] as? CGFloat,
            let y = savedPosition["y"] as? CGFloat {
-            window.setFrameOrigin(NSPoint(x: x, y: y))
-        } else if let screen = NSScreen.main {
+            // Validate that the saved position is on a currently connected screen
+            let savedFrame = NSRect(x: x, y: y, width: window.frame.width, height: window.frame.height)
+            let isOnScreen = NSScreen.screens.contains { screen in
+                screen.frame.intersects(savedFrame)
+            }
+            if isOnScreen {
+                window.setFrameOrigin(NSPoint(x: x, y: y))
+                useDefault = false
+            }
+        }
+        if useDefault, let screen = NSScreen.main {
             // Default: top center of main screen
             let screenFrame = screen.visibleFrame
             let windowWidth: CGFloat = 480
