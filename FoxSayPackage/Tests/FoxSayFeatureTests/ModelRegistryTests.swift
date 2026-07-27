@@ -42,6 +42,14 @@ struct AIModelRegistryTests {
         #expect(AIModel.model(withId: "no-such-model") == nil)
     }
 
+    @Test("exactly one model carries the Recommended badge")
+    func singleRecommendation() {
+        let recommended = AIModel.registry.filter(\.isRecommended)
+        #expect(recommended.count == 1, "got \(recommended.map(\.id))")
+        // Chosen by benchmarking the vocal-corrections prompt; see the note in AIModel.swift.
+        #expect(recommended.first?.id == "qwen-1.5b-instruct")
+    }
+
     @Test("newest-generation models are present")
     func newestGenerationPresent() {
         // These need the qwen3_5 and gemma4 architectures, which only exist from

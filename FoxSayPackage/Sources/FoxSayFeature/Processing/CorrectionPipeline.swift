@@ -4,7 +4,7 @@ import os.log
 private let pipelineLog = OSLog(subsystem: "com.foxsay", category: "PIPELINE")
 
 /// Orchestrates the text processing pipeline for transcribed text
-/// New flow: Transcription → Markdown PreProcess → Prompt Detection → AI Transform → PostProcess
+/// New flow: Transcription → Markdown PreProcess → Prompt Detection → Vocal Corrections → AI Transform → PostProcess
 @MainActor
 public class CorrectionPipeline: ObservableObject {
     public static let shared = CorrectionPipeline()
@@ -14,7 +14,56 @@ public class CorrectionPipeline: ObservableObject {
     private let providerManager = LLMProviderManager.shared
     private let dictionaryManager = DictionaryManager.shared
 
-    private init() {}
+    // MARK: - Vocal Corrections
+
+    private static let vocalCorrectionsEnabledKey = "vocalCorrectionsEnabled"
+
+    /// Whether vocal corrections via AI are enabled (off by default)
+    @Published public var vocalCorrectionsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(vocalCorrectionsEnabled, forKey: Self.vocalCorrectionsEnabledKey)
+        }
+    }
+
+    /// The prompt used to correct spoken self-corrections in transcribed text.
+    ///
+    /// Leads with the instruction and three worked examples rather than a list of
+    /// prohibitions. The previous wording stacked five "do not" clauses, which
+    /// suppressed the edit this feature exists to make: benchmarked across the
+    /// sub-2GB models, several applied no corrections at all, while others rewrote
+    /// text that contained no correction ("about four in the afternoon" became
+    /// "about 4:00 PM", and a git command picked up backticks). Showing the
+    /// no-correction case as an example fixes both failure modes.
+    ///
+    /// Note the examples are load-bearing. Changing them changes behaviour, so
+    /// re-benchmark rather than editing them by eye.
+    static let vocalCorrectionsPrompt = """
+        You edit speech-to-text transcripts. The speaker sometimes corrects themselves \
+        mid-sentence. Rewrite the text keeping ONLY what the speaker finally intended, \
+        and deleting the abandoned words and the correction phrase itself.
+
+        If the speaker did not correct themselves, repeat the text back completely unchanged.
+
+        Example 1
+        Input: Let's meet on Monday, scratch that, let's meet on Friday.
+        Output: Let's meet on Friday.
+
+        Example 2
+        Input: The build takes about ten minutes on this machine.
+        Output: The build takes about ten minutes on this machine.
+
+        Example 3
+        Input: Email Tom, no wait, email Priya, before lunch.
+        Output: Email Priya before lunch.
+
+        Now do the same for this input. Output only the result.
+        Input: {input}
+        Output:
+        """
+
+    private init() {
+        self.vocalCorrectionsEnabled = UserDefaults.standard.bool(forKey: Self.vocalCorrectionsEnabledKey)
+    }
 
     /// Process transcription result through the pipeline
     /// - Parameter result: Original transcription result
@@ -84,7 +133,12 @@ public class CorrectionPipeline: ObservableObject {
             text = minimalCleanup(text)
         }
 
-        // Step 4: Apply prompt transformation using AI
+        // Step 4: Apply vocal corrections via AI (if enabled and AI model available)
+        if vocalCorrectionsEnabled {
+            text = await applyVocalCorrections(text)
+        }
+
+        // Step 5: Apply prompt transformation using AI
         // Priority: App-specific prompt > Manually activated prompt > None
         print("FoxSay: [PIPELINE] Checking for prompt...")
 
@@ -165,7 +219,7 @@ public class CorrectionPipeline: ObservableObject {
             print("FoxSay: [PIPELINE] No prompt active, skipping AI transform")
         }
 
-        // Step 5: Post-processing cleanup
+        // Step 6: Post-processing cleanup
         text = postProcess(text)
 
         os_log(.info, log: pipelineLog, "<<< OUTPUT: %{public}@", text)
@@ -176,6 +230,57 @@ public class CorrectionPipeline: ObservableObject {
         }
 
         return result
+    }
+
+    /// Apply vocal corrections using the AI model
+    /// Sends text through the LLM with a correction-specific prompt to clean up
+    /// spoken self-corrections, false starts, and revision phrases.
+    private func applyVocalCorrections(_ text: String) async -> String {
+        // Get the transformer (same logic as prompt step, respects app-specific overrides)
+        let appDetector = AppDetector.shared
+        let appPromptManager = AppPromptManager.shared
+        let targetBundleId = appDetector.targetAppBundleId
+
+        var transformer: (any TextTransformer)?
+
+        // Check for app-specific remote provider override
+        if let bundleId = targetBundleId,
+           let modelRef = appPromptManager.getModelReference(forBundleId: bundleId) {
+            switch modelRef {
+            case .remote(let providerId):
+                if let provider = LLMProviderManager.shared.remoteProviders.first(where: { $0.id == providerId && $0.isEnabled }) {
+                    transformer = RemoteLLMService(provider: provider)
+                }
+            }
+        }
+
+        // Fall back to default transformer
+        if transformer == nil {
+            transformer = await providerManager.getTransformer()
+        }
+
+        guard let transformer = transformer else {
+            os_log(.info, log: pipelineLog, "Vocal corrections: no transformer available, skipping")
+            return text
+        }
+
+        do {
+            let isAvailable = await transformer.isAvailable
+            guard isAvailable else {
+                os_log(.info, log: pipelineLog, "Vocal corrections: transformer not available, skipping")
+                return text
+            }
+
+            print("FoxSay: [PIPELINE] Applying vocal corrections...")
+            let corrected = try await transformer.transform(text, prompt: Self.vocalCorrectionsPrompt)
+            os_log(.info, log: pipelineLog, "After vocal corrections: %{public}@", corrected)
+            print("FoxSay: [PIPELINE] Vocal corrections result: \"\(corrected)\"")
+            return corrected
+        } catch {
+            os_log(.error, log: pipelineLog, "Vocal corrections error: %{public}@", String(describing: error))
+            print("FoxSay: [PIPELINE] Vocal corrections error: \(error)")
+            return text
+        }
     }
 
     /// Minimal cleanup for non-markdown text

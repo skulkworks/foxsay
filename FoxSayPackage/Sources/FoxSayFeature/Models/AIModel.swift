@@ -54,18 +54,29 @@ public struct AIModel: Codable, Identifiable, Sendable {
 
     /// Registry of available AI models for text transformation
     public static let registry: [AIModel] = [
-        // Recommended
+        // Recommended. Chosen by benchmarking the vocal-corrections prompt across the
+        // sub-2GB models: this one applies corrections correctly while leaving text that
+        // contains no correction completely untouched, which is the failure mode that
+        // matters most for dictation.
+        AIModel(
+            id: "qwen-1.5b-instruct",
+            name: "Qwen 2.5 1.5B Instruct",
+            description: "Fast, general-purpose model. Great for quick corrections.",
+            huggingFaceId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+            sizeBytes: 900_000_000,
+            capabilities: ["general", "coding"],
+            isRecommended: true
+        ),
+
+        // Fast models (< 1.5GB)
         AIModel(
             id: "qwen3-1.7b",
             name: "Qwen3 1.7B",
             description: "Alibaba's latest small model. Fast, with excellent instruction following.",
             huggingFaceId: "Qwen/Qwen3-1.7B-MLX-4bit",
             sizeBytes: 914_000_000,
-            capabilities: ["general", "coding"],
-            isRecommended: true
+            capabilities: ["general", "coding"]
         ),
-
-        // Fast models (< 1.5GB)
         AIModel(
             id: "lfm2-1.2b",
             name: "LFM2 1.2B",
@@ -105,14 +116,6 @@ public struct AIModel: Codable, Identifiable, Sendable {
             huggingFaceId: "mlx-community/Qwen2.5-Coder-1.5B-Instruct-4bit",
             sizeBytes: 900_000_000,
             capabilities: ["coding", "general"]
-        ),
-        AIModel(
-            id: "qwen-1.5b-instruct",
-            name: "Qwen 2.5 1.5B Instruct",
-            description: "Fast, general-purpose model. Great for quick corrections.",
-            huggingFaceId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
-            sizeBytes: 900_000_000,
-            capabilities: ["general", "coding"]
         ),
 
         // Balanced models (1.5-2.5GB)
