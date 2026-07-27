@@ -25,12 +25,16 @@ Package.resolved
 *.xcworkspace/xcuserdata/
 
 # Downloaded ML models (at runtime)
+# Anchored to the repo root: an unanchored "models/" also matches
+# FoxSayPackage/Sources/FoxSayFeature/Models/ (case-insensitive), which
+# silently kept those sources out of the repo.
 *.mlmodelc/
 huggingface/
-models/
+/models/
 
 # Test directories and artifacts
-tests/
+# Anchored: an unanchored "tests/" also matches FoxSayPackage/Tests/.
+/tests/
 *.tar.bz2
 *.tar.gz
 
