@@ -1,6 +1,12 @@
 import Foundation
 import MLXLLM
 import MLXLMCommon
+// MLXHuggingFace supplies the #hubDownloader / #huggingFaceTokenizerLoader macros.
+// HuggingFace and Tokenizers must also be in scope: the macros expand to
+// HuggingFace.HubClient and Tokenizers references at the call site.
+import MLXHuggingFace
+import HuggingFace
+import Tokenizers
 
 /// Manages AI models for text transformation
 @MainActor
@@ -152,7 +158,11 @@ public class AIModelManager: ObservableObject {
             }
 
             // Load the model - this downloads it if not cached
-            let container = try await loadModelContainer(id: model.huggingFaceId) { progress in
+            let container = try await loadModelContainer(
+                from: #hubDownloader(),
+                using: #huggingFaceTokenizerLoader(),
+                id: model.huggingFaceId
+            ) { progress in
                 Task { @MainActor in
                     let fraction = progress.fractionCompleted
                     if fraction > self.downloadProgress {
@@ -243,7 +253,11 @@ public class AIModelManager: ObservableObject {
 
         do {
             let startTime = CFAbsoluteTimeGetCurrent()
-            loadedModel = try await loadModelContainer(id: model.huggingFaceId)
+            loadedModel = try await loadModelContainer(
+                from: #hubDownloader(),
+                using: #huggingFaceTokenizerLoader(),
+                id: model.huggingFaceId
+            )
             loadedModelId = model.id
             let loadTime = CFAbsoluteTimeGetCurrent() - startTime
 

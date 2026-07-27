@@ -117,6 +117,22 @@ public struct AIModel: Codable, Identifiable, Sendable {
 
         // Balanced models (1.5-2.5GB)
         AIModel(
+            id: "qwen3.5-2b",
+            name: "Qwen3.5 2B",
+            description: "Newest Qwen generation. Top quality for its size, 200+ languages.",
+            huggingFaceId: "mlx-community/Qwen3.5-2B-4bit",
+            sizeBytes: 1_750_000_000,
+            capabilities: ["general", "coding", "creative"]
+        ),
+        AIModel(
+            id: "gemma-4-e2b-instruct",
+            name: "Gemma 4 E2B",
+            description: "Google's newest edge model. Great quality, needs more memory.",
+            huggingFaceId: "mlx-community/gemma-4-e2b-it-4bit",
+            sizeBytes: 3_580_000_000,
+            capabilities: ["general", "creative"]
+        ),
+        AIModel(
             id: "qwen3-4b-instruct",
             name: "Qwen3 4B Instruct",
             description: "Alibaba's latest 4B model. Best small model quality with dual-mode reasoning.",

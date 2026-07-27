@@ -128,21 +128,20 @@ Available AI models:
 | Model | Size | Notes |
 |-------|------|-------|
 | LFM2 1.2B | 660 MB | Liquid AI's on-device model, extremely fast |
-| Llama 3.2 1B | 710 MB | Meta's tiny model, fastest Llama |
-| Gemma 3 1B | 733 MB | Google's compact QAT model |
-| Qwen 2.5 1.5B | 900 MB | Fast, general-purpose |
+| Llama 3.2 1B Instruct | 710 MB | Meta's tiny model, fastest Llama |
+| Gemma 3 1B Instruct | 733 MB | Google's compact model |
+| Qwen 2.5 1.5B Instruct | 900 MB | Fast, general-purpose |
 | Qwen 2.5 Coder 1.5B | 900 MB | Optimized for code |
 | Qwen3 1.7B | 914 MB | Current Qwen generation, fast |
-| Gemma 2 2B | 1.4 GB | Memory efficient |
-| Qwen 2.5 3B | 1.8 GB | Balanced performance |
+| Gemma 2 2B Instruct | 1.4 GB | Memory efficient |
+| Qwen3.5 2B | 1.8 GB | Newest Qwen generation, 200+ languages |
+| Qwen 2.5 3B Instruct | 1.8 GB | Balanced performance |
 | Qwen 2.5 Coder 3B | 1.8 GB | Better code handling |
-| Llama 3.2 3B | 1.9 GB | Meta's small model |
+| Llama 3.2 3B Instruct | 1.9 GB | Meta's small model |
 | Qwen3 4B Instruct | 2.3 GB | Updated instruct, dual-mode reasoning |
 | Phi 4 Mini (3.8B) | 2.3 GB | Excellent reasoning |
-| Mistral NeMo 12B | 7 GB | Highest quality |
-
-Newer architectures (Qwen 3.5, Gemma 4) need a more recent `mlx-swift-lm` than the
-revision pinned in `Package.swift`, so they are not listed yet.
+| Gemma 4 E2B | 3.6 GB | Google's newest edge model |
+| Mistral NeMo 12B | 7.0 GB | Highest quality |
 
 ### Voice Modes
 
@@ -218,8 +217,13 @@ FoxSayPackage/                   # Swift package with all feature code
 | Package | Source | Purpose |
 |---------|--------|---------|
 | WhisperKit | `argmaxinc/WhisperKit` (v0.12.0+) | Whisper speech recognition |
-| FluidAudio | `FluidInference/FluidAudio` (v0.10.0+) | Parakeet speech recognition |
-| mlx-swift-lm | `ml-explore/mlx-swift-lm` (main) | Local LLM inference via Apple MLX |
+| FluidAudio | `FluidInference/FluidAudio` (v0.15.5+) | Parakeet speech recognition |
+| mlx-swift-lm | `ml-explore/mlx-swift-lm` (v3.31.4+) | Local LLM inference via Apple MLX |
+| swift-huggingface | `huggingface/swift-huggingface` (v0.9.0+) | Hugging Face Hub client for model downloads |
+| swift-transformers | `huggingface/swift-transformers` (v1.1.6+) | Tokenizers |
+
+`Package.resolved` is committed, so a clean checkout builds against a known-good set
+rather than resolving to whatever is newest that day.
 
 ## License
 

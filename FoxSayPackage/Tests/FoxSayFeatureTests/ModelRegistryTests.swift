@@ -42,16 +42,14 @@ struct AIModelRegistryTests {
         #expect(AIModel.model(withId: "no-such-model") == nil)
     }
 
-    @Test("every registry model has an architecture the pinned mlx-swift-lm supports")
-    func architecturesAreSupported() {
-        // mlx-swift-lm is pinned (see Package.swift), so a model whose architecture
-        // landed upstream after that revision would download and then fail to load.
-        // qwen3_5 and gemma4 are the two known-unsupported ones at this pin.
-        for model in AIModel.registry {
-            let repo = model.huggingFaceId.lowercased()
-            #expect(!repo.contains("qwen3.5"), "\(model.id) needs a newer mlx-swift-lm")
-            #expect(!repo.contains("gemma-4"), "\(model.id) needs a newer mlx-swift-lm")
-        }
+    @Test("newest-generation models are present")
+    func newestGenerationPresent() {
+        // These need the qwen3_5 and gemma4 architectures, which only exist from
+        // mlx-swift-lm 3.31.4 onwards. Whether a given architecture is registered
+        // isn't introspectable at build time, so this can't verify loadability. It
+        // does catch the entries being dropped, e.g. by a careless dependency revert.
+        #expect(AIModel.model(withId: "qwen3.5-2b") != nil)
+        #expect(AIModel.model(withId: "gemma-4-e2b-instruct") != nil)
     }
 }
 
