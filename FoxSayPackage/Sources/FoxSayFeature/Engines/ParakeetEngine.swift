@@ -50,14 +50,16 @@ public actor ParakeetEngine: TranscriptionEngine {
     }
 
     /// Directory FluidAudio downloads this version into, under
-    /// ~/Library/Application Support/FluidAudio/Models/
+    /// ~/Library/Application Support/FluidAudio/Models/.
+    /// These must track FluidAudio's `Repo.folderName`, which is NOT the repo name:
+    /// it strips the "-coreml" suffix by default and overrides some versions outright.
     private nonisolated var modelDirectoryName: String {
         switch version {
-        case .v2: return "parakeet-tdt-0.6b-v2-coreml"
-        case .v3: return "parakeet-tdt-0.6b-v3-coreml"
-        case .tdtCtc110m: return "parakeet-tdt-ctc-110m-coreml"
-        case .tdtJa: return "parakeet-0.6b-ja-coreml"
-        @unknown default: return "parakeet-tdt-0.6b-v2-coreml"
+        case .v2: return "parakeet-tdt-0.6b-v2"
+        case .v3: return "parakeet-tdt-0.6b-v3"
+        case .tdtCtc110m: return "parakeet-tdt-ctc-110m"
+        case .tdtJa: return "parakeet-ja"
+        @unknown default: return "parakeet-tdt-0.6b-v2"
         }
     }
 
