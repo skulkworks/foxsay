@@ -13,88 +13,83 @@ public struct ModelDownloadView: View {
     public init() {}
 
     public var body: some View {
-        VStack(spacing: 24) {
-            // Icon
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.accentColor)
+        VStack(spacing: 20) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(Color.accentColor)
+                .padding(.top, 8)
 
-            // Title
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text("Download Model")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .fontWeight(.semibold)
 
-                Text("FoxSay needs to download a speech recognition model to work offline.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                Text("FoxSay needs a speech recognition model to transcribe offline.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
             // Engine info
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text(engineManager.currentEngineType.displayName)
                     .font(.headline)
 
                 Text(engineManager.currentEngineType.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
                 let sizeBytes = engineManager.currentEngine?.modelSize ?? 0
                 let sizeMB = Double(sizeBytes) / 1_000_000
-                Text(String(format: "Size: %.0f MB", sizeMB))
+                Text(String(format: "%.0f MB", sizeMB))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
             }
-            .padding()
-            .background(Color(.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(maxWidth: .infinity)
+            .cardSurface()
 
             // Progress
             if isDownloading {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
-                        .tint(.secondaryAccent)
 
-                    Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")
+                    Text("Downloading… \(Int(engineManager.downloadProgress * 100))%")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
-                .padding(.horizontal)
             }
 
             // Error message
             if let error = errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundColor(.tertiaryAccent)
+                    .foregroundStyle(Color.statusError)
                     .multilineTextAlignment(.center)
             }
 
             // Success message
             if downloadComplete {
-                Label("Download Complete", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
-                    .font(.headline)
+                Label("Download complete", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.statusOK)
             }
 
             Spacer()
 
             // Buttons
-            HStack(spacing: 12) {
-                if !downloadComplete {
-                    Button("Skip") {
-                        dismiss()
-                    }
-                    .buttonStyle(.bordered)
-                }
+            HStack(spacing: 10) {
+                Spacer()
 
                 if downloadComplete {
                     Button("Done") {
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                 } else if isDownloading {
                     Button("Cancel") {
                         engineManager.cancelDownload()
@@ -102,15 +97,22 @@ public struct ModelDownloadView: View {
                     }
                     .buttonStyle(.bordered)
                 } else {
+                    Button("Skip") {
+                        dismiss()
+                    }
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.cancelAction)
+
                     Button("Download") {
                         startDownload()
                     }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                 }
             }
         }
         .padding(24)
-        .frame(width: 400, height: 450)
+        .frame(width: 420, height: 450)
     }
 
     private func startDownload() {

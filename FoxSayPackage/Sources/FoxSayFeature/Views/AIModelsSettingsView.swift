@@ -39,15 +39,11 @@ public struct AIModelsSettingsView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                Text("AI Models")
-                    .font(.title2)
-                    .fontWeight(.bold)
-
-                Text("Select a provider for AI-powered text transformation.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsPaneHeader(
+                    "AI Models",
+                    description: "Pick the model that powers prompts, vocal corrections, and text transforms."
+                )
 
                 // Unified active provider/model indicator (above the picker)
                 unifiedActiveIndicator
@@ -58,6 +54,9 @@ public struct AIModelsSettingsView: View {
                     Text("Remote API").tag(LLMProviderType.remote)
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .center)
 
                 // Conditional content based on provider type
                 if providerManager.providerType == .local {
@@ -115,16 +114,21 @@ public struct AIModelsSettingsView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
-        // Filter chips
-        HStack(spacing: 8) {
+        // Filters
+        HStack(spacing: 6) {
             ForEach(AIModelFilter.allCases) { filter in
-                filterChip(filter)
+                SettingsFilterPill(
+                    title: filter.title,
+                    isSelected: selectedFilter == filter
+                ) {
+                    selectedFilter = filter
+                }
             }
             Spacer()
         }
 
         // Model Cards
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(filteredModels) { model in
                 AIModelCardView(model: model)
             }
@@ -140,7 +144,7 @@ public struct AIModelsSettingsView: View {
             .foregroundStyle(.secondary)
 
         // Provider Cards
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(providerManager.remoteProviders) { provider in
                 RemoteProviderCard(
                     provider: provider,
@@ -171,10 +175,7 @@ public struct AIModelsSettingsView: View {
         Button {
             showingAddProvider = true
         } label: {
-            HStack {
-                Image(systemName: "plus.circle")
-                Text("Add Custom Provider")
-            }
+            Label("Add Custom Provider", systemImage: "plus")
         }
         .buttonStyle(.bordered)
     }
@@ -200,131 +201,70 @@ public struct AIModelsSettingsView: View {
     @ViewBuilder
     private var unifiedActiveIndicator: some View {
         if isLocalModelActive, let model = aiModelManager.selectedModel {
-            // Local model is active
-            GroupBox {
-                HStack(spacing: 12) {
-                    Image(systemName: "brain")
-                        .font(.title2)
-                        .foregroundColor(.accentColor)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Active")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 6) {
-                            Text(model.name)
-                                .font(.headline)
-
-                            // Local badge
-                            Text("Local")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.accentColor)
-                                .foregroundColor(.white)
-                                .clipShape(Capsule())
-
-                            // Status indicator
-                            if aiModelManager.isPreloading {
-                                ProgressView()
-                                    .scaleEffect(0.6)
-                            } else if aiModelManager.isModelLoaded {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.secondaryAccent)
-                            }
-                        }
-                    }
-
-                    Spacer()
-
-                    Button("Deactivate") {
-                        providerManager.deactivate()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(8)
-            }
+            activeSummary(
+                icon: "cpu",
+                name: model.name,
+                kind: "Local",
+                isLoading: aiModelManager.isPreloading,
+                isLoaded: aiModelManager.isModelLoaded
+            )
         } else if isRemoteProviderActive, let provider = providerManager.selectedRemoteProvider {
-            // Remote provider is active
-            GroupBox {
-                HStack(spacing: 12) {
-                    Image(systemName: "network")
-                        .font(.title2)
-                        .foregroundColor(.accentColor)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Active")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 6) {
-                            Text(provider.name)
-                                .font(.headline)
-
-                            // Remote badge
-                            Text("Remote")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.purple)
-                                .foregroundColor(.white)
-                                .clipShape(Capsule())
-
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.secondaryAccent)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button("Deactivate") {
-                        providerManager.deactivate()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(8)
-            }
+            activeSummary(
+                icon: "network",
+                name: provider.name,
+                kind: "Remote",
+                isLoading: false,
+                isLoaded: true
+            )
         } else {
-            // No model/provider selected warning
-            HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.title2)
-                    .foregroundColor(.orange)
+            SettingsWarningBanner(
+                title: "No AI provider active",
+                message: "Select a local model or remote provider below to enable AI-powered text transformations."
+            )
+        }
+    }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("No AI Provider Active")
+    private func activeSummary(
+        icon: String,
+        name: String,
+        kind: String,
+        isLoading: Bool,
+        isLoaded: Bool
+    ) -> some View {
+        HStack(spacing: 12) {
+            IconTile(systemName: icon, isActive: true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Active")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 8) {
+                    Text(name)
                         .font(.headline)
-                    Text("Select a local model or remote provider below to enable AI-powered text transformations.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+
+                    ChipLabel(text: kind)
+
+                    if isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if isLoaded {
+                        StatusCaption(text: "Loaded", color: .statusOK)
+                    }
                 }
-
-                Spacer()
             }
-            .padding(12)
-            .background(Color.orange.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
 
-    private func filterChip(_ filter: AIModelFilter) -> some View {
-        Button {
-            selectedFilter = filter
-        } label: {
-            Text(filter.title)
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(selectedFilter == filter ? Color.accentColor : Color(.textBackgroundColor))
-                .foregroundColor(selectedFilter == filter ? .white : .primary)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
+            Spacer()
 
+            Button("Deactivate") {
+                providerManager.deactivate()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
 }
 
 /// Card view for a remote provider (unified style with local model cards)
@@ -339,19 +279,10 @@ struct RemoteProviderCard: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             // Header row with icon, title, badges, and action buttons
             HStack(spacing: 12) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
-                        .frame(width: 44, height: 44)
-
-                    Image(systemName: "network")
-                        .font(.system(size: 18))
-                        .foregroundColor(isSelected ? .accentColor : .secondary)
-                }
+                IconTile(systemName: "network", isActive: isSelected, size: 40)
 
                 // Title and badges
                 VStack(alignment: .leading, spacing: 4) {
@@ -360,36 +291,15 @@ struct RemoteProviderCard: View {
                             .font(.headline)
 
                         if isSelected {
-                            Text("Active")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondaryAccent)
-                                .foregroundColor(.black)
-                                .clipShape(Capsule())
+                            ChipLabel(text: "Active", tinted: true)
                         }
 
                         if provider.isVerified && !isSelected {
-                            Text("Ready")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .clipShape(Capsule())
+                            StatusCaption(text: "Ready", color: .statusOK)
                         }
 
                         if !provider.isEnabled {
-                            Text("Disabled")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.gray)
-                                .foregroundColor(.white)
-                                .clipShape(Capsule())
+                            ChipLabel(text: "Disabled")
                         }
                     }
 
@@ -404,7 +314,7 @@ struct RemoteProviderCard: View {
                 Spacer()
 
                 // Action buttons
-                statusView
+                actionButtons
             }
 
             // Footer: URL and connection status
@@ -419,13 +329,7 @@ struct RemoteProviderCard: View {
                 connectionTestResultView
             }
         }
-        .padding(16)
-        .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
+        .selectableCard(isSelected: isSelected)
         .contentShape(Rectangle())
         .onTapGesture {
             if provider.isEnabled && !isSelected {
@@ -435,105 +339,21 @@ struct RemoteProviderCard: View {
     }
 
     @ViewBuilder
-    private var statusView: some View {
-        if isSelected {
-            // Active provider - show deactivate and action buttons (Active badge is already in title)
-            HStack(spacing: 8) {
-                Button {
-                    onDeactivate()
-                } label: {
-                    Image(systemName: "stop.circle")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-                .buttonStyle(.borderless)
-                .help("Deactivate provider")
-
-                Button {
-                    onTest()
-                } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("Test connection")
-                .disabled(testResult == .testing)
-
-                Button {
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("Edit provider")
-
-                if !provider.isBuiltIn {
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Delete provider")
-                }
+    private var actionButtons: some View {
+        HStack(spacing: 2) {
+            if isSelected {
+                RowActionButton("stop.circle", help: "Deactivate provider", action: onDeactivate)
             }
-        } else if provider.isEnabled {
-            // Not active - just show borderless icons (clicking card activates)
-            HStack(spacing: 8) {
-                Button {
-                    onTest()
-                } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("Test connection")
-                .disabled(testResult == .testing)
 
-                Button {
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("Edit provider")
-
-                if !provider.isBuiltIn {
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Delete provider")
-                }
+            if provider.isEnabled {
+                RowActionButton("arrow.triangle.2.circlepath", help: "Test connection", action: onTest)
+                    .disabled(testResult == .testing)
             }
-        } else {
-            // Disabled provider - borderless icons only
-            HStack(spacing: 8) {
-                Button {
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-                .help("Edit provider")
 
-                if !provider.isBuiltIn {
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Delete provider")
-                }
+            RowActionButton("pencil", help: "Edit provider", action: onEdit)
+
+            if !provider.isBuiltIn {
+                RowActionButton("trash", help: "Delete provider", role: .destructive, action: onDelete)
             }
         }
     }
@@ -546,26 +366,22 @@ struct RemoteProviderCard: View {
         case .testing:
             HStack(spacing: 6) {
                 ProgressView()
-                    .scaleEffect(0.6)
-                Text("Testing connection...")
+                    .controlSize(.small)
+                Text("Testing connection…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         case .success(let models):
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.secondaryAccent)
-                Text("Connected - \(models.count) model\(models.count == 1 ? "" : "s") available")
-                    .font(.caption)
-                    .foregroundColor(.secondaryAccent)
-            }
+            StatusCaption(
+                text: "Connected — \(models.count) model\(models.count == 1 ? "" : "s") available",
+                color: .statusOK
+            )
         case .failure(let error):
             HStack(spacing: 6) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundColor(.red)
+                StatusDot(color: .statusError)
                 Text(error)
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
         }
@@ -617,62 +433,58 @@ struct RemoteProviderEditSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text(isNew ? "Add Provider" : "Edit Provider")
-                    .font(.headline)
-                Spacer()
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.cancelAction)
-            }
-            .padding()
+            SheetHeader(
+                title: isNew ? "Add Provider" : "Edit Provider",
+                subtitle: "Any OpenAI-compatible endpoint works here."
+            )
 
             Divider()
 
-            // Form
             Form {
-                Section {
+                Section("Connection") {
                     TextField("Name", text: $name, prompt: Text("e.g., OpenAI"))
                     TextField("Base URL", text: $baseURL, prompt: Text("e.g., https://api.openai.com/v1"))
                     SecureField("API Key", text: $apiKey)
                 }
 
-                Section {
-                    HStack {
-                        if availableModels.isEmpty {
-                            TextField("Model Name", text: $modelName, prompt: Text("e.g., gpt-5-chat-latest"))
-                        } else {
-                            Button {
-                                modelFilter = ""
-                                showModelPicker = true
-                            } label: {
-                                StyledMenuLabel(modelName.isEmpty ? "Select a model" : modelName)
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Button {
-                            fetchModels()
-                        } label: {
-                            if isFetchingModels {
-                                ProgressView()
-                                    .scaleEffect(0.6)
-                                    .frame(width: 16, height: 16)
+                Section("Model") {
+                    LabeledContent("Model Name") {
+                        HStack(spacing: 8) {
+                            if availableModels.isEmpty {
+                                TextField("Model Name", text: $modelName, prompt: Text("e.g., gpt-5-chat-latest"))
+                                    .labelsHidden()
                             } else {
-                                Image(systemName: "arrow.clockwise")
+                                Button {
+                                    modelFilter = ""
+                                    showModelPicker = true
+                                } label: {
+                                    StyledMenuLabel(modelName.isEmpty ? "Select a model" : modelName)
+                                }
+                                .buttonStyle(.plain)
                             }
+
+                            Button {
+                                fetchModels()
+                            } label: {
+                                if isFetchingModels {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(!canFetchModels || isFetchingModels)
+                            .help("Fetch available models")
                         }
-                        .buttonStyle(.borderless)
-                        .disabled(!canFetchModels || isFetchingModels)
-                        .help("Fetch available models")
                     }
 
                     if let error = fetchError {
                         Text(error)
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(Color.statusError)
                     }
 
                     if !availableModels.isEmpty {
@@ -711,6 +523,8 @@ struct RemoteProviderEditSheet: View {
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
                     }
                     .font(.caption)
                 }
@@ -719,28 +533,25 @@ struct RemoteProviderEditSheet: View {
 
             Divider()
 
-            // Footer
-            HStack {
-                Spacer()
-                Button("Save") {
-                    let updated = RemoteProvider(
-                        id: originalProvider.id,
-                        name: name.trimmingCharacters(in: .whitespaces),
-                        baseURL: baseURL.trimmingCharacters(in: .whitespaces),
-                        apiKey: apiKey.isEmpty ? nil : apiKey,
-                        modelName: modelName.isEmpty ? nil : modelName,
-                        isEnabled: isEnabled,
-                        isBuiltIn: originalProvider.isBuiltIn,
-                        isVerified: originalProvider.isVerified
-                    )
-                    onSave(updated)
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+            SheetFooter(
+                confirmTitle: isNew ? "Add" : "Save",
+                isConfirmDisabled: !isValid,
+                onCancel: onCancel
+            ) {
+                let updated = RemoteProvider(
+                    id: originalProvider.id,
+                    name: name.trimmingCharacters(in: .whitespaces),
+                    baseURL: baseURL.trimmingCharacters(in: .whitespaces),
+                    apiKey: apiKey.isEmpty ? nil : apiKey,
+                    modelName: modelName.isEmpty ? nil : modelName,
+                    isEnabled: isEnabled,
+                    isBuiltIn: originalProvider.isBuiltIn,
+                    isVerified: originalProvider.isVerified
+                )
+                onSave(updated)
             }
-            .padding()
         }
-        .frame(width: 450, height: 380)
+        .frame(minWidth: 420, idealWidth: 460, minHeight: 420, idealHeight: 460)
         .sheet(isPresented: $showModelPicker) {
             ModelPickerSheet(
                 models: availableModels,
@@ -810,49 +621,42 @@ struct ModelPickerSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Select Model")
-                    .font(.headline)
-                Spacer()
-                Button("Cancel") {
-                    onCancel()
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding()
+            SheetHeader(
+                title: "Select Model",
+                subtitle: "\(filteredModels.count) of \(models.count) models"
+            )
 
             Divider()
 
             // Search field
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Filter models...", text: $filter)
+
+                TextField("Filter models…", text: $filter)
                     .textFieldStyle(.plain)
+
                 if !filter.isEmpty {
                     Button {
                         filter = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(8)
-            .background(Color(.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            // Model count
-            Text("\(filteredModels.count) of \(models.count) models")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.bottom, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
 
             Divider()
 
@@ -865,26 +669,38 @@ struct ModelPickerSheet: View {
                         } label: {
                             HStack {
                                 Text(model)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 if model == selectedModel {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.accentColor)
+                                        .foregroundStyle(Color.accentColor)
                                 }
                             }
-                            .padding(.horizontal)
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 8)
-                            .background(model == selectedModel ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .contentShape(Rectangle())
+                            .background(model == selectedModel ? Color.accentColor.opacity(0.08) : Color.clear)
                         }
                         .buttonStyle(.plain)
 
                         Divider()
-                            .padding(.leading)
+                            .padding(.leading, 20)
                     }
                 }
             }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
         }
-        .frame(width: 400, height: 450)
+        .frame(width: 420, height: 460)
     }
 }
 
@@ -910,50 +726,28 @@ struct AIModelCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header row
             HStack(spacing: 12) {
-                // Icon
-                modelIcon
-                    .frame(width: 44, height: 44)
+                IconTile(systemName: "cpu", isActive: isSelected, size: 40)
 
                 // Title and badges
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
                         Text(model.name)
                             .font(.headline)
 
                         if isSelected && aiModelManager.isModelLoaded {
-                            Text("Active")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondaryAccent)
-                                .foregroundColor(.black)
-                                .clipShape(Capsule())
+                            ChipLabel(text: "Active", tinted: true)
                         } else if isSelected && aiModelManager.isPreloading {
-                            Text("Loading")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange)
-                                .foregroundColor(.black)
-                                .clipShape(Capsule())
+                            ChipLabel(text: "Loading")
                         }
                     }
 
                     // Capability badges
                     HStack(spacing: 4) {
                         if model.isRecommended {
-                            Text("Recommended")
-                                .font(.caption2)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.2))
-                                .foregroundColor(.orange)
-                                .clipShape(Capsule())
+                            ChipLabel(text: "Recommended", tinted: true)
                         }
                         ForEach(model.capabilities, id: \.self) { capability in
-                            capabilityBadge(capability)
+                            ChipLabel(text: capability.capitalized)
                         }
                     }
                 }
@@ -969,53 +763,20 @@ struct AIModelCardView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             // Metrics row
-            HStack(spacing: 16) {
-                // Quality rating (based on size)
-                metricView(
-                    label: "Quality",
-                    value: qualityRating,
-                    color: .secondaryAccent
-                )
-
-                // Speed rating (inverse of size)
-                metricView(
-                    label: "Speed",
-                    value: speedRating,
-                    color: .accentColor
-                )
+            HStack(spacing: 18) {
+                RatingDots(label: "Quality", value: qualityRating)
+                RatingDots(label: "Speed", value: speedRating)
 
                 Spacer()
 
-                // Size
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(model.formattedSize)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                    Text("Size")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-
-                // Quantization
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("4-bit")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                    Text("Precision")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+                metricValue(model.formattedSize, label: "Size")
+                metricValue("4-bit", label: "Precision")
             }
         }
-        .padding(16)
-        .background(isSelected ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
+        .selectableCard(isSelected: isSelected)
         .contentShape(Rectangle())
         .onTapGesture {
             // Only allow selection if downloaded
@@ -1053,45 +814,11 @@ struct AIModelCardView: View {
         return 2
     }
 
-    private var modelIcon: some View {
-        ZStack {
-            Circle()
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
-
-            Image(systemName: "brain")
-                .font(.system(size: 18))
-                .foregroundColor(isSelected ? .accentColor : .secondary)
-        }
-    }
-
-    private func capabilityBadge(_ capability: String) -> some View {
-        let color: Color = {
-            switch capability {
-            case "general": return .secondaryAccent
-            case "coding": return .purple
-            case "creative": return .orange
-            default: return .gray
-            }
-        }()
-
-        return Text(capability.capitalized)
-            .font(.caption2)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .foregroundColor(color)
-            .clipShape(Capsule())
-    }
-
-    private func metricView(label: String, value: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 2) {
-                ForEach(0..<5, id: \.self) { i in
-                    Circle()
-                        .fill(i < value ? color : color.opacity(0.2))
-                        .frame(width: 6, height: 6)
-                }
-            }
+    private func metricValue(_ value: String, label: String) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -1104,12 +831,12 @@ struct AIModelCardView: View {
             VStack(spacing: 4) {
                 ProgressView(value: aiModelManager.downloadProgress)
                     .progressViewStyle(.linear)
-                    .tint(.secondaryAccent)
                     .frame(width: 70)
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Text("\(Int(aiModelManager.downloadProgress * 100))%")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .monospacedDigit()
                     Button("Cancel") {
                         aiModelManager.cancelDownload()
                     }
@@ -1118,47 +845,28 @@ struct AIModelCardView: View {
                 }
             }
         } else if isSelected && aiModelManager.isPreloading {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 ProgressView()
-                    .scaleEffect(0.6)
-                    .tint(.secondaryAccent)
-                Text("Loading...")
-                    .font(.caption2)
+                    .controlSize(.small)
+                Text("Loading…")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } else if isSelected && aiModelManager.isModelLoaded {
-            // Active model - show deactivate and delete buttons (Active badge is already in title)
-            HStack(spacing: 8) {
-                Button {
+            // Active model — the "Active" chip already names the state
+            HStack(spacing: 2) {
+                RowActionButton("stop.circle", help: "Deactivate model") {
                     providerManager.deactivate()
-                } label: {
-                    Image(systemName: "stop.circle")
-                        .font(.caption)
-                        .foregroundColor(.orange)
                 }
-                .buttonStyle(.borderless)
-                .help("Deactivate model")
-
-                Button(role: .destructive) {
+                RowActionButton("trash", help: "Delete model", role: .destructive) {
                     aiModelManager.deleteModel(model)
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
                 }
-                .buttonStyle(.borderless)
-                .help("Delete model")
             }
         } else if isDownloaded {
-            // Downloaded but not active - just show delete button (clicking card activates)
-            HStack(spacing: 8) {
-                Button(role: .destructive) {
+            HStack(spacing: 2) {
+                RowActionButton("trash", help: "Delete model", role: .destructive) {
                     aiModelManager.deleteModel(model)
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
                 }
-                .buttonStyle(.borderless)
-                .help("Delete model")
             }
         } else {
             Button("Download") {

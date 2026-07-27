@@ -13,40 +13,34 @@ public struct DictionarySettingsView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                Text("Dictionary")
-                    .font(.title2)
-                    .fontWeight(.bold)
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsPaneHeader(
+                    "Dictionary",
+                    description: "Replace or remove words in transcribed text — filler words, names, custom terms."
+                )
 
-                Text("Define word replacements that are applied to transcribed text. Use this to remove filler words or replace custom terms.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        SettingsSectionHeader("Word Replacements", systemImage: "character.book.closed")
 
-                // Dictionary Entries
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Label("Word Replacements", systemImage: "character.book.closed")
-                                .font(.headline)
+                        Spacer()
 
-                            Spacer()
-
-                            Button {
-                                showingAddSheet = true
-                            } label: {
-                                Label("Add Entry", systemImage: "plus")
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("Add Entry", systemImage: "plus")
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
 
-                        if dictionaryManager.entries.isEmpty {
-                            Text("No dictionary entries. Add entries to remove or replace words in your transcriptions.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 8)
-                        } else {
+                    if dictionaryManager.entries.isEmpty {
+                        Text("No entries yet. Add one to remove or replace words in your transcriptions.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 4)
+                    } else {
+                        VStack(spacing: 0) {
                             ForEach(dictionaryManager.entries) { entry in
                                 entryRow(entry)
 
@@ -56,9 +50,9 @@ public struct DictionarySettingsView: View {
                             }
                         }
                     }
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .cardSurface()
 
                 Spacer()
             }
@@ -88,7 +82,7 @@ public struct DictionarySettingsView: View {
     // MARK: - Entry Row
 
     private func entryRow(_ entry: DictionaryEntry) -> some View {
-        HStack {
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayName)
                     .fontWeight(.medium)
@@ -101,35 +95,25 @@ public struct DictionarySettingsView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                // Visibility toggle (eye icon)
-                Button {
+            HStack(spacing: 2) {
+                RowActionButton(
+                    entry.isEnabled ? "eye" : "eye.slash",
+                    help: entry.isEnabled ? "Deactivate this entry" : "Activate this entry"
+                ) {
                     dictionaryManager.toggleEntry(entry)
-                } label: {
-                    Image(systemName: entry.isEnabled ? "eye" : "eye.slash")
-                        .foregroundColor(entry.isEnabled ? .secondary : .red.opacity(0.6))
                 }
-                .buttonStyle(.borderless)
-                .help(entry.isEnabled ? "Deactivate" : "Activate")
 
-                // Edit button
-                Button {
+                RowActionButton("pencil", help: "Edit entry") {
                     editingEntry = entry
-                } label: {
-                    Image(systemName: "pencil")
                 }
-                .buttonStyle(.borderless)
 
-                // Delete button
-                Button(role: .destructive) {
+                RowActionButton("trash", help: "Delete entry", role: .destructive) {
                     entryToDelete = entry
                     showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
                 }
-                .buttonStyle(.borderless)
             }
         }
+        .opacity(entry.isEnabled ? 1 : 0.6)
         .padding(.vertical, 8)
     }
 }
@@ -152,12 +136,16 @@ private struct DictionaryEntrySheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text(entry == nil ? "Add Entry" : "Edit Entry")
-                .font(.headline)
+        VStack(spacing: 0) {
+            SheetHeader(
+                title: entry == nil ? "Add Entry" : "Edit Entry",
+                subtitle: "Trigger words are matched in transcribed text and replaced."
+            )
 
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+            Divider()
+
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text("Trigger Words")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -170,7 +158,7 @@ private struct DictionaryEntrySheet: View {
                         .foregroundStyle(.tertiary)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text("Replacement")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -182,59 +170,48 @@ private struct DictionaryEntrySheet: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-            }
 
-            // Preview
-            if !triggersText.isEmpty {
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 4) {
+                // Preview
+                if !triggersText.isEmpty {
+                    VStack(alignment: .leading, spacing: 5) {
                         Text("Preview")
                             .font(.caption)
-                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
 
                         let previewTrigger = parseTriggers(triggersText).first ?? "word"
-                        let previewResult = replacement.isEmpty ? "" : replacement
 
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("\"\(previewTrigger)\"")
                             Image(systemName: "arrow.right")
-                                .foregroundStyle(.secondary)
-                            if previewResult.isEmpty {
-                                Text("(removed)")
-                                    .italic()
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            if replacement.isEmpty {
+                                Text("removed")
                                     .foregroundStyle(.secondary)
                             } else {
-                                Text("\"\(previewResult)\"")
+                                Text("\"\(replacement)\"")
                             }
                         }
-                        .font(.callout)
+                        .font(.system(.callout, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .cardSurface(padding: 10)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                Spacer(minLength: 0)
             }
+            .padding(20)
 
-            Spacer()
+            Divider()
 
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button(entry == nil ? "Add" : "Save") {
-                    saveEntry()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(parseTriggers(triggersText).isEmpty)
-            }
+            SheetFooter(
+                confirmTitle: entry == nil ? "Add" : "Save",
+                isConfirmDisabled: parseTriggers(triggersText).isEmpty,
+                onCancel: { dismiss() },
+                onConfirm: { saveEntry() }
+            )
         }
-        .padding(24)
-        .frame(width: 400, height: 350)
+        .frame(width: 420, height: 380)
         .onAppear {
             if let entry = entry {
                 triggersText = entry.triggers.joined(separator: ", ")

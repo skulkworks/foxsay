@@ -5,36 +5,36 @@ struct PeriodSelectorView: View {
     @Binding var selectedPeriod: DashboardPeriod
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(DashboardPeriod.allCases) { period in
                 periodButton(period)
             }
         }
-        .padding(3)
-        .background(Color(.textBackgroundColor).opacity(0.5))
-        .clipShape(Capsule())
+        .padding(2)
+        .background(Capsule().fill(Color.primary.opacity(0.05)))
     }
 
     private func periodButton(_ period: DashboardPeriod) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
+        let isSelected = selectedPeriod == period
+
+        return Button {
+            withAnimation(.easeOut(duration: 0.18)) {
                 selectedPeriod = period
             }
         } label: {
             Text(period.rawValue)
                 .font(.caption)
-                .fontWeight(selectedPeriod == period ? .semibold : .regular)
-                .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
                 .background(
-                    selectedPeriod == period
-                        ? Color(.textBackgroundColor)
-                        : Color.clear
+                    Capsule().fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
                 )
-                .clipShape(Capsule())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .help(period.displayName)
     }
 }
 

@@ -41,8 +41,7 @@ public struct SidebarView: View {
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
             statusFooter
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.bottom, 8)
         }
         .onAppear {
             selection = appState.selectedSidebarItem
@@ -64,109 +63,82 @@ public struct SidebarView: View {
             Text(item.title)
         } icon: {
             Image(systemName: item.icon)
-                .foregroundStyle(iconColor(for: item))
+                .foregroundStyle(.secondary)
         }
         .tag(item)
     }
 
-    private func iconColor(for item: SidebarItem) -> Color {
-        .secondary
-    }
+    // MARK: - Status Footer
 
     private var statusFooter: some View {
-        HStack(spacing: 8) {
-            // Mic status
-            statusDot(
-                isActive: audioEngine.hasPermission,
-                activeColor: .accentColor,
-                inactiveColor: .secondary,
-                icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash"
-            )
+        VStack(spacing: 0) {
+            Divider()
 
-            // Auto-paste status (Accessibility permission)
-            statusDot(
-                isActive: HotkeyManager.checkAccessibilityPermission(),
-                activeColor: .accentColor,
-                inactiveColor: .secondary,
-                icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard"
-            )
+            HStack(spacing: 6) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.65)
+                        .frame(width: 12, height: 12)
+                } else {
+                    StatusDot(color: statusColor)
+                }
 
-            // Transcription model status
-            modelStatusDot
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
 
-            // AI model status
-            aiModelStatusDot
+                Spacer(minLength: 4)
 
-            Spacer()
-
-            // Version
-            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                Text("v\(appVersion)")
+                    .font(.caption2)
+                    .foregroundStyle(.quaternary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
         }
-        .padding(8)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func statusDot(isActive: Bool, activeColor: Color, inactiveColor: Color, icon: String) -> some View {
-        Image(systemName: icon)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(isActive ? activeColor : inactiveColor)
-            .frame(width: 20, height: 20)
-            .background((isActive ? activeColor : inactiveColor).opacity(0.15))
-            .clipShape(Circle())
+    private var isLoading: Bool {
+        modelManager.isPreloading || aiModelManager.isPreloading
     }
 
-    @ViewBuilder
-    private var modelStatusDot: some View {
-        if modelManager.isModelLoaded {
-            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "checkmark.circle.fill")
-        } else if modelManager.isPreloading {
-            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .secondary)
-        } else if modelManager.isModelReady {
-            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "hourglass")
+    private var permissionsGranted: Bool {
+        audioEngine.hasPermission && HotkeyManager.checkAccessibilityPermission()
+    }
+
+    private var speechModelAvailable: Bool {
+        modelManager.isModelLoaded || modelManager.isModelReady
+    }
+
+    private var aiModelAvailable: Bool {
+        (providerManager.providerType == .remote && providerManager.isRemoteReady)
+            || aiModelManager.isModelLoaded
+            || aiModelManager.isModelReady
+            || aiModelManager.selectedModelId == nil  // No AI model configured is a valid setup
+    }
+
+    private var statusColor: Color {
+        permissionsGranted && speechModelAvailable && aiModelAvailable ? .statusOK : .statusWarning
+    }
+
+    private var statusText: String {
+        if isLoading {
+            return "Loading model…"
+        } else if !permissionsGranted {
+            return "Permissions needed"
+        } else if !speechModelAvailable {
+            return "Speech model needed"
+        } else if !aiModelAvailable {
+            return "AI model needed"
         } else {
-            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "arrow.down.circle")
+            return "Ready"
         }
     }
 
-    @ViewBuilder
-    private var aiModelStatusDot: some View {
-        // Check remote provider first
-        if providerManager.providerType == .remote && providerManager.isRemoteReady {
-            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "globe")
-        } else if aiModelManager.isModelLoaded {
-            statusDot(isActive: true, activeColor: .accentColor, inactiveColor: .accentColor, icon: "brain")
-        } else if aiModelManager.isPreloading {
-            // Use rotating arrow icon during loading (brain is too symmetric to show rotation)
-            SpinningStatusDot(icon: "arrow.trianglehead.2.clockwise.rotate.90", color: .secondary)
-        } else if aiModelManager.isModelReady {
-            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "brain")
-        } else {
-            // No AI model selected/downloaded - gray
-            statusDot(isActive: false, activeColor: .accentColor, inactiveColor: .secondary, icon: "brain")
-        }
-    }
-}
-
-/// Spinning status dot for loading states
-private struct SpinningStatusDot: View {
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            let rotation = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.0) * 360
-
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(color)
-                .rotationEffect(.degrees(rotation))
-                .frame(width: 20, height: 20)
-                .background(color.opacity(0.15))
-                .clipShape(Circle())
-        }
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 }
 

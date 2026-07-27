@@ -11,23 +11,21 @@ struct DashboardFooterView: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(alignment: .center) {
             // Left side: Last session info and auto-paste status
             VStack(alignment: .leading, spacing: 4) {
                 if let lastSession = historyManager.items.first {
                     Text("Last session: \(lastSession.formattedTimestamp)")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                 }
 
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(autoPasteEnabled ? Color.dashboardGreen : Color.secondary.opacity(0.5))
-                        .frame(width: 6, height: 6)
+                HStack(spacing: 5) {
+                    StatusDot(color: autoPasteEnabled ? .statusOK : Color.primary.opacity(0.2))
 
                     Text(autoPasteEnabled ? "Auto-paste enabled" : "Auto-paste disabled")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                 }
             }
 
@@ -41,33 +39,22 @@ struct DashboardFooterView: View {
     // MARK: - Hotkey Hint
 
     private var hotkeyHint: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Text("Hold")
                 .font(.caption)
-                .foregroundStyle(.secondary)
-
-            // Styled key cap
-            Text(hotkeyManager.selectedModifier.symbol)
-                .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(Color(.textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
-                )
+                .foregroundStyle(.tertiary)
 
             if !hotkeyManager.selectedModifier.side.isEmpty {
                 Text(hotkeyManager.selectedModifier.side)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
+
+            KeycapLabel(text: hotkeyManager.selectedModifier.symbol)
 
             Text("to record")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
         }
     }
 }

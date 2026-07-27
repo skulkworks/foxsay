@@ -19,33 +19,27 @@ public struct AppPromptsSettingsView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                Text("Applications")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .padding(.bottom, 8)
-
-                Text("Assign default prompts and AI models to specific applications. When you switch to an app with assignments, they will automatically activate.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsPaneHeader(
+                    "Applications",
+                    description: "Assign a default prompt and model per app — they activate when you switch to it."
+                )
 
                 // App list
                 if appPromptManager.assignments.isEmpty {
                     emptyStateView
                 } else {
-                    GroupBox {
-                        VStack(spacing: 0) {
-                            ForEach(appPromptManager.assignments) { assignment in
-                                appRow(assignment)
+                    VStack(spacing: 0) {
+                        ForEach(appPromptManager.assignments) { assignment in
+                            appRow(assignment)
 
-                                if assignment.id != appPromptManager.assignments.last?.id {
-                                    Divider()
-                                }
+                            if assignment.id != appPromptManager.assignments.last?.id {
+                                Divider()
                             }
                         }
-                        .padding(8)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .cardSurface(padding: 4)
                 }
 
                 // Add app button
@@ -77,27 +71,28 @@ public struct AppPromptsSettingsView: View {
     }
 
     private var emptyStateView: some View {
-        GroupBox {
-            VStack(spacing: 12) {
-                Image(systemName: "app.badge")
-                    .font(.largeTitle)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 12) {
+            Image(systemName: "app.badge")
+                .font(.system(size: 40))
+                .foregroundStyle(.tertiary)
 
-                Text("No Apps Configured")
-                    .font(.headline)
+            Text("No Apps Configured")
+                .font(.headline)
+                .foregroundStyle(.secondary)
 
-                Text("Add applications to assign default prompts. Drag an app from Finder or use the Add button.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(24)
+            Text("Drag an app here from Finder, or use Add Application below.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .cardSurface()
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(dragOver ? Color.accentColor : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(dragOver ? Color.accentColor : Color.clear, lineWidth: 1.5)
         )
+        .animation(.easeOut(duration: 0.18), value: dragOver)
     }
 
     private func appRow(_ assignment: AppPromptAssignment) -> some View {
@@ -129,13 +124,9 @@ public struct AppPromptsSettingsView: View {
 
                 Spacer()
 
-                // Delete button
-                Button(role: .destructive) {
+                RowActionButton("trash", help: "Remove application", role: .destructive) {
                     appPromptManager.removeApp(assignment)
-                } label: {
-                    Image(systemName: "trash")
                 }
-                .buttonStyle(.borderless)
             }
 
             // Bottom row: Dropdowns
@@ -247,38 +238,26 @@ public struct AppPromptsSettingsView: View {
     }
 
     private var howItWorksSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("How It Works", systemImage: "info.circle")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSectionHeader("How It Works", systemImage: "info.circle")
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("1. Add applications you frequently use for writing or coding")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text("2. Assign a default prompt and/or AI model to each app")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text("3. When you switch to that app, the settings automatically activate")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text("4. Your transcriptions will be transformed using the assigned prompt and model")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.leading, 4)
-
-                Text("\"Default\" model uses whatever is currently active in AI Models settings. You can override this per-app with a specific remote provider.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("1. Add applications you frequently use for writing or coding")
+                Text("2. Assign a default prompt and/or AI model to each app")
+                Text("3. When you switch to that app, the settings automatically activate")
+                Text("4. Your transcriptions are transformed using the assigned prompt and model")
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.leading, 4)
+
+            Text("\"Default\" uses whatever is active in AI Models. Override it per app with a specific remote provider.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 2)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -322,80 +301,86 @@ struct AddAppSheet: View {
     @State private var runningApps: [NSRunningApplication] = []
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Add Application")
-                .font(.headline)
-
-            // Running apps list
-            if !runningApps.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Running Applications")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    ScrollView {
-                        VStack(spacing: 4) {
-                            ForEach(runningApps, id: \.bundleIdentifier) { app in
-                                Button {
-                                    bundleId = app.bundleIdentifier ?? ""
-                                    displayName = app.localizedName ?? ""
-                                } label: {
-                                    HStack {
-                                        if let icon = app.icon {
-                                            Image(nsImage: icon)
-                                                .resizable()
-                                                .frame(width: 20, height: 20)
-                                        }
-                                        Text(app.localizedName ?? app.bundleIdentifier ?? "Unknown")
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(bundleId == app.bundleIdentifier ? Color.accentColor.opacity(0.2) : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    .frame(maxHeight: 150)
-                }
-            }
+        VStack(spacing: 0) {
+            SheetHeader(
+                title: "Add Application",
+                subtitle: "Pick a running app or enter its bundle identifier."
+            )
 
             Divider()
 
-            // Manual entry
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Or enter manually")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 16) {
+                // Running apps list
+                if !runningApps.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Running Applications")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
 
-                TextField("Bundle ID (e.g., com.apple.Safari)", text: $bundleId)
-                    .textFieldStyle(.roundedBorder)
+                        ScrollView {
+                            VStack(spacing: 2) {
+                                ForEach(runningApps, id: \.bundleIdentifier) { app in
+                                    Button {
+                                        bundleId = app.bundleIdentifier ?? ""
+                                        displayName = app.localizedName ?? ""
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            if let icon = app.icon {
+                                                Image(nsImage: icon)
+                                                    .resizable()
+                                                    .frame(width: 18, height: 18)
+                                            }
+                                            Text(app.localizedName ?? app.bundleIdentifier ?? "Unknown")
+                                                .foregroundStyle(.primary)
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                        .contentShape(Rectangle())
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                                .fill(bundleId == app.bundleIdentifier
+                                                    ? Color.accentColor.opacity(0.12)
+                                                    : Color.clear)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(4)
+                        }
+                        .frame(maxHeight: 160)
+                        .cardSurface(padding: 0)
+                    }
+                }
 
-                TextField("Display Name (e.g., Safari)", text: $displayName)
-                    .textFieldStyle(.roundedBorder)
+                // Manual entry
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Or enter manually")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    TextField("Bundle ID (e.g., com.apple.Safari)", text: $bundleId)
+                        .textFieldStyle(.roundedBorder)
+
+                    TextField("Display Name (e.g., Safari)", text: $displayName)
+                        .textFieldStyle(.roundedBorder)
+                }
             }
+            .padding(20)
 
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
+            Divider()
 
-                Spacer()
-
-                Button("Add") {
-                    onAdd(bundleId, displayName)
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(bundleId.isEmpty || displayName.isEmpty)
+            SheetFooter(
+                confirmTitle: "Add",
+                isConfirmDisabled: bundleId.isEmpty || displayName.isEmpty,
+                onCancel: { dismiss() }
+            ) {
+                onAdd(bundleId, displayName)
+                dismiss()
             }
         }
-        .padding(24)
-        .frame(width: 400)
+        .frame(width: 420)
         .onAppear {
             loadRunningApps()
         }

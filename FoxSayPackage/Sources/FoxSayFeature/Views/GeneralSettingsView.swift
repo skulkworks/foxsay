@@ -16,25 +16,16 @@ public struct GeneralSettingsView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                Text("General")
-                    .font(.title2)
-                    .fontWeight(.bold)
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsPaneHeader(
+                    "General",
+                    description: "Recording keys, audio input, and where transcribed text goes."
+                )
 
-                // Keyboard Controls Section
                 keyboardControlsSection
-
-                // Text Processing Section
                 textProcessingSection
-
-                // Input Section (Microphone)
                 inputSection
-
-                // Output Section
                 outputSection
-
-                // Appearance Section
                 appearanceSection
 
                 Spacer()
@@ -47,122 +38,118 @@ public struct GeneralSettingsView: View {
     // MARK: - Keyboard Controls
 
     private var keyboardControlsSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Keyboard Controls", systemImage: "keyboard")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 14) {
+            SettingsSectionHeader("Keyboard Controls", systemImage: "keyboard")
 
-                // Activation Keys Row
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Activation Keys")
-                            .foregroundStyle(.primary)
-
-                        Spacer()
-
-                        // Activation mode picker
-                        Menu {
-                            ForEach(HotkeyManager.ActivationMode.allCases) { mode in
-                                Button {
-                                    hotkeyManager.activationMode = mode
-                                } label: {
-                                    HStack {
-                                        Text(mode.displayName)
-                                        if hotkeyManager.activationMode == mode {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            StyledMenuLabel(hotkeyManager.activationMode.displayName)
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: 140)
-
-                        // Key picker
-                        Menu {
-                            Section("Right Side") {
-                                ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
-                                    Button {
-                                        hotkeyManager.selectedModifier = modifier
-                                    } label: {
-                                        HStack {
-                                            Text(modifier.shortName)
-                                            if hotkeyManager.selectedModifier == modifier {
-                                                Spacer()
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Section("Left Side") {
-                                ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
-                                    Button {
-                                        hotkeyManager.selectedModifier = modifier
-                                    } label: {
-                                        HStack {
-                                            Text(modifier.shortName)
-                                            if hotkeyManager.selectedModifier == modifier {
-                                                Spacer()
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Section("Other") {
-                                Button {
-                                    hotkeyManager.selectedModifier = .fn
-                                } label: {
-                                    HStack {
-                                        Text(HotkeyManager.HotkeyModifier.fn.shortName)
-                                        if hotkeyManager.selectedModifier == .fn {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            StyledMenuLabel(hotkeyManager.selectedModifier.shortName)
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: 120)
-                    }
-
-                    Text(activationModeDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Divider()
-
-                // Escape to cancel
+            // Activation Keys Row
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "escape")
-                        .frame(width: 24)
-                        .foregroundStyle(.secondary)
-
-                    Text("Use Escape to cancel recording")
+                    Text("Activation Keys")
 
                     Spacer()
 
-                    Toggle("", isOn: $hotkeyManager.escapeToCancel)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
+                    // Activation mode picker
+                    Menu {
+                        ForEach(HotkeyManager.ActivationMode.allCases) { mode in
+                            Button {
+                                hotkeyManager.activationMode = mode
+                            } label: {
+                                HStack {
+                                    Text(mode.displayName)
+                                    if hotkeyManager.activationMode == mode {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        StyledMenuLabel(hotkeyManager.activationMode.displayName)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 140)
+
+                    // Key picker
+                    Menu {
+                        Section("Right Side") {
+                            ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
+                                Button {
+                                    hotkeyManager.selectedModifier = modifier
+                                } label: {
+                                    HStack {
+                                        Text(modifier.shortName)
+                                        if hotkeyManager.selectedModifier == modifier {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Section("Left Side") {
+                            ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
+                                Button {
+                                    hotkeyManager.selectedModifier = modifier
+                                } label: {
+                                    HStack {
+                                        Text(modifier.shortName)
+                                        if hotkeyManager.selectedModifier == modifier {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Section("Other") {
+                            Button {
+                                hotkeyManager.selectedModifier = .fn
+                            } label: {
+                                HStack {
+                                    Text(HotkeyManager.HotkeyModifier.fn.shortName)
+                                    if hotkeyManager.selectedModifier == .fn {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        StyledMenuLabel(hotkeyManager.selectedModifier.shortName)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 120)
                 }
 
-                Divider()
-
-                // Try Your Keys section
-                tryYourKeysSection
+                Text(activationModeDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+
+            // Escape to cancel
+            HStack {
+                Image(systemName: "escape")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+
+                Text("Use Escape to cancel recording")
+
+                Spacer()
+
+                Toggle("", isOn: $hotkeyManager.escapeToCancel)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+
+            Divider()
+
+            tryYourKeysSection
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     private var activationModeDescription: String {
@@ -179,167 +166,166 @@ public struct GeneralSettingsView: View {
     }
 
     private var accessibilityWarning: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
-            Text("Accessibility permission required to paste text into apps")
-                .font(.caption)
-            Spacer()
-            Button("Grant Access") {
-                HotkeyManager.requestAccessibilityPermission()
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+        SettingsWarningBanner(
+            title: "Accessibility permission required",
+            message: "FoxSay needs accessibility access to paste text into other apps.",
+            actionTitle: "Grant Access"
+        ) {
+            HotkeyManager.requestAccessibilityPermission()
         }
-        .padding(10)
-        .background(Color.orange.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var tryYourKeysSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("Try Your Keys")
                 .font(.subheadline)
                 .fontWeight(.medium)
 
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(hotkeyManager.isHotkeyPressed ? Color.secondaryAccent.opacity(0.2) : Color(.textBackgroundColor))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(hotkeyManager.isHotkeyPressed ? Color.secondaryAccent : Color.secondary.opacity(0.3), lineWidth: 1)
-                        )
+            HStack(spacing: 8) {
+                Image(systemName: hotkeyManager.isHotkeyPressed ? "checkmark.circle.fill" : "keyboard")
+                    .font(.system(size: 12))
+                    .foregroundStyle(hotkeyManager.isHotkeyPressed ? Color.accentColor : Color.secondary)
 
-                    HStack(spacing: 8) {
-                        Image(systemName: hotkeyManager.isHotkeyPressed ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(hotkeyManager.isHotkeyPressed ? .secondaryAccent : .secondary)
+                Text(hotkeyManager.isHotkeyPressed
+                    ? "Key detected — recording would start now"
+                    : "Press \(hotkeyManager.selectedModifier.shortName) to test")
+                    .font(.caption)
+                    .foregroundStyle(hotkeyManager.isHotkeyPressed ? .primary : .secondary)
 
-                        Text(hotkeyManager.isHotkeyPressed ? "Key detected! Recording..." : "Press \(hotkeyManager.selectedModifier.shortName) to test")
-                            .font(.caption)
-                            .foregroundStyle(hotkeyManager.isHotkeyPressed ? .primary : .secondary)
-                    }
-                    .padding(.horizontal, 12)
-                }
-                .frame(height: 36)
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(hotkeyManager.isHotkeyPressed
+                        ? Color.accentColor.opacity(0.1)
+                        : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(
+                        hotkeyManager.isHotkeyPressed
+                            ? Color.accentColor.opacity(0.45)
+                            : Color.primary.opacity(0.08),
+                        lineWidth: 1
+                    )
+            )
+            .animation(.easeOut(duration: 0.18), value: hotkeyManager.isHotkeyPressed)
         }
     }
 
     // MARK: - Text Processing Section
 
     private var textProcessingSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Text Processing", systemImage: "text.bubble")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader("Text Processing", systemImage: "text.bubble")
 
-                // Prompt selector hotkey
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Prompt Selector Hotkey")
-                        Text("Open overlay to quickly select an AI prompt")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Toggle("", isOn: $hotkeyManager.promptSelectorEnabled)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
+            // Prompt selector hotkey
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Prompt Selector Hotkey")
+                    Text("Open overlay to quickly select an AI prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
-                if hotkeyManager.promptSelectorEnabled {
-                    HStack {
-                        Spacer()
+                Spacer()
 
-                        Menu {
-                            Section("Right Side") {
-                                ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
-                                    Button {
-                                        hotkeyManager.promptSelectorModifier = modifier
-                                    } label: {
-                                        HStack {
-                                            Text(modifier.shortName)
-                                            if hotkeyManager.promptSelectorModifier == modifier {
-                                                Spacer()
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Section("Left Side") {
-                                ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
-                                    Button {
-                                        hotkeyManager.promptSelectorModifier = modifier
-                                    } label: {
-                                        HStack {
-                                            Text(modifier.shortName)
-                                            if hotkeyManager.promptSelectorModifier == modifier {
-                                                Spacer()
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Section("Other") {
+                Toggle("", isOn: $hotkeyManager.promptSelectorEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+
+            if hotkeyManager.promptSelectorEnabled {
+                HStack {
+                    Spacer()
+
+                    Menu {
+                        Section("Right Side") {
+                            ForEach(HotkeyManager.HotkeyModifier.rightSideModifiers) { modifier in
                                 Button {
-                                    hotkeyManager.promptSelectorModifier = .fn
+                                    hotkeyManager.promptSelectorModifier = modifier
                                 } label: {
                                     HStack {
-                                        Text(HotkeyManager.HotkeyModifier.fn.shortName)
-                                        if hotkeyManager.promptSelectorModifier == .fn {
+                                        Text(modifier.shortName)
+                                        if hotkeyManager.promptSelectorModifier == modifier {
                                             Spacer()
                                             Image(systemName: "checkmark")
                                         }
                                     }
                                 }
                             }
-                        } label: {
-                            StyledMenuLabel(hotkeyManager.promptSelectorModifier.shortName)
                         }
-                        .buttonStyle(.plain)
-                        .frame(width: 140)
+                        Section("Left Side") {
+                            ForEach(HotkeyManager.HotkeyModifier.leftSideModifiers) { modifier in
+                                Button {
+                                    hotkeyManager.promptSelectorModifier = modifier
+                                } label: {
+                                    HStack {
+                                        Text(modifier.shortName)
+                                        if hotkeyManager.promptSelectorModifier == modifier {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Section("Other") {
+                            Button {
+                                hotkeyManager.promptSelectorModifier = .fn
+                            } label: {
+                                HStack {
+                                    Text(HotkeyManager.HotkeyModifier.fn.shortName)
+                                    if hotkeyManager.promptSelectorModifier == .fn {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        StyledMenuLabel(hotkeyManager.promptSelectorModifier.shortName)
                     }
-
-                    if hotkeyManager.promptSelectorModifier == hotkeyManager.selectedModifier {
-                        Text("Choose a different key than the recording hotkey")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 140)
                 }
 
-                Divider()
-
-                // Vocal corrections
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Vocal Corrections")
-                        Text("Use AI to clean up spoken self-corrections and false starts")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Toggle("", isOn: $correctionPipeline.vocalCorrectionsEnabled)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .disabled(!providerManager.isReady)
+                if hotkeyManager.promptSelectorModifier == hotkeyManager.selectedModifier {
+                    Text("Choose a different key than the recording hotkey")
+                        .font(.caption)
+                        .foregroundStyle(Color.statusWarning)
                 }
+            }
 
-                if !providerManager.isReady && !correctionPipeline.vocalCorrectionsEnabled {
-                    Text("Requires an AI model to be enabled")
+            Divider()
+
+            // Vocal corrections
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vocal Corrections")
+                    Text("Use AI to clean up spoken self-corrections and false starts")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Spacer()
+
+                Toggle("", isOn: $correctionPipeline.vocalCorrectionsEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .disabled(!providerManager.isReady)
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !providerManager.isReady && !correctionPipeline.vocalCorrectionsEnabled {
+                Text("Requires an AI model to be enabled")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     // MARK: - Input Section
@@ -356,25 +342,102 @@ public struct GeneralSettingsView: View {
     }()
 
     private var inputSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Input", systemImage: "mic")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader("Input", systemImage: "mic")
 
-                // Microphone picker
+            // Microphone picker
+            HStack {
+                Text("Microphone")
+
+                Spacer()
+
+                Menu {
+                    ForEach(audioEngine.availableDevices) { device in
+                        Button {
+                            audioEngine.selectedDeviceUID = device.uid
+                        } label: {
+                            HStack {
+                                Text(device.name)
+                                if audioEngine.selectedDeviceUID == device.uid {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    StyledMenuLabel(audioEngine.availableDevices.first { $0.uid == audioEngine.selectedDeviceUID }?.name ?? "Select...")
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: 200)
+
+                RowActionButton("arrow.clockwise", help: "Refresh device list") {
+                    audioEngine.refreshAvailableDevices()
+                }
+            }
+
+            // Permission status
+            if !audioEngine.hasPermission {
                 HStack {
-                    Text("Microphone")
+                    Text("Permission")
+                    Spacer()
+                    Button("Request Access") {
+                        Task {
+                            await audioEngine.checkPermission()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
+            Divider()
+
+            // Mute while recording
+            HStack {
+                Text("Mute while recording")
+
+                Spacer()
+
+                Toggle("", isOn: $audioEngine.muteWhileRecording)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+
+            // Show overlay toggle
+            HStack {
+                Text("Show recording overlay")
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { showOverlay },
+                    set: { newValue in
+                        showOverlay = newValue
+                        UserDefaults.standard.set(newValue, forKey: "showInputOverlay")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            // Overlay settings (only show if overlay enabled)
+            if showOverlay {
+                // Visualization style picker
+                HStack {
+                    Text("Visualization style")
 
                     Spacer()
 
                     Menu {
-                        ForEach(audioEngine.availableDevices) { device in
+                        ForEach(VisualizationStyle.allCases) { style in
                             Button {
-                                audioEngine.selectedDeviceUID = device.uid
+                                visualizationStyle = style
+                                UserDefaults.standard.set(style.rawValue, forKey: "visualizationStyle")
                             } label: {
                                 HStack {
-                                    Text(device.name)
-                                    if audioEngine.selectedDeviceUID == device.uid {
+                                    Text(style.displayName)
+                                    if visualizationStyle == style {
                                         Spacer()
                                         Image(systemName: "checkmark")
                                     }
@@ -382,137 +445,58 @@ public struct GeneralSettingsView: View {
                             }
                         }
                     } label: {
-                        StyledMenuLabel(audioEngine.availableDevices.first { $0.uid == audioEngine.selectedDeviceUID }?.name ?? "Select...")
+                        StyledMenuLabel(visualizationStyle.displayName)
                     }
                     .buttonStyle(.plain)
-                    .frame(maxWidth: 200)
-
-                    Button {
-                        audioEngine.refreshAvailableDevices()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Refresh device list")
+                    .frame(width: 120)
                 }
 
-                // Permission status
-                if !audioEngine.hasPermission {
-                    HStack {
-                        Text("Permission")
-                        Spacer()
-                        Button("Request Access") {
-                            Task {
-                                await audioEngine.checkPermission()
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                }
-
-                Divider()
-
-                // Mute while recording
+                // Visual amplitude slider. Continuous range keeps the track
+                // clean; the setter rounds so the stored value stays integral.
                 HStack {
-                    Text("Mute while recording")
+                    Text("Visual amplitude")
 
                     Spacer()
 
-                    Toggle("", isOn: $audioEngine.muteWhileRecording)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                }
-
-                // Show overlay toggle
-                HStack {
-                    Text("Show recording overlay")
-
-                    Spacer()
-
-                    Toggle("", isOn: Binding(
-                        get: { showOverlay },
+                    Slider(value: Binding(
+                        get: { inputAmplitude },
                         set: { newValue in
-                            showOverlay = newValue
-                            UserDefaults.standard.set(newValue, forKey: "showInputOverlay")
+                            let rounded = newValue.rounded()
+                            guard rounded != inputAmplitude else { return }
+                            inputAmplitude = rounded
+                            UserDefaults.standard.set(rounded, forKey: "inputAmplitude")
                         }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
+                    ), in: 5...20)
+                    .controlSize(.small)
+                    .frame(width: 140)
 
-                // Overlay settings (only show if overlay enabled)
-                if showOverlay {
-                    // Visualization style picker
-                    HStack {
-                        Text("Visualization style")
-
-                        Spacer()
-
-                        Menu {
-                            ForEach(VisualizationStyle.allCases) { style in
-                                Button {
-                                    visualizationStyle = style
-                                    UserDefaults.standard.set(style.rawValue, forKey: "visualizationStyle")
-                                } label: {
-                                    HStack {
-                                        Text(style.displayName)
-                                        if visualizationStyle == style {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            StyledMenuLabel(visualizationStyle.displayName)
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: 120)
-                    }
-
-                    // Visual amplitude slider
-                    HStack {
-                        Text("Visual amplitude")
-
-                        Spacer()
-
-                        Slider(value: Binding(
-                            get: { inputAmplitude },
-                            set: { newValue in
-                                inputAmplitude = newValue
-                                UserDefaults.standard.set(newValue, forKey: "inputAmplitude")
-                            }
-                        ), in: 5...20, step: 1)
-                        .frame(width: 120)
-
-                        Text("\(Int(inputAmplitude))x")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 30, alignment: .trailing)
-                    }
-                }
-
-                // Sound effects toggle
-                HStack {
-                    Text("Sound effects")
-
-                    Spacer()
-
-                    Toggle("", isOn: Binding(
-                        get: { enableSoundEffects },
-                        set: { newValue in
-                            enableSoundEffects = newValue
-                            UserDefaults.standard.set(newValue, forKey: "enableSoundEffects")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
+                    Text("\(Int(inputAmplitude))×")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 30, alignment: .trailing)
                 }
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Sound effects toggle
+            HStack {
+                Text("Sound effects")
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { enableSoundEffects },
+                    set: { newValue in
+                        enableSoundEffects = newValue
+                        UserDefaults.standard.set(newValue, forKey: "enableSoundEffects")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     // MARK: - Output Section
@@ -530,68 +514,65 @@ public struct GeneralSettingsView: View {
     }
 
     private var outputSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Output", systemImage: "doc.on.clipboard")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader("Output", systemImage: "doc.on.clipboard")
 
-                HStack {
-                    Text("Paste into active app")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { pasteToActiveApp },
-                        set: { newValue in
-                            if !newValue && !canDisable(paste: false) { return }
-                            pasteToActiveApp = newValue
-                            UserDefaults.standard.set(newValue, forKey: "pasteToActiveApp")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                HStack {
-                    Text("Copy to clipboard")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { copyToClipboard },
-                        set: { newValue in
-                            if !newValue && !canDisable(copy: false) { return }
-                            copyToClipboard = newValue
-                            UserDefaults.standard.set(newValue, forKey: "copyToClipboard")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                HStack {
-                    Text("Save to history")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { saveToHistory },
-                        set: { newValue in
-                            if !newValue && !canDisable(history: false) { return }
-                            saveToHistory = newValue
-                            UserDefaults.standard.set(newValue, forKey: "saveToHistory")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                // Accessibility warning if paste is enabled but permission not granted
-                if pasteToActiveApp && !HotkeyManager.checkAccessibilityPermission() {
-                    accessibilityWarning
-                }
-
-                Text(outputBehaviorDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack {
+                Text("Paste into active app")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { pasteToActiveApp },
+                    set: { newValue in
+                        if !newValue && !canDisable(paste: false) { return }
+                        pasteToActiveApp = newValue
+                        UserDefaults.standard.set(newValue, forKey: "pasteToActiveApp")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack {
+                Text("Copy to clipboard")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { copyToClipboard },
+                    set: { newValue in
+                        if !newValue && !canDisable(copy: false) { return }
+                        copyToClipboard = newValue
+                        UserDefaults.standard.set(newValue, forKey: "copyToClipboard")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            HStack {
+                Text("Save to history")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { saveToHistory },
+                    set: { newValue in
+                        if !newValue && !canDisable(history: false) { return }
+                        saveToHistory = newValue
+                        UserDefaults.standard.set(newValue, forKey: "saveToHistory")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            Text(outputBehaviorDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Accessibility warning if paste is enabled but permission not granted
+            if pasteToActiveApp && !HotkeyManager.checkAccessibilityPermission() {
+                accessibilityWarning
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     private var outputBehaviorDescription: String {
@@ -618,93 +599,90 @@ public struct GeneralSettingsView: View {
     @State private var hideWindowOnLaunch: Bool = UserDefaults.standard.bool(forKey: "hideWindowOnLaunch")
 
     private var appearanceSection: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Appearance", systemImage: "paintbrush")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            SettingsSectionHeader("Appearance", systemImage: "paintbrush")
 
-                HStack {
-                    Text("Launch at login")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { launchAtLogin },
-                        set: { newValue in
-                            do {
-                                if newValue {
-                                    try SMAppService.mainApp.register()
-                                } else {
-                                    try SMAppService.mainApp.unregister()
-                                }
-                                launchAtLogin = newValue
-                            } catch {
-                                print("Failed to update launch at login: \(error)")
+            HStack {
+                Text("Launch at login")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { launchAtLogin },
+                    set: { newValue in
+                        do {
+                            if newValue {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
                             }
+                            launchAtLogin = newValue
+                        } catch {
+                            print("Failed to update launch at login: \(error)")
                         }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                HStack {
-                    Text("Hide window on launch")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { hideWindowOnLaunch },
-                        set: { newValue in
-                            hideWindowOnLaunch = newValue
-                            UserDefaults.standard.set(newValue, forKey: "hideWindowOnLaunch")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                HStack {
-                    Text("Show in menu bar")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { showInMenuBar },
-                        set: { newValue in
-                            // Prevent disabling both
-                            if !newValue && !showInDock {
-                                return
-                            }
-                            showInMenuBar = newValue
-                            UserDefaults.standard.set(newValue, forKey: "showInMenuBar")
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                HStack {
-                    Text("Show in Dock")
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { showInDock },
-                        set: { newValue in
-                            // Prevent disabling both
-                            if !newValue && !showInMenuBar {
-                                return
-                            }
-                            showInDock = newValue
-                            UserDefaults.standard.set(newValue, forKey: "showInDock")
-                            updateDockVisibility(newValue)
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                if !showInMenuBar || !showInDock {
-                    Text("At least one must be enabled to access the app")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
             }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack {
+                Text("Hide window on launch")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { hideWindowOnLaunch },
+                    set: { newValue in
+                        hideWindowOnLaunch = newValue
+                        UserDefaults.standard.set(newValue, forKey: "hideWindowOnLaunch")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            HStack {
+                Text("Show in menu bar")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { showInMenuBar },
+                    set: { newValue in
+                        // Prevent disabling both
+                        if !newValue && !showInDock {
+                            return
+                        }
+                        showInMenuBar = newValue
+                        UserDefaults.standard.set(newValue, forKey: "showInMenuBar")
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            HStack {
+                Text("Show in Dock")
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { showInDock },
+                    set: { newValue in
+                        // Prevent disabling both
+                        if !newValue && !showInMenuBar {
+                            return
+                        }
+                        showInDock = newValue
+                        UserDefaults.standard.set(newValue, forKey: "showInDock")
+                        updateDockVisibility(newValue)
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
+
+            if !showInMenuBar || !showInDock {
+                Text("At least one must be enabled to access the app")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     private func updateDockVisibility(_ show: Bool) {

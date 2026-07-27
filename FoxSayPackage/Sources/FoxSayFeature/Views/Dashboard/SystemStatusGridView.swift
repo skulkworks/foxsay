@@ -14,13 +14,13 @@ struct SystemStatusGridView: View {
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 10) {
             // Microphone
             SystemStatusCard(
                 icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash",
                 label: "Microphone",
                 value: microphoneValue,
-                statusColor: audioEngine.hasPermission ? .dashboardBlue : .dashboardAmber,
+                statusColor: audioEngine.hasPermission ? .statusOK : .statusWarning,
                 isLoading: false
             ) {
                 openMicrophoneSettings()
@@ -31,7 +31,7 @@ struct SystemStatusGridView: View {
                 icon: accessibilityEnabled ? "hand.raised.fill" : "hand.raised",
                 label: "Accessibility",
                 value: accessibilityEnabled ? "Enabled" : "Permission Required",
-                statusColor: accessibilityEnabled ? .dashboardBlue : .dashboardAmber,
+                statusColor: accessibilityEnabled ? .statusOK : .statusWarning,
                 isLoading: false
             ) {
                 HotkeyManager.requestAccessibilityPermission()
@@ -94,11 +94,9 @@ struct SystemStatusGridView: View {
     // MARK: - Speech Model
 
     private var speechModelIcon: String {
-        if modelManager.isModelLoaded {
-            return "waveform"
-        } else if modelManager.isPreloading {
-            return "arrow.trianglehead.2.clockwise.rotate.90"
-        } else if modelManager.isModelReady {
+        // The loading state is carried by the card's progress indicator, so the
+        // icon stays meaningful throughout.
+        if modelManager.isModelLoaded || modelManager.isPreloading || modelManager.isModelReady {
             return "waveform"
         } else {
             return "arrow.down.circle"
@@ -118,14 +116,10 @@ struct SystemStatusGridView: View {
     }
 
     private var speechModelStatusColor: Color {
-        if modelManager.isModelLoaded {
-            return .dashboardBlue
-        } else if modelManager.isPreloading {
-            return .dashboardBlue
-        } else if modelManager.isModelReady {
-            return .dashboardBlue
+        if modelManager.isModelLoaded || modelManager.isPreloading || modelManager.isModelReady {
+            return .statusOK
         } else {
-            return .dashboardAmber
+            return .statusWarning
         }
     }
 
@@ -136,12 +130,8 @@ struct SystemStatusGridView: View {
         if providerManager.providerType == .remote && providerManager.isRemoteReady {
             return "globe"
         }
-        // Then check local
-        if aiModelManager.isModelLoaded {
-            return "brain"
-        } else if aiModelManager.isPreloading {
-            return "arrow.trianglehead.2.clockwise.rotate.90"
-        } else if aiModelManager.isModelReady {
+        // Then check local. Loading is shown by the card's progress indicator.
+        if aiModelManager.isModelLoaded || aiModelManager.isPreloading || aiModelManager.isModelReady {
             return "brain"
         } else if aiModelManager.selectedModelId != nil {
             return "arrow.down.circle"
@@ -173,19 +163,16 @@ struct SystemStatusGridView: View {
     private var aiModelStatusColor: Color {
         // Check remote provider first
         if providerManager.providerType == .remote && providerManager.isRemoteReady {
-            return .dashboardBlue
+            return .statusOK
         }
         // Then check local
-        if aiModelManager.isModelLoaded {
-            return .dashboardBlue
-        } else if aiModelManager.isPreloading {
-            return .dashboardBlue
-        } else if aiModelManager.isModelReady {
-            return .dashboardBlue
+        if aiModelManager.isModelLoaded || aiModelManager.isPreloading || aiModelManager.isModelReady {
+            return .statusOK
         } else if aiModelManager.selectedModelId != nil {
-            return .dashboardAmber
+            return .statusWarning
         } else {
-            return .secondary
+            // No AI model configured is a valid setup, not a problem to flag.
+            return Color.primary.opacity(0.2)
         }
     }
 }

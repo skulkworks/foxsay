@@ -54,12 +54,12 @@ public struct ContentView: View {
                 HStack(spacing: 8) {
                     statusPill(
                         icon: audioEngine.hasPermission ? "mic.fill" : "mic.slash",
-                        color: audioEngine.hasPermission ? .secondaryAccent : .orange
+                        color: audioEngine.hasPermission ? .accentColor : .statusWarning
                     )
 
                     statusPill(
                         icon: HotkeyManager.checkAccessibilityPermission() ? "doc.on.clipboard.fill" : "doc.on.clipboard",
-                        color: HotkeyManager.checkAccessibilityPermission() ? .secondaryAccent : .orange
+                        color: HotkeyManager.checkAccessibilityPermission() ? .accentColor : .statusWarning
                     )
 
                     engineStatusPill
@@ -74,10 +74,9 @@ public struct ContentView: View {
 
             Spacer()
 
-            // Version
-            Text("Version 1.0.0")
+            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.quaternary)
                 .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -120,7 +119,7 @@ public struct ContentView: View {
 
                 Image(systemName: indicatorIcon)
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(isActive ? Color.white : Color.secondary)
             }
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -147,14 +146,13 @@ public struct ContentView: View {
         }
     }
 
+    /// True while the app is actively capturing or processing speech.
+    private var isActive: Bool {
+        appState.isRecording || appState.isTranscribing
+    }
+
     private var indicatorColor: Color {
-        if appState.isRecording {
-            return .tertiaryAccent
-        } else if appState.isTranscribing {
-            return .orange
-        } else {
-            return .gray
-        }
+        isActive ? .accentColor : Color.primary.opacity(0.25)
     }
 
     private var indicatorIcon: String {
@@ -169,11 +167,11 @@ public struct ContentView: View {
 
     private var indicatorText: String {
         if appState.isRecording {
-            return "Recording..."
+            return "Recording…"
         } else if appState.isTranscribing {
-            return "Transcribing..."
+            return "Transcribing…"
         } else if engineManager.isPreloading {
-            return "Warming up..."
+            return "Warming up…"
         } else {
             return "Hold \(hotkeyManager.selectedModifier.displayName) to record"
         }
@@ -182,8 +180,6 @@ public struct ContentView: View {
     private var engineStatusIcon: String {
         if engineManager.isEngineReady {
             return "checkmark.circle.fill"
-        } else if engineManager.isPreloading {
-            return "arrow.trianglehead.2.clockwise.rotate.90"
         } else if engineManager.isModelReady {
             return "hourglass"
         } else {
@@ -192,28 +188,29 @@ public struct ContentView: View {
     }
 
     private var engineStatusColor: Color {
-        if engineManager.isEngineReady {
-            return .accentColor
-        } else if engineManager.isPreloading || engineManager.isModelReady {
-            return .secondary
-        } else {
-            return .secondary
-        }
+        engineManager.isEngineReady ? .accentColor : .secondary
     }
 
     private func statusPill(icon: String, color: Color) -> some View {
         Image(systemName: icon)
             .font(.system(size: 12, weight: .medium))
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .frame(width: 28, height: 28)
-            .background(color.opacity(0.15))
-            .clipShape(Circle())
+            .background(Circle().fill(color.opacity(0.12)))
+    }
+
+    private var loadingPill: some View {
+        ProgressView()
+            .controlSize(.small)
+            .scaleEffect(0.7)
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(Color.primary.opacity(0.06)))
     }
 
     @ViewBuilder
     private var engineStatusPill: some View {
         if engineManager.isPreloading {
-            SpinningIconView(icon: engineStatusIcon, color: engineStatusColor)
+            loadingPill
         } else {
             statusPill(icon: engineStatusIcon, color: engineStatusColor)
         }
@@ -222,11 +219,7 @@ public struct ContentView: View {
     // MARK: - AI Model Status
 
     private var aiModelStatusIcon: String {
-        if aiModelManager.isModelLoaded {
-            return "brain"
-        } else if aiModelManager.isPreloading {
-            return "arrow.trianglehead.2.clockwise.rotate.90"
-        } else if aiModelManager.isModelReady {
+        if aiModelManager.isModelLoaded || aiModelManager.isModelReady {
             return "brain"
         } else {
             return "arrow.down.circle"
@@ -234,44 +227,16 @@ public struct ContentView: View {
     }
 
     private var aiModelStatusColor: Color {
-        if aiModelManager.isModelLoaded {
-            return .accentColor
-        } else if aiModelManager.isPreloading || aiModelManager.isModelReady {
-            return .secondary
-        } else {
-            return .secondary
-        }
+        aiModelManager.isModelLoaded ? .accentColor : .secondary
     }
 
     @ViewBuilder
     private var aiModelStatusPill: some View {
         if aiModelManager.isPreloading {
-            SpinningIconView(icon: aiModelStatusIcon, color: aiModelStatusColor)
+            loadingPill
         } else {
             statusPill(icon: aiModelStatusIcon, color: aiModelStatusColor)
         }
-    }
-}
-
-/// Separate view for spinning animation - animation stops when view is removed
-struct SpinningIconView: View {
-    let icon: String
-    let color: Color
-    @State private var rotation: Double = 0
-
-    var body: some View {
-        Image(systemName: icon)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(color)
-            .rotationEffect(.degrees(rotation))
-            .frame(width: 28, height: 28)
-            .background(color.opacity(0.15))
-            .clipShape(Circle())
-            .onAppear {
-                withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
-            }
     }
 }
 

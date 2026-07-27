@@ -4,20 +4,15 @@ extension Color {
     static let secondaryAccent = Color("SecondaryAccentColor")
     static let tertiaryAccent = Color("TertiaryAccentColor")
 
-    // MARK: - Dashboard Colors
+    // MARK: - Legacy dashboard palette (deprecated)
+    //
+    // The old multi-color dashboard palette now maps onto the single-accent
+    // theme (see Theme.swift). Prefer .accentColor / status colors directly;
+    // these aliases exist only until remaining call sites are migrated.
 
-    /// Primary dashboard color - Orange (#f97316)
-    static let dashboardOrange = Color(red: 0.976, green: 0.451, blue: 0.086)
-
-    /// Secondary dashboard color - System blue
+    static let dashboardOrange = Color.accentColor
     static let dashboardBlue = Color.accentColor
-
-    /// Accent color for AI/voice features - Purple (used sparingly)
-    static let dashboardPurple = Color(red: 0.659, green: 0.333, blue: 0.969)
-
-    /// Status color - Ready/Success
-    static let dashboardGreen = Color(red: 0.133, green: 0.773, blue: 0.369)
-
-    /// Status color - Warning/Attention
-    static let dashboardAmber = Color(red: 0.961, green: 0.620, blue: 0.043)
+    static let dashboardPurple = Color.accentColor
+    static let dashboardGreen = Color.statusOK
+    static let dashboardAmber = Color.statusWarning
 }

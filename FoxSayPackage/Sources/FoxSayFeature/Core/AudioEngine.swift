@@ -6,6 +6,7 @@ final class AudioBufferStorage: @unchecked Sendable {
     private var buffer: [Float] = []
     private let lock = NSLock()
     var currentLevel: Float = 0
+    var currentRMS: Float = 0
 
     func append(_ samples: [Float]) {
         lock.lock()
@@ -30,6 +31,9 @@ final class AudioBufferStorage: @unchecked Sendable {
 
 /// Audio tap processor - handles audio on realtime thread, completely non-isolated
 final class AudioTapProcessor: @unchecked Sendable {
+    /// True when a sink node handles metering, so the 100 ms tap buffers don't
+    /// overwrite the fresher per-cycle values.
+    var skipLevelMetering = false
     let storage: AudioBufferStorage
     let targetSampleRate: Double
     private var converter: AVAudioConverter?
@@ -95,12 +99,12 @@ final class AudioTapProcessor: @unchecked Sendable {
                 ))
         }
 
-        // Calculate audio level for visualization
-        let level = samples.reduce(0) { max($0, abs($1)) }
-
         // Update storage
         storage.append(samples)
-        storage.currentLevel = level
+
+        if !skipLevelMetering {
+            storage.currentLevel = samples.reduce(0) { max($0, abs($1)) }
+        }
     }
 }
 
@@ -123,6 +127,7 @@ public class AudioEngine: ObservableObject {
 
     private var audioEngine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
+    private var meterSink: AVAudioSinkNode?
 
     // Separate storage and processor that can be safely accessed from audio thread
     private let storage = AudioBufferStorage()
@@ -136,6 +141,7 @@ public class AudioEngine: ObservableObject {
     @Published public private(set) var isRecording = false
     @Published public private(set) var hasPermission = false
     @Published public private(set) var audioLevel: Float = 0
+    @Published public private(set) var audioRMS: Float = 0
     @Published public private(set) var recordingDuration: TimeInterval = 0
     @Published public private(set) var availableDevices: [AudioInputDevice] = []
 
@@ -538,6 +544,9 @@ public class AudioEngine: ObservableObject {
             setInputDevice(deviceID, for: engine)
         }
 
+        // Small IO buffer so the level meter tracks the voice in real time
+        requestSmallIOBuffer()
+
         inputNode = engine.inputNode
         guard let node = inputNode else {
             restoreSystemAudio()
@@ -563,6 +572,15 @@ public class AudioEngine: ObservableObject {
         // Install tap to capture audio - use nonisolated helper to avoid actor context
         Self.installAudioTap(on: node, format: inputFormat, processor: processor)
 
+        // Metering sink: taps coalesce to ~100 ms buffers no matter what, so the
+        // level meter reads the input per IO cycle (~10 ms) through a sink node.
+        // The tap stays the transcription capture path.
+        let sink = Self.makeMeterSink(storage: storage)
+        engine.attach(sink)
+        engine.connect(node, to: sink, format: inputFormat)
+        meterSink = sink
+        processor.skipLevelMetering = true
+
         // Start engine
         do {
             try engine.start()
@@ -576,6 +594,7 @@ public class AudioEngine: ObservableObject {
         } catch {
             print("FoxSay: Failed to start audio engine: \(error)")
             // Clean up
+            restoreIOBuffer()
             inputNode?.removeTap(onBus: 0)
             audioEngine = nil
             inputNode = nil
@@ -605,12 +624,85 @@ public class AudioEngine: ObservableObject {
         }
     }
 
+    // MARK: - IO buffer size
+
+    /// The HAL ignores the tap's requested bufferSize and delivers whatever the
+    /// device's IO buffer is set to (often 4800 frames = 100 ms), which makes the
+    /// level meter feel laggy. Request a small IO buffer for the duration of the
+    /// recording and restore the device's previous value afterwards.
+    private var savedIOBufferSize: (device: AudioDeviceID, frames: UInt32)?
+
+    private func currentInputDeviceID() -> AudioDeviceID? {
+        if selectedDeviceUID != "default", let id = getDeviceID(forUID: selectedDeviceUID) {
+            return id
+        }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID)
+        return status == noErr && deviceID != 0 ? deviceID : nil
+    }
+
+    private func requestSmallIOBuffer(frames requested: UInt32 = 512) {
+        guard let deviceID = currentInputDeviceID() else { return }
+
+        var sizeAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyBufferFrameSize,
+            mScope: kAudioObjectPropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var current = UInt32(0)
+        var propSize = UInt32(MemoryLayout<UInt32>.size)
+        let getStatus = AudioObjectGetPropertyData(deviceID, &sizeAddress, 0, nil, &propSize, &current)
+        guard getStatus == noErr else { return }
+
+        var rangeAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyBufferFrameSizeRange,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var range = AudioValueRange()
+        var rangeSize = UInt32(MemoryLayout<AudioValueRange>.size)
+        var target = requested
+        if AudioObjectGetPropertyData(deviceID, &rangeAddress, 0, nil, &rangeSize, &range) == noErr {
+            target = min(max(requested, UInt32(range.mMinimum)), UInt32(range.mMaximum))
+        }
+        guard target < current else { return }
+
+        var value = target
+        let status = AudioObjectSetPropertyData(
+            deviceID, &sizeAddress, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+        if status == noErr {
+            savedIOBufferSize = (deviceID, current)
+            print("FoxSay: Input IO buffer \(current) -> \(target) frames")
+        }
+    }
+
+    private func restoreIOBuffer() {
+        guard let saved = savedIOBufferSize else { return }
+        savedIOBufferSize = nil
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyBufferFrameSize,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value = saved.frames
+        AudioObjectSetPropertyData(saved.device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+    }
+
     private func startLevelUpdateTimer() {
         // ~60Hz update rate synced to display refresh for smooth visualizations
         levelUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self = self else { return }
                 self.audioLevel = self.storage.currentLevel
+                self.audioRMS = self.storage.currentRMS
             }
         }
     }
@@ -633,11 +725,20 @@ public class AudioEngine: ObservableObject {
         stopLevelUpdateTimer()
         inputNode?.removeTap(onBus: 0)
         audioEngine?.stop()
+        if let sink = meterSink {
+            audioEngine?.detach(sink)
+            meterSink = nil
+        }
         audioEngine = nil
         inputNode = nil
         tapProcessor = nil
         isRecording = false
         audioLevel = 0
+        audioRMS = 0
+        storage.currentLevel = 0
+        storage.currentRMS = 0
+
+        restoreIOBuffer()
 
         // Restore system audio
         restoreSystemAudio()
@@ -653,6 +754,34 @@ public class AudioEngine: ObservableObject {
     /// Get the current audio buffer without stopping
     public func getCurrentBuffer() -> [Float] {
         return storage.getAndClear()
+    }
+
+    /// Per-IO-cycle level metering on the realtime thread: no allocation, no
+    /// locks, just a peak/RMS reduction into the shared storage floats.
+    nonisolated private static func makeMeterSink(storage: AudioBufferStorage) -> AVAudioSinkNode {
+        AVAudioSinkNode { _, _, audioBufferList -> OSStatus in
+            var peak: Float = 0
+            var sumSquares: Float = 0
+            var totalSamples = 0
+            let buffers = UnsafeMutableAudioBufferListPointer(
+                UnsafeMutablePointer(mutating: audioBufferList))
+            for buffer in buffers {
+                guard let data = buffer.mData else { continue }
+                let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
+                let samples = data.assumingMemoryBound(to: Float.self)
+                for i in 0..<count {
+                    let value = samples[i]
+                    peak = max(peak, abs(value))
+                    sumSquares += value * value
+                }
+                totalSamples += count
+            }
+            if totalSamples > 0 {
+                storage.currentLevel = peak
+                storage.currentRMS = (sumSquares / Float(totalSamples)).squareRoot()
+            }
+            return noErr
+        }
     }
 
     /// Install audio tap from a nonisolated context to avoid actor isolation in the callback

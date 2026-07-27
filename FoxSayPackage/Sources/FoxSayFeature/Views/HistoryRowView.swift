@@ -7,6 +7,8 @@ public struct HistoryRowView: View {
     var onDelete: (() -> Void)?
     @ObservedObject private var playbackManager = AudioPlaybackManager.shared
 
+    private static let placeholderBarHeights: [CGFloat] = [5, 9, 6, 12, 8, 11, 6, 10, 7, 12, 5, 8]
+
     public init(item: HistoryItem, onDelete: (() -> Void)? = nil) {
         self.item = item
         self.onDelete = onDelete
@@ -16,15 +18,9 @@ public struct HistoryRowView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row
             HStack(spacing: 8) {
-                // App badge
+                // App badge — tinted only when the dev-app correction pass ran
                 if let appName = item.appName {
-                    Text(appName)
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(item.wasDevCorrected ? Color.purple.opacity(0.2) : Color.secondary.opacity(0.15))
-                        .foregroundColor(item.wasDevCorrected ? .purple : .secondary)
-                        .clipShape(Capsule())
+                    ChipLabel(text: appName, tinted: item.wasDevCorrected)
                 }
 
                 // Timestamp
@@ -37,8 +33,8 @@ public struct HistoryRowView: View {
                 // Star indicator
                 if item.isStarred {
                     Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundColor(.yellow)
+                        .font(.caption2)
+                        .foregroundStyle(Color.accentColor)
                 }
 
                 // Duration
@@ -51,7 +47,7 @@ public struct HistoryRowView: View {
             Text(item.text)
                 .font(.body)
                 .lineLimit(3)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             // Audio playback controls (if audio available)
             if item.audioFileName != nil {
@@ -94,16 +90,14 @@ public struct HistoryRowView: View {
                     } label: {
                         Image(systemName: "trash")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Delete")
                 }
             }
         }
-        .padding(12)
-        .background(Color(.textBackgroundColor).opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .cardSurface(padding: 12)
     }
 
     @ViewBuilder
@@ -116,11 +110,10 @@ public struct HistoryRowView: View {
                 playbackManager.toggle(item)
             } label: {
                 Image(systemName: isCurrentItem && playbackManager.isPlaying ? "stop.fill" : "play.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.accentColor)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.accentColor)
                     .frame(width: 24, height: 24)
-                    .background(Color.accentColor.opacity(0.15))
-                    .clipShape(Circle())
+                    .background(Circle().fill(Color.accentColor.opacity(0.12)))
             }
             .buttonStyle(.plain)
 
@@ -138,12 +131,13 @@ public struct HistoryRowView: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 35, alignment: .trailing)
             } else {
-                // Waveform placeholder when not playing
+                // Static waveform placeholder when not playing. Heights are a
+                // fixed pattern so rows do not reshuffle on every redraw.
                 HStack(spacing: 2) {
-                    ForEach(0..<12, id: \.self) { i in
+                    ForEach(Array(Self.placeholderBarHeights.enumerated()), id: \.offset) { _, height in
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.secondary.opacity(0.3))
-                            .frame(width: 3, height: CGFloat.random(in: 4...12))
+                            .fill(Color.primary.opacity(0.15))
+                            .frame(width: 3, height: height)
                     }
                 }
                 .frame(height: 12)

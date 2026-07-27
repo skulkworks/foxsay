@@ -75,7 +75,7 @@ public struct StatusPaneView: View {
 
                 Image(systemName: indicatorIcon)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(isActive ? Color.white : Color.secondary)
             }
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -102,13 +102,16 @@ public struct StatusPaneView: View {
         }
     }
 
+    /// True while the app is actively capturing or processing speech.
+    private var isActive: Bool {
+        appState.isRecording || appState.isTranscribing
+    }
+
     private var indicatorColor: Color {
-        if appState.isRecording {
-            return .tertiaryAccent
-        } else if appState.isTranscribing {
-            return .orange
+        if appState.isRecording || appState.isTranscribing {
+            return .accentColor
         } else {
-            return .gray
+            return Color.primary.opacity(0.25)
         }
     }
 
@@ -124,11 +127,11 @@ public struct StatusPaneView: View {
 
     private var indicatorText: String {
         if appState.isRecording {
-            return "Recording..."
+            return "Recording…"
         } else if appState.isTranscribing {
-            return "Transcribing..."
+            return "Transcribing…"
         } else if modelManager.isPreloading {
-            return "Warming up model..."
+            return "Warming up model…"
         } else {
             return "Ready"
         }
@@ -137,7 +140,7 @@ public struct StatusPaneView: View {
     // MARK: - System Status
 
     private var systemStatusCards: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // Microphone
             statusCard(
                 title: "Microphone",
@@ -291,11 +294,8 @@ public struct StatusPaneView: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(width: 376) // Match width of 4 status cards (4×85 + 3×12)
-            .background(Color(.textBackgroundColor).opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(width: 344) // Match width of 4 status cards (4×85 + 3×10) minus card padding
+            .cardSurface(padding: 12)
         }
         .buttonStyle(.plain)
     }
@@ -304,12 +304,13 @@ public struct StatusPaneView: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 if isLoading {
-                    SpinningIcon(icon: icon)
+                    ProgressView()
+                        .controlSize(.small)
                         .frame(height: 28)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 24))
-                        .foregroundColor(isReady ? .accentColor : .secondary)
+                        .font(.system(size: 22))
+                        .foregroundStyle(isReady ? Color.accentColor : Color.secondary)
                         .frame(height: 28)
                 }
 
@@ -325,27 +326,10 @@ public struct StatusPaneView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .frame(width: 85, height: 85)
-            .background(Color(.textBackgroundColor).opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .frame(width: 61, height: 61)
+            .cardSurface(padding: 12)
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Spinning icon for loading states using TimelineView for reliable animation
-private struct SpinningIcon: View {
-    let icon: String
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            let rotation = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.0) * 360
-
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(.accentColor)
-                .rotationEffect(.degrees(rotation))
-        }
     }
 }
 

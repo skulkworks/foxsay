@@ -24,31 +24,32 @@ public struct ModelsSettingsView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                Text("Speech Models")
-                    .font(.title2)
-                    .fontWeight(.bold)
-
-                Text("Select a model for speech-to-text transcription. Different models offer trade-offs between speed, accuracy, and language support.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                SettingsPaneHeader(
+                    "Speech Models",
+                    description: "Choose the model that transcribes your speech, trading speed against accuracy and language coverage."
+                )
 
                 // Active model indicator
                 if let modelInfo = ModelRegistry.info(for: modelManager.currentModelType) {
                     activeModelIndicator(modelInfo)
                 }
 
-                // Filter chips
-                HStack(spacing: 8) {
+                // Filters
+                HStack(spacing: 6) {
                     ForEach(ModelFilter.allCases) { filter in
-                        filterChip(filter)
+                        SettingsFilterPill(
+                            title: filter.title,
+                            isSelected: selectedFilter == filter
+                        ) {
+                            selectedFilter = filter
+                        }
                     }
                     Spacer()
                 }
 
                 // Model Cards
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(filteredModels) { modelInfo in
                         ModelCardView(modelInfo: modelInfo)
                     }
@@ -61,53 +62,34 @@ public struct ModelsSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func filterChip(_ filter: ModelFilter) -> some View {
-        Button {
-            selectedFilter = filter
-        } label: {
-            Text(filter.title)
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(selectedFilter == filter ? Color.accentColor : Color(.textBackgroundColor))
-                .foregroundColor(selectedFilter == filter ? .white : .primary)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
     private func activeModelIndicator(_ modelInfo: TranscriptionModelInfo) -> some View {
-        GroupBox {
-            HStack(spacing: 12) {
-                Image(systemName: "waveform")
-                    .font(.title2)
-                    .foregroundColor(.accentColor)
+        HStack(spacing: 12) {
+            IconTile(systemName: "waveform", isActive: true)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Model")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 6) {
-                        Text(modelInfo.displayName)
-                            .font(.headline)
-                        if modelManager.isPreloading {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                        } else if modelManager.isModelLoaded {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.secondaryAccent)
-                        } else if !modelManager.isModelReady {
-                            Text("Not Downloaded")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                        }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Active Model")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 8) {
+                    Text(modelInfo.displayName)
+                        .font(.headline)
+
+                    if modelManager.isPreloading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if modelManager.isModelLoaded {
+                        StatusCaption(text: "Loaded", color: .statusOK)
+                    } else if !modelManager.isModelReady {
+                        StatusCaption(text: "Not downloaded", color: .statusWarning)
                     }
                 }
-
-                Spacer()
             }
-            .padding(8)
+
+            Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 }
 
@@ -141,41 +123,25 @@ struct ModelCardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Header row
                 HStack(spacing: 12) {
-                    // Icon
-                    modelIcon
-                        .frame(width: 44, height: 44)
+                    IconTile(systemName: iconName, isActive: isSelected, size: 40)
 
                     // Title and badges
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 5) {
                         HStack(spacing: 6) {
                             Text(modelInfo.displayName)
                                 .font(.headline)
 
                             if isSelected && modelManager.isModelLoaded {
-                                Text("Active")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.secondaryAccent)
-                                    .foregroundColor(.black)
-                                    .clipShape(Capsule())
+                                ChipLabel(text: "Active", tinted: true)
                             } else if isSelected {
-                                Text("Selected")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.accentColor)
-                                    .foregroundColor(.white)
-                                    .clipShape(Capsule())
+                                ChipLabel(text: "Selected", tinted: true)
                             }
                         }
 
                         // Badges
                         HStack(spacing: 4) {
                             ForEach(modelInfo.badges, id: \.self) { badge in
-                                badgeView(badge)
+                                ChipLabel(text: badge.rawValue, tinted: badge == .recommended)
                             }
                         }
                     }
@@ -191,66 +157,22 @@ struct ModelCardView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Metrics row
-                HStack(spacing: 16) {
-                    // Accuracy
-                    metricView(
-                        label: "Accuracy",
-                        value: modelInfo.accuracyRating,
-                        color: .secondaryAccent
-                    )
-
-                    // Speed
-                    metricView(
-                        label: "Speed",
-                        value: modelInfo.speedRating,
-                        color: .accentColor
-                    )
+                HStack(spacing: 18) {
+                    RatingDots(label: "Accuracy", value: modelInfo.accuracyRating)
+                    RatingDots(label: "Speed", value: modelInfo.speedRating)
 
                     Spacer()
 
-                    // Size
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(modelInfo.formattedSize)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Text("Size")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    // Language
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(modelInfo.languageSupport.rawValue)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Text("Languages")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
+                    metricValue(modelInfo.formattedSize, label: "Size")
+                    metricValue(modelInfo.languageSupport.rawValue, label: "Languages")
                 }
             }
-            .padding(16)
-            .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
+            .selectableCard(isSelected: isSelected)
         }
         .buttonStyle(.plain)
-    }
-
-    private var modelIcon: some View {
-        ZStack {
-            Circle()
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
-
-            Image(systemName: iconName)
-                .font(.system(size: 18))
-                .foregroundColor(isSelected ? .accentColor : .secondary)
-        }
     }
 
     private var iconName: String {
@@ -260,45 +182,21 @@ struct ModelCardView: View {
         case .whisperLargeTurbo:
             return "waveform.badge.magnifyingglass"
         case .parakeetV2:
-            return "bolt.fill"
+            return "waveform"
         case .parakeetV3:
             return "globe"
         case .parakeetTdtCtc110m:
-            return "bolt.fill"
+            return "waveform"
         case .parakeetJa:
             return "character.bubble"
         }
     }
 
-    private func badgeView(_ badge: TranscriptionModelInfo.ModelBadge) -> some View {
-        let color: Color = {
-            switch badge {
-            case .recommended: return .orange
-            case .fastest: return .purple
-            case .mostAccurate: return .secondaryAccent
-            case .multilingual: return .purple
-            case .compact: return .gray
-            }
-        }()
-
-        return Text(badge.rawValue)
-            .font(.caption2)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.2))
-            .foregroundColor(color)
-            .clipShape(Capsule())
-    }
-
-    private func metricView(label: String, value: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 2) {
-                ForEach(0..<5, id: \.self) { i in
-                    Circle()
-                        .fill(i < value ? color : color.opacity(0.2))
-                        .frame(width: 6, height: 6)
-                }
-            }
+    private func metricValue(_ value: String, label: String) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -313,29 +211,29 @@ struct ModelCardView: View {
             VStack(spacing: 4) {
                 ProgressView(value: modelManager.downloadProgress)
                     .progressViewStyle(.linear)
-                    .tint(.secondaryAccent)
                     .frame(width: 70)
                 Text("\(Int(modelManager.downloadProgress * 100))%")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
         } else if isCurrentModel && modelManager.isPreloading {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 ProgressView()
-                    .scaleEffect(0.6)
-                    .tint(.secondaryAccent)
-                Text("Loading...")
-                    .font(.caption2)
+                    .controlSize(.small)
+                Text("Loading…")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } else if isCurrentModel && modelManager.isModelLoaded {
             Label("Ready", systemImage: "checkmark.circle.fill")
                 .font(.caption)
-                .foregroundColor(.secondaryAccent)
+                .foregroundStyle(Color.statusOK)
+                .labelStyle(.titleAndIcon)
         } else if isCurrentModel && modelManager.isModelReady {
             Label("Downloaded", systemImage: "checkmark.circle")
                 .font(.caption)
-                .foregroundColor(.accentColor)
+                .foregroundStyle(.secondary)
         } else if isCurrentModel && !modelManager.isModelReady {
             Button("Download") {
                 Task {

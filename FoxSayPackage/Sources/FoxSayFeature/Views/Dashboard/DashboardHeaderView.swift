@@ -1,22 +1,20 @@
 import SwiftUI
 
-/// Header component showing app icon, name, version, and status
+/// Header component for the dashboard pane: title, one-line description, and
+/// the current recording status.
 struct DashboardHeaderView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var modelManager = ModelManager.shared
 
     @State private var showDebugMenu = false
+    @State private var isPulsing = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Dashboard")
                     .font(.title2)
-                    .fontWeight(.bold)
-
-                Text("v\(appVersion)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .fontWeight(.semibold)
                     .onTapGesture {
                         #if DEBUG
                         if NSEvent.modifierFlags.contains(.option) {
@@ -27,59 +25,55 @@ struct DashboardHeaderView: View {
                     .popover(isPresented: $showDebugMenu) {
                         debugMenuContent
                     }
+
+                Text("Your dictation activity and system readiness at a glance.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            // Status badge
-            statusBadge
+            statusIndicator
         }
     }
 
-    // MARK: - Status Badge
+    // MARK: - Status Indicator
 
-    private var statusBadge: some View {
+    private var statusIndicator: some View {
         HStack(spacing: 6) {
-            // Pulsing status dot
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-                .overlay {
-                    if appState.isRecording || appState.isTranscribing {
-                        Circle()
-                            .stroke(statusColor.opacity(0.5), lineWidth: 2)
-                            .scaleEffect(pulseAnimation ? 1.8 : 1.0)
-                            .opacity(pulseAnimation ? 0 : 0.8)
-                    }
-                }
+            if modelManager.isPreloading && !isActive {
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.65)
+                    .frame(width: 12, height: 12)
+            } else {
+                StatusDot(color: statusColor)
+                    .opacity(isActive && isPulsing ? 0.35 : 1)
+                    .animation(
+                        isActive
+                            ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                            : .easeOut(duration: 0.18),
+                        value: isPulsing
+                    )
+            }
 
             Text(statusText)
                 .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(statusColor)
+                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(statusColor.opacity(0.1))
-        .clipShape(Capsule())
-        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
-        .onAppear {
-            pulseAnimation = true
+        .onAppear { isPulsing = isActive }
+        .onChange(of: isActive) { _, active in
+            isPulsing = active
         }
     }
 
-    @State private var pulseAnimation = false
+    /// True while the app is actively capturing or processing speech.
+    private var isActive: Bool {
+        appState.isRecording || appState.isTranscribing
+    }
 
     private var statusColor: Color {
-        if appState.isRecording {
-            return .dashboardOrange
-        } else if appState.isTranscribing {
-            return .dashboardAmber
-        } else if modelManager.isPreloading {
-            return .dashboardBlue
-        } else {
-            return .dashboardBlue  // Ready state is blue
-        }
+        isActive ? .accentColor : .statusOK
     }
 
     private var statusText: String {
@@ -88,16 +82,10 @@ struct DashboardHeaderView: View {
         } else if appState.isTranscribing {
             return "Transcribing"
         } else if modelManager.isPreloading {
-            return "Loading..."
+            return "Loading model…"
         } else {
             return "Ready"
         }
-    }
-
-    // MARK: - Version
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
     // MARK: - Debug Menu (DEBUG builds only)

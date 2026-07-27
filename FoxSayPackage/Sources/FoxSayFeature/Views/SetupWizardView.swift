@@ -36,14 +36,17 @@ public struct SetupWizardView: View {
     public var body: some View {
         VStack(spacing: 0) {
             // Progress indicators
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(SetupStep.allCases, id: \.rawValue) { step in
-                    Circle()
-                        .fill(step.rawValue <= currentStep.rawValue ? Color.accentColor : Color.gray.opacity(0.3))
-                        .frame(width: 10, height: 10)
+                    Capsule()
+                        .fill(step.rawValue <= currentStep.rawValue
+                            ? Color.accentColor
+                            : Color.primary.opacity(0.15))
+                        .frame(width: step == currentStep ? 20 : 8, height: 5)
                 }
             }
             .padding(.top, 20)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentStep)
 
             Spacer()
 
@@ -109,45 +112,70 @@ public struct SetupWizardView: View {
         }
     }
 
+    /// Large glyph at the top of a step. Neutral by default; status color only
+    /// when a permission is still missing.
+    private func stepGlyph(_ systemName: String, isBlocked: Bool = false) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 52, weight: .light))
+            .foregroundStyle(isBlocked ? Color.statusWarning : Color.accentColor)
+    }
+
     private var welcomeStep: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.accentColor)
+        VStack(spacing: 18) {
+            // Brand moment: the app icon over a soft wash of the icon's own
+            // coral gradient. The only place the gradient appears in settings.
+            ZStack {
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .fill(LinearGradient.brandCoral)
+                    .frame(width: 124, height: 124)
+                    .opacity(0.18)
+                    .blur(radius: 14)
 
-            Text("Welcome to FoxSay")
-                .font(.title)
-                .fontWeight(.bold)
+                Image("AppIconImage")
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 88, height: 88)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .shadow(color: Color.brandSlateDeep.opacity(0.25), radius: 10, y: 5)
+            }
 
-            Text("FoxSay lets you dictate text anywhere on your Mac using speech-to-text. Hold a key to record, release to transcribe.")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("Welcome to FoxSay")
+                    .font(.title)
+                    .fontWeight(.semibold)
 
-            Text("Let's set up a few things to get started.")
-                .font(.callout)
-                .foregroundColor(.secondary)
+                Text("Dictate text anywhere on your Mac. Hold a key to record, release to transcribe.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Text("Let's set up a few things to get started.")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 
     private var microphoneStep: some View {
-        VStack(spacing: 20) {
-            Image(systemName: audioEngine.hasPermission ? "mic.circle.fill" : "mic.slash")
-                .font(.system(size: 64))
-                .foregroundColor(audioEngine.hasPermission ? .accentColor : .orange)
+        VStack(spacing: 18) {
+            stepGlyph(
+                audioEngine.hasPermission ? "mic.circle" : "mic.slash.circle",
+                isBlocked: !audioEngine.hasPermission
+            )
 
             Text("Microphone Access")
                 .font(.title2)
-                .fontWeight(.bold)
+                .fontWeight(.semibold)
 
             Text("FoxSay needs access to your microphone to transcribe your speech.")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             if audioEngine.hasPermission {
                 Label("Microphone access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.statusOK)
             } else {
                 Button("Grant Microphone Access") {
                     Task {
@@ -162,25 +190,27 @@ public struct SetupWizardView: View {
     private var accessibilityStep: some View {
         let hasAccess = HotkeyManager.checkAccessibilityPermission()
 
-        return VStack(spacing: 20) {
-            Image(systemName: hasAccess ? "hand.raised.circle.fill" : "hand.raised.slash")
-                .font(.system(size: 64))
-                .foregroundColor(hasAccess ? .accentColor : .orange)
+        return VStack(spacing: 18) {
+            stepGlyph(
+                hasAccess ? "hand.raised.circle" : "hand.raised.slash",
+                isBlocked: !hasAccess
+            )
 
             Text("Accessibility Access")
                 .font(.title2)
-                .fontWeight(.bold)
+                .fontWeight(.semibold)
 
-            Text("FoxSay needs accessibility access to automatically paste transcribed text into your active application.")
+            Text("FoxSay needs accessibility access to paste transcribed text into your active application.")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             if hasAccess {
                 Label("Accessibility access granted", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.statusOK)
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     Button("Open System Settings") {
                         HotkeyManager.requestAccessibilityPermission()
                     }
@@ -188,12 +218,11 @@ public struct SetupWizardView: View {
 
                     Text("Enable FoxSay in the list, then return here")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
-                    Text("If already enabled, you may need to restart the app")
+                    Text("If it is already enabled, you may need to restart the app")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
+                        .foregroundStyle(.tertiary)
                 }
             }
         }
@@ -204,21 +233,19 @@ public struct SetupWizardView: View {
     }
 
     private var modelDownloadStep: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.accentColor)
+        VStack(spacing: 18) {
+            stepGlyph("arrow.down.circle")
 
             Text("Download Speech Model")
                 .font(.title2)
-                .fontWeight(.bold)
+                .fontWeight(.semibold)
 
-            Text("FoxSay uses a local AI model for transcription. Choose a model and download it.")
+            Text("FoxSay transcribes locally. Choose a model and download it.")
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 // Model picker
                 Menu {
                     Button {
@@ -285,23 +312,24 @@ public struct SetupWizardView: View {
 
                 Text(engineManager.currentModelType.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(height: 32)
 
                 if isDownloading {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
-                        .tint(.accentColor)
                         .frame(width: 200)
 
-                    Text("Downloading... \(Int(engineManager.downloadProgress * 100))%")
+                    Text("Downloading… \(Int(engineManager.downloadProgress * 100))%")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 } else if let error = downloadError {
                     Text(error)
                         .font(.caption)
-                        .foregroundColor(.tertiaryAccent)
+                        .foregroundStyle(Color.statusError)
+                        .multilineTextAlignment(.center)
 
                     Button("Retry") {
                         startDownload()
@@ -314,36 +342,39 @@ public struct SetupWizardView: View {
                     .buttonStyle(.bordered)
                 }
             }
-            .padding()
-            .background(Color(.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(maxWidth: .infinity)
+            .cardSurface()
         }
     }
 
     private var completeStep: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.accentColor)
+        VStack(spacing: 18) {
+            stepGlyph("checkmark.circle")
 
             Text("You're All Set!")
                 .font(.title)
-                .fontWeight(.bold)
+                .fontWeight(.semibold)
 
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Microphone ready", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
-                Label("Auto-paste enabled", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
-                Label("Model downloaded", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.accentColor)
+            VStack(alignment: .leading, spacing: 10) {
+                completeRow("Microphone ready")
+                completeRow("Auto-paste enabled")
+                completeRow("Model downloaded")
             }
-            .padding()
 
             Text("Hold your activation key to start recording. Release to transcribe and paste.")
                 .font(.callout)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+        }
+    }
+
+    private func completeRow(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.statusOK)
+            Text(text)
+                .font(.subheadline)
         }
     }
 

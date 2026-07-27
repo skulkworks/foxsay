@@ -160,7 +160,7 @@ struct ActivityGridView: View {
         let isHovered = hoveredCell?.day == day && hoveredCell?.week == week
 
         return RoundedRectangle(cornerRadius: 2)
-            .fill(Color.dashboardOrange.opacity(level.opacity))
+            .fill(fill(for: level))
             .frame(width: cellSize, height: cellSize)
             .overlay(
                 RoundedRectangle(cornerRadius: 2)
@@ -202,26 +202,37 @@ struct ActivityGridView: View {
     // MARK: - Legend
 
     private var legendRow: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Spacer()
 
             Text("Less")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
 
             ForEach(ActivityLevel.allCases, id: \.rawValue) { level in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.dashboardOrange.opacity(level.opacity))
-                    .frame(width: cellSize, height: cellSize)
+                    .fill(fill(for: level))
+                    .frame(width: legendSwatchSize, height: legendSwatchSize)
             }
 
             Text("More")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
         }
     }
 
+    private var legendSwatchSize: CGFloat {
+        min(cellSize, 9)
+    }
+
     // MARK: - Helpers
+
+    /// Empty days stay neutral so the coral ramp only marks real activity.
+    private func fill(for level: ActivityLevel) -> Color {
+        level == .none
+            ? Color.primary.opacity(0.06)
+            : Color.accentColor.opacity(level.opacity)
+    }
 
     private func formatNumber(_ number: Int) -> String {
         if number >= 1_000_000 {

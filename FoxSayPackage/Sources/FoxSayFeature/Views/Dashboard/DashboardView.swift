@@ -12,24 +12,19 @@ public struct DashboardView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // Header
+            VStack(spacing: 20) {
                 DashboardHeaderView()
 
-                // Hotkey indicator
                 hotkeyIndicator
 
-                // Activity Section
                 activitySection
 
-                // Stats Grid
                 statsSection
 
-                // System Status Section
                 systemStatusSection
 
-                // Footer
                 DashboardFooterView()
+                    .padding(.top, 4)
             }
             .padding(24)
         }
@@ -40,102 +35,58 @@ public struct DashboardView: View {
 
     private var hotkeyIndicator: some View {
         HStack(spacing: 12) {
-            // Recording hotkey - clickable
-            Button {
+            HotkeyChip(
+                icon: "mic",
+                label: "Record",
+                key: hotkeyManager.selectedModifier.shortName,
+                help: "Click to change recording hotkey"
+            ) {
                 appState.selectedSidebarItem = .general
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.dashboardOrange)
-
-                    Text("Record")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    Text(hotkeyManager.selectedModifier.shortName)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.dashboardOrange.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .help("Click to change recording hotkey")
 
             Spacer()
 
-            // Prompts hotkey (if enabled) - clickable
             if hotkeyManager.promptSelectorEnabled {
-                Button {
+                HotkeyChip(
+                    icon: "text.bubble",
+                    label: "Prompts",
+                    key: hotkeyManager.promptSelectorModifier.shortName,
+                    help: "Click to change prompts hotkey"
+                ) {
                     appState.selectedSidebarItem = .general
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "text.bubble.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.dashboardPurple)
-
-                        Text("Prompts")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-
-                        Text(hotkeyManager.promptSelectorModifier.shortName)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.dashboardPurple.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help("Click to change prompts hotkey")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(.textBackgroundColor).opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .cardSurface(padding: 12)
     }
 
     // MARK: - Activity Section
 
     private var activitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Activity")
                     .font(.headline)
-                    .fontWeight(.semibold)
 
                 Spacer()
 
                 PeriodSelectorView(selectedPeriod: $selectedPeriod)
             }
 
-            // Activity grid card
-            VStack(alignment: .leading, spacing: 16) {
-                ActivityGridView(
-                    gridData: dashboardData.gridData,
-                    period: selectedPeriod
-                )
-            }
-            .padding(16)
-            .background(Color(.textBackgroundColor).opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            ActivityGridView(
+                gridData: dashboardData.gridData,
+                period: selectedPeriod
+            )
+            .cardSurface()
         }
     }
 
     // MARK: - Stats Section
 
     private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Statistics")
                 .font(.headline)
-                .fontWeight(.semibold)
 
             StatsGridView(data: dashboardData)
         }
@@ -144,10 +95,9 @@ public struct DashboardView: View {
     // MARK: - System Status Section
 
     private var systemStatusSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("System Status")
                 .font(.headline)
-                .fontWeight(.semibold)
 
             SystemStatusGridView()
         }
@@ -157,6 +107,44 @@ public struct DashboardView: View {
 
     private var dashboardData: DashboardDisplayData {
         statisticsManager.getDashboardData(period: selectedPeriod)
+    }
+}
+
+// MARK: - Hotkey Chip
+
+/// A clickable "label + keycap" pair. Neutral at rest, accent-tinted on hover
+/// so it reads as interactive without adding a second color to the pane.
+private struct HotkeyChip: View {
+    let icon: String
+    let label: String
+    let key: String
+    let help: String
+    let action: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(isHovering ? Color.accentColor : Color.secondary)
+
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                KeycapLabel(text: key, tinted: isHovering)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.18)) {
+                isHovering = hovering
+            }
+        }
     }
 }
 

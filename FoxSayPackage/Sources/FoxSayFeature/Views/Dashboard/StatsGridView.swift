@@ -12,40 +12,32 @@ struct StatsGridView: View {
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            // Sessions
+        LazyVGrid(columns: columns, spacing: 10) {
             StatCardView(
                 icon: "mic.fill",
                 value: formatNumber(data.aggregates.totalSessions),
                 label: "Sessions",
-                color: .dashboardOrange,
                 trend: data.sessionTrendText
             )
 
-            // Words
             StatCardView(
                 icon: "text.bubble.fill",
                 value: formatNumber(data.aggregates.totalWords),
                 label: "Words",
-                color: .dashboardOrange,
                 trend: data.wordsTrendText
             )
 
-            // Time Saved
             StatCardView(
                 icon: "clock.fill",
                 value: formatTimeSaved(data.aggregates.timeSavedMinutes),
                 label: "Time Saved",
-                color: .dashboardOrange,
                 trend: data.timeSavedTrendText
             )
 
-            // Accuracy
             StatCardView(
                 icon: "checkmark.seal.fill",
                 value: formatAccuracy(data.aggregates.averageConfidence),
                 label: "Accuracy",
-                color: .dashboardOrange,
                 trend: data.accuracyTrendText
             )
         }

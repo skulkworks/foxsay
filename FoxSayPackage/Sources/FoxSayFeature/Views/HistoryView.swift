@@ -27,28 +27,35 @@ public struct HistoryView: View {
     public var body: some View {
         VStack(spacing: 0) {
             // Header with search and filters
-            VStack(spacing: 12) {
-                HStack {
-                    Text("History")
-                        .font(.title2)
-                        .fontWeight(.bold)
+            VStack(spacing: 16) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("History")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+
+                        Text("Past transcriptions with audio playback.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Spacer()
 
-                    Button {
+                    Button("Clear All", role: .destructive) {
                         showClearConfirmation = true
-                    } label: {
-                        Label("Clear All", systemImage: "trash")
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.small)
                     .disabled(historyManager.items.isEmpty)
                 }
 
                 // Search
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                    TextField("Search transcriptions...", text: $searchText)
+
+                    TextField("Search transcriptions…", text: $searchText)
                         .textFieldStyle(.plain)
 
                     if !searchText.isEmpty {
@@ -61,12 +68,19 @@ public struct HistoryView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(8)
-                .background(Color(.textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                )
 
                 // Filter chips
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ForEach(HistoryFilter.allCases) { filter in
                         filterChip(filter)
                     }
@@ -102,7 +116,7 @@ public struct HistoryView: View {
 
     private var historyList: some View {
         ScrollView {
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: 10) {
                 ForEach(filteredItems) { item in
                     HistoryRowView(item: item, onDelete: {
                         historyManager.deleteItem(item)
@@ -144,27 +158,18 @@ public struct HistoryView: View {
     }
 
     private func filterChip(_ filter: HistoryFilter) -> some View {
-        Button {
+        SettingsFilterPill(title: filter.title, isSelected: selectedFilter == filter) {
             selectedFilter = filter
-        } label: {
-            Text(filter.title)
-                .font(.caption)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(selectedFilter == filter ? Color.accentColor : Color(.textBackgroundColor))
-                .foregroundColor(selectedFilter == filter ? .white : .primary)
-                .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Spacer()
 
             Image(systemName: emptyStateIcon)
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(.quaternary)
 
             Text(emptyStateTitle)
                 .font(.headline)
@@ -177,6 +182,7 @@ public struct HistoryView: View {
 
             Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var emptyStateIcon: String {
