@@ -6,6 +6,8 @@ import SwiftUI
 public struct GeneralSettingsView: View {
     @ObservedObject private var hotkeyManager = HotkeyManager.shared
     @ObservedObject private var audioEngine = AudioEngine.shared
+    @ObservedObject private var correctionPipeline = CorrectionPipeline.shared
+    @ObservedObject private var providerManager = LLMProviderManager.shared
     @EnvironmentObject private var appState: AppState
 
     @State private var isTestingHotkey = false
@@ -308,6 +310,31 @@ public struct GeneralSettingsView: View {
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
+                }
+
+                Divider()
+
+                // Vocal corrections
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Vocal Corrections")
+                        Text("Use AI to clean up spoken self-corrections and false starts")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: $correctionPipeline.vocalCorrectionsEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .disabled(!providerManager.isReady)
+                }
+
+                if !providerManager.isReady && !correctionPipeline.vocalCorrectionsEnabled {
+                    Text("Requires an AI model to be enabled")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(8)

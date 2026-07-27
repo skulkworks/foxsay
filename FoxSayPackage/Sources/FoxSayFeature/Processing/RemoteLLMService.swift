@@ -240,6 +240,10 @@ public actor RemoteLLMService: TextTransformer {
             }
         }
 
+        // Strip Qwen3 thinking tags (may appear multiple times, empty or with content)
+        cleaned = cleaned.replacingOccurrences(of: "<think>", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "</think>", with: "")
+
         cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Remove markdown code blocks (```language ... ```)
