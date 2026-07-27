@@ -127,15 +127,22 @@ When enabled, FoxSay runs a local LLM for post-transcription corrections:
 Available AI models:
 | Model | Size | Notes |
 |-------|------|-------|
+| LFM2 1.2B | 660 MB | Liquid AI's on-device model, extremely fast |
+| Llama 3.2 1B | 710 MB | Meta's tiny model, fastest Llama |
 | Gemma 3 1B | 733 MB | Google's compact QAT model |
 | Qwen 2.5 1.5B | 900 MB | Fast, general-purpose |
 | Qwen 2.5 Coder 1.5B | 900 MB | Optimized for code |
+| Qwen3 1.7B | 914 MB | Current Qwen generation, fast |
 | Gemma 2 2B | 1.4 GB | Memory efficient |
 | Qwen 2.5 3B | 1.8 GB | Balanced performance |
 | Qwen 2.5 Coder 3B | 1.8 GB | Better code handling |
-| Llama 3.2 3B | 1.9 GB | Meta's latest small model |
+| Llama 3.2 3B | 1.9 GB | Meta's small model |
+| Qwen3 4B Instruct | 2.3 GB | Updated instruct, dual-mode reasoning |
 | Phi 4 Mini (3.8B) | 2.3 GB | Excellent reasoning |
 | Mistral NeMo 12B | 7 GB | Highest quality |
+
+Newer architectures (Qwen 3.5, Gemma 4) need a more recent `mlx-swift-lm` than the
+revision pinned in `Package.swift`, so they are not listed yet.
 
 ### Voice Modes
 

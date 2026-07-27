@@ -67,6 +67,22 @@ public struct AIModel: Codable, Identifiable, Sendable {
 
         // Fast models (< 1.5GB)
         AIModel(
+            id: "lfm2-1.2b",
+            name: "LFM2 1.2B",
+            description: "Liquid AI's on-device model. Extremely fast responses.",
+            huggingFaceId: "mlx-community/LFM2-1.2B-4bit",
+            sizeBytes: 660_000_000,
+            capabilities: ["general"]
+        ),
+        AIModel(
+            id: "llama-3.2-1b-instruct",
+            name: "Llama 3.2 1B Instruct",
+            description: "Meta's tiny model. Fastest Llama for quick corrections.",
+            huggingFaceId: "mlx-community/Llama-3.2-1B-Instruct-4bit",
+            sizeBytes: 710_000_000,
+            capabilities: ["general"]
+        ),
+        AIModel(
             id: "gemma-3-1b-instruct",
             name: "Gemma 3 1B Instruct",
             description: "Google's latest compact model. Tiny but slower inference.",

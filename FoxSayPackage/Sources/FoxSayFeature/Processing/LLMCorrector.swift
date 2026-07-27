@@ -42,8 +42,13 @@ public actor LLMCorrector {
 
         let startTime = CFAbsoluteTimeGetCurrent()
 
-        // Prepare the input for the model
-        let userInput = UserInput(prompt: promptText)
+        // Prepare the input for the model.
+        // enable_thinking=false keeps hybrid reasoning models (Qwen 3/3.5, SmolLM3)
+        // in direct-answer mode; templates without the variable ignore it.
+        let userInput = UserInput(
+            prompt: promptText,
+            additionalContext: ["enable_thinking": false]
+        )
         let input = try await container.prepare(input: userInput)
 
         // Generate with low temperature for deterministic output
@@ -81,6 +86,18 @@ public actor LLMCorrector {
     /// Clean up the LLM response to extract just the corrected text
     private func cleanResponse(_ response: String, originalText: String, promptText: String) -> String {
         var cleaned = response
+
+        // Drop reasoning blocks emitted by models that think despite enable_thinking=false.
+        // An unterminated block means the token budget was spent on reasoning - drop it too.
+        for (open, close) in [("<think>", "</think>"), ("<thinking>", "</thinking>")] {
+            while let openRange = cleaned.range(of: open) {
+                if let closeRange = cleaned.range(of: close, range: openRange.upperBound..<cleaned.endIndex) {
+                    cleaned.removeSubrange(openRange.lowerBound..<closeRange.upperBound)
+                } else {
+                    cleaned.removeSubrange(openRange.lowerBound..<cleaned.endIndex)
+                }
+            }
+        }
 
         // Stop at common end tokens (Gemma, Llama, Qwen, etc.)
         let endTokens = ["<end_of_turn>", "<|end|>", "<|eot_id|>", "</s>", "<|im_end|>", "<|endoftext|>", "<|assistant|>", "<|user|>"]
