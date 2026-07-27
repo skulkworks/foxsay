@@ -67,6 +67,8 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
     // Parakeet variants via FluidAudio
     case parakeetV2 = "parakeet"  // Keep raw value for backward compatibility
     case parakeetV3 = "parakeet-v3"
+    case parakeetTdtCtc110m = "parakeet-tdt-ctc-110m"
+    case parakeetJa = "parakeet-ja"
 
     // Legacy alias
     case whisperKit = "whisperkit"
@@ -81,6 +83,8 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         case .whisperLargeTurbo: return "Whisper Large Turbo"
         case .parakeetV2: return "Parakeet V2"
         case .parakeetV3: return "Parakeet V3"
+        case .parakeetTdtCtc110m: return "Parakeet TDT-CTC 110M"
+        case .parakeetJa: return "Parakeet Japanese"
         }
     }
 
@@ -92,6 +96,8 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         case .whisperLargeTurbo: return "Whisper Turbo"
         case .parakeetV2: return "Parakeet V2"
         case .parakeetV3: return "Parakeet V3"
+        case .parakeetTdtCtc110m: return "Parakeet 110M"
+        case .parakeetJa: return "Parakeet JA"
         }
     }
 
@@ -109,6 +115,10 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
             return "English-only, highest recall (~450MB)"
         case .parakeetV3:
             return "Multilingual, 25 languages (~480MB)"
+        case .parakeetTdtCtc110m:
+            return "English-only, smallest and fastest Parakeet (~230MB)"
+        case .parakeetJa:
+            return "Japanese-only, tuned for Japanese speech (~620MB)"
         }
     }
 
@@ -116,7 +126,7 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .whisperTiny, .whisperBase, .whisperKit, .whisperSmall, .whisperLargeTurbo, .parakeetV3:
             return true
-        case .parakeetV2:
+        case .parakeetV2, .parakeetTdtCtc110m, .parakeetJa:
             return false
         }
     }

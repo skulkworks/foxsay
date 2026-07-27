@@ -263,6 +263,10 @@ struct ModelCardView: View {
             return "bolt.fill"
         case .parakeetV3:
             return "globe"
+        case .parakeetTdtCtc110m:
+            return "bolt.fill"
+        case .parakeetJa:
+            return "character.bubble"
         }
     }
 

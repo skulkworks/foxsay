@@ -68,7 +68,7 @@ FoxSay uses a protocol-based engine system (`TranscriptionEngine`) with two impl
 
 | Engine | Library | Models | Size |
 |--------|---------|--------|------|
-| **Parakeet** | FluidAudio | V2 (English), V3 (25 languages) | ~450-480 MB |
+| **Parakeet** | FluidAudio | TDT-CTC 110M (English), V2 (English), V3 (25 languages), Japanese | 230-620 MB |
 | **Whisper** | WhisperKit | tiny, base, small, large-turbo | 39-809 MB |
 
 `ModelManager` handles engine selection, model downloads, and routing transcription requests to the active engine. Models are stored in `~/Library/Application Support/`.
@@ -101,12 +101,19 @@ The combination of Neural Engine for speech recognition and Metal GPU for LLM in
 
 ### Parakeet Engine Details
 
-Parakeet is the default and recommended engine. It uses NVIDIA's Parakeet TDT 0.6B model converted to CoreML format for on-device inference:
+Parakeet is the default and recommended engine. It uses NVIDIA's Parakeet models converted to CoreML format for on-device inference:
+
+| Variant | Size | Notes |
+|---------|------|-------|
+| TDT-CTC 110M | ~230 MB | English-only, fused preprocessor+encoder, smallest and fastest |
+| V2 | ~450 MB | English-only, highest recall (default) |
+| V3 | ~480 MB | 25 European languages |
+| Japanese | ~620 MB | Japanese-only, more accurate than V3 for Japanese |
 
 - **FluidAudio** (`FluidInference/FluidAudio`) provides the Swift interface to the CoreML model
 - Model files are downloaded on first use via `AsrModels.downloadAndLoad()`
 - Audio buffers are pre-padded to minimum 240K samples (workaround for a FluidAudio bug with trailing punctuation on short audio)
-- Transcription runs via `AsrManager.transcribe()` which returns text with confidence scores
+- Transcription runs via `AsrManager.transcribe(_:decoderState:)`, which takes an inout `TdtDecoderState`. FoxSay creates a fresh one per utterance, sized by the variant's `decoderLayers` (1 for TDT-CTC 110M, 2 for the rest)
 
 ### LLM Correction System
 

@@ -16,6 +16,7 @@ public struct TranscriptionModelInfo: Identifiable, Sendable {
     public enum LanguageSupport: String, Sendable {
         case englishOnly = "English"
         case multilingual = "25 Languages"
+        case japanese = "Japanese"
     }
 
     public enum ModelBadge: String, CaseIterable, Sendable {
@@ -66,6 +67,34 @@ public struct ModelRegistry {
             sizeBytes: 480_000_000,
             languageSupport: .multilingual,
             badges: [.multilingual, .mostAccurate]
+        ),
+
+        // Parakeet TDT-CTC 110M - Smallest Parakeet, fused preprocessor+encoder
+        TranscriptionModelInfo(
+            id: "parakeet-tdt-ctc-110m",
+            type: .parakeetTdtCtc110m,
+            displayName: "Parakeet TDT-CTC 110M",
+            version: "0.11B",
+            description: "Smallest and fastest Parakeet. English-only, great for quick dictation.",
+            accuracyRating: 4,
+            speedRating: 5,
+            sizeBytes: 230_000_000,
+            languageSupport: .englishOnly,
+            badges: [.compact, .fastest]
+        ),
+
+        // Parakeet Japanese - Japanese-only
+        TranscriptionModelInfo(
+            id: "parakeet-ja",
+            type: .parakeetJa,
+            displayName: "Parakeet Japanese",
+            version: "0.6B",
+            description: "Tuned specifically for Japanese speech, with higher accuracy than the multilingual model.",
+            accuracyRating: 5,
+            speedRating: 4,
+            sizeBytes: 620_000_000,
+            languageSupport: .japanese,
+            badges: [.mostAccurate]
         ),
 
         // Whisper Tiny - Fastest, smallest

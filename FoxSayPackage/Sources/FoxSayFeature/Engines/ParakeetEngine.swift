@@ -8,14 +8,13 @@ public actor ParakeetEngine: TranscriptionEngine {
     /// The model version this engine uses
     public let version: AsrModelVersion
 
-    // FoxSay only ever constructs this engine with .v2 or .v3. FluidAudio keeps
-    // adding model versions (.tdtCtc110m, .tdtJa), so these switches use a default
-    // rather than breaking the build every time upstream adds a case.
     public nonisolated var name: String {
         switch version {
         case .v2: return "Parakeet V2"
         case .v3: return "Parakeet V3"
-        default: return "Parakeet"
+        case .tdtCtc110m: return "Parakeet TDT-CTC 110M"
+        case .tdtJa: return "Parakeet Japanese"
+        @unknown default: return "Parakeet"
         }
     }
 
@@ -23,7 +22,9 @@ public actor ParakeetEngine: TranscriptionEngine {
         switch version {
         case .v2: return "parakeet-v2"
         case .v3: return "parakeet-v3"
-        default: return "parakeet"
+        case .tdtCtc110m: return "parakeet-tdt-ctc-110m"
+        case .tdtJa: return "parakeet-ja"
+        @unknown default: return "parakeet"
         }
     }
 
@@ -31,7 +32,41 @@ public actor ParakeetEngine: TranscriptionEngine {
         switch version {
         case .v2: return 450_000_000  // ~450MB for V2
         case .v3: return 480_000_000  // ~480MB for V3
-        default: return 480_000_000
+        case .tdtCtc110m: return 230_000_000  // fused preprocessor+encoder, much smaller
+        case .tdtJa: return 620_000_000
+        @unknown default: return 480_000_000
+        }
+    }
+
+    /// Short label used in log messages ("V2", "110M", ...)
+    private nonisolated var versionLabel: String {
+        switch version {
+        case .v2: return "V2"
+        case .v3: return "V3"
+        case .tdtCtc110m: return "TDT-CTC 110M"
+        case .tdtJa: return "Japanese"
+        @unknown default: return "unknown"
+        }
+    }
+
+    /// Directory FluidAudio downloads this version into, under
+    /// ~/Library/Application Support/FluidAudio/Models/
+    private nonisolated var modelDirectoryName: String {
+        switch version {
+        case .v2: return "parakeet-tdt-0.6b-v2-coreml"
+        case .v3: return "parakeet-tdt-0.6b-v3-coreml"
+        case .tdtCtc110m: return "parakeet-tdt-ctc-110m-coreml"
+        case .tdtJa: return "parakeet-0.6b-ja-coreml"
+        @unknown default: return "parakeet-tdt-0.6b-v2-coreml"
+        }
+    }
+
+    /// Vocabulary file whose presence indicates a complete download. The Japanese
+    /// repo ships vocab.json where the others ship parakeet_vocab.json.
+    private nonisolated var vocabFileName: String {
+        switch version {
+        case .tdtJa: return "vocab.json"
+        default: return "parakeet_vocab.json"
         }
     }
 
@@ -51,16 +86,15 @@ public actor ParakeetEngine: TranscriptionEngine {
     public var isModelDownloaded: Bool {
         get async {
             // FluidAudio stores models in ~/Library/Application Support/FluidAudio/Models/
-            let versionSuffix = version == .v2 ? "v2" : "v3"
             let modelDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
                 .appendingPathComponent("FluidAudio")
                 .appendingPathComponent("Models")
-                .appendingPathComponent("parakeet-tdt-0.6b-\(versionSuffix)-coreml")
+                .appendingPathComponent(modelDirectoryName)
 
             guard let modelDir = modelDir else { return false }
 
             // Check if the vocab file exists (indicates complete download)
-            let vocabPath = modelDir.appendingPathComponent("parakeet_vocab.json")
+            let vocabPath = modelDir.appendingPathComponent(vocabFileName)
             return FileManager.default.fileExists(atPath: vocabPath.path)
         }
     }
@@ -74,7 +108,6 @@ public actor ParakeetEngine: TranscriptionEngine {
     public func downloadModel() async throws {
         _downloadProgress = 0
 
-        let versionLabel = version == .v2 ? "V2" : "V3"
         print("FoxSay: Starting Parakeet \(versionLabel) model download via FluidAudio...")
 
         do {
@@ -115,7 +148,6 @@ public actor ParakeetEngine: TranscriptionEngine {
 
     public func transcribe(audioBuffer: [Float]) async throws -> TranscriptionResult {
         isCancelled = false
-        let versionLabel = version == .v2 ? "V2" : "V3"
 
         // Ensure model is loaded
         if asrManager == nil {
@@ -152,7 +184,8 @@ public actor ParakeetEngine: TranscriptionEngine {
         // FoxSay transcribes one complete utterance per call, so each transcription
         // starts from a fresh decoder state. Carrying state across calls is only
         // useful for streaming, where chunks continue a single utterance.
-        var decoderState = try TdtDecoderState()
+        // decoderLayers varies by version (tdtCtc110m uses 1, the rest use 2).
+        var decoderState = try TdtDecoderState(decoderLayers: version.decoderLayers)
         let result = try await manager.transcribe(paddedBuffer, decoderState: &decoderState)
 
         if isCancelled {
@@ -184,7 +217,6 @@ public actor ParakeetEngine: TranscriptionEngine {
             throw TranscriptionError.modelNotDownloaded
         }
 
-        let versionLabel = version == .v2 ? "V2" : "V3"
         print("FoxSay: Preloading Parakeet \(versionLabel) model...")
         let startTime = CFAbsoluteTimeGetCurrent()
 

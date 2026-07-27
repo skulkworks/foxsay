@@ -68,4 +68,22 @@ struct FoxSayFeatureTests {
         #expect(EngineType.parakeetV2.displayName == "Parakeet V2")
         #expect(EngineType.parakeetV2.rawValue == "parakeet")
     }
+
+    @Test("every ModelType has speech-model registry metadata")
+    func testModelRegistryCoversEveryType() {
+        for type in ModelType.allCases {
+            #expect(ModelRegistry.info(for: type) != nil, "\(type) is missing from ModelRegistry.allModels")
+        }
+    }
+
+    @Test("registry ids are unique and match their model type")
+    func testModelRegistryIdsConsistent() {
+        let ids = ModelRegistry.allModels.map(\.id)
+        #expect(Set(ids).count == ids.count)
+        // id is what the UI keys off, so it must track the enum's raw value
+        for info in ModelRegistry.allModels {
+            #expect(info.id == info.type.rawValue || info.type == .parakeetV2,
+                    "\(info.id) does not match \(info.type.rawValue)")
+        }
+    }
 }

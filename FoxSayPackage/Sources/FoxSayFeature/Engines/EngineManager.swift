@@ -34,6 +34,8 @@ public class ModelManager: ObservableObject {
         // Parakeet variants
         models[.parakeetV2] = ParakeetEngine(version: .v2)
         models[.parakeetV3] = ParakeetEngine(version: .v3)
+        models[.parakeetTdtCtc110m] = ParakeetEngine(version: .tdtCtc110m)
+        models[.parakeetJa] = ParakeetEngine(version: .tdtJa)
 
         // Check initial model state and preload if ready
         Task {

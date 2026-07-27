@@ -403,6 +403,8 @@ public struct SetupWizardView: View {
         switch engineManager.currentModelType {
         case .parakeetV2: return "Parakeet V2 (English)"
         case .parakeetV3: return "Parakeet V3 (Multilingual)"
+        case .parakeetTdtCtc110m: return "Parakeet 110M (English)"
+        case .parakeetJa: return "Parakeet (Japanese)"
         case .whisperBase, .whisperKit: return "Whisper Base"
         case .whisperSmall: return "Whisper Small"
         case .whisperLargeTurbo: return "Whisper Large Turbo"
