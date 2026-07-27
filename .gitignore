@@ -10,6 +10,9 @@ xcuserdata/
 .build/
 .swiftpm/
 Package.resolved
+# ...except the app package's, which must be tracked: without it a clean checkout
+# floats to whatever resolves that day and stops compiling.
+!/FoxSayPackage/Package.resolved
 
 # macOS
 .DS_Store

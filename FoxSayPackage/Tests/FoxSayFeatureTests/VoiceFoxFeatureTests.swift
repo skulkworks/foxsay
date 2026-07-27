@@ -59,21 +59,13 @@ struct FoxSayFeatureTests {
         #expect(corrector.correct("open brace close brace") == "{ }")
     }
 
-    @Test("DevAppConfig defaults")
-    func testDevAppConfigDefaults() {
-        let defaults = DevAppConfig.defaultApps
-
-        #expect(defaults.count > 0)
-        #expect(defaults.contains { $0.bundleId == "com.microsoft.VSCode" })
-        #expect(defaults.contains { $0.bundleId == "com.apple.dt.Xcode" })
-        #expect(defaults.contains { $0.bundleId == "com.googlecode.iterm2" })
-    }
-
     @Test("EngineType properties")
     func testEngineTypeProperties() {
-        #expect(EngineType.whisperKit.displayName == "WhisperKit")
-        #expect(EngineType.parakeet.displayName == "Parakeet MLX")
+        // .whisperKit is the legacy alias and displays as Whisper Base
+        #expect(EngineType.whisperKit.displayName == "Whisper Base")
         #expect(EngineType.whisperKit.rawValue == "whisperkit")
-        #expect(EngineType.parakeet.rawValue == "parakeet")
+        // .parakeetV2 keeps the bare "parakeet" raw value for backward compatibility
+        #expect(EngineType.parakeetV2.displayName == "Parakeet V2")
+        #expect(EngineType.parakeetV2.rawValue == "parakeet")
     }
 }

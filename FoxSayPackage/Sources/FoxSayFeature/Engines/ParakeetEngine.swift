@@ -8,10 +8,14 @@ public actor ParakeetEngine: TranscriptionEngine {
     /// The model version this engine uses
     public let version: AsrModelVersion
 
+    // FoxSay only ever constructs this engine with .v2 or .v3. FluidAudio keeps
+    // adding model versions (.tdtCtc110m, .tdtJa), so these switches use a default
+    // rather than breaking the build every time upstream adds a case.
     public nonisolated var name: String {
         switch version {
         case .v2: return "Parakeet V2"
         case .v3: return "Parakeet V3"
+        default: return "Parakeet"
         }
     }
 
@@ -19,6 +23,7 @@ public actor ParakeetEngine: TranscriptionEngine {
         switch version {
         case .v2: return "parakeet-v2"
         case .v3: return "parakeet-v3"
+        default: return "parakeet"
         }
     }
 
@@ -26,6 +31,7 @@ public actor ParakeetEngine: TranscriptionEngine {
         switch version {
         case .v2: return 450_000_000  // ~450MB for V2
         case .v3: return 480_000_000  // ~480MB for V3
+        default: return 480_000_000
         }
     }
 
@@ -96,7 +102,7 @@ public actor ParakeetEngine: TranscriptionEngine {
             // Initialize ASR manager
             let manager = AsrManager(config: .default)
             _downloadProgress = 0.90
-            try await manager.initialize(models: models!)
+            try await manager.loadModels(models!)
             asrManager = manager
 
             _downloadProgress = 1.0
@@ -121,7 +127,7 @@ public actor ParakeetEngine: TranscriptionEngine {
             print("FoxSay: Loading Parakeet \(versionLabel) model...")
             models = try await AsrModels.downloadAndLoad(version: version)
             let manager = AsrManager(config: .default)
-            try await manager.initialize(models: models!)
+            try await manager.loadModels(models!)
             asrManager = manager
         }
 
@@ -143,7 +149,11 @@ public actor ParakeetEngine: TranscriptionEngine {
             let targetLength = 240_001
             paddedBuffer = audioBuffer + Array(repeating: 0, count: targetLength - audioBuffer.count)
         }
-        let result = try await manager.transcribe(paddedBuffer)
+        // FoxSay transcribes one complete utterance per call, so each transcription
+        // starts from a fresh decoder state. Carrying state across calls is only
+        // useful for streaming, where chunks continue a single utterance.
+        var decoderState = try TdtDecoderState()
+        let result = try await manager.transcribe(paddedBuffer, decoderState: &decoderState)
 
         if isCancelled {
             throw TranscriptionError.cancelled
@@ -180,7 +190,7 @@ public actor ParakeetEngine: TranscriptionEngine {
 
         models = try await AsrModels.downloadAndLoad(version: version)
         let manager = AsrManager(config: .default)
-        try await manager.initialize(models: models!)
+        try await manager.loadModels(models!)
         asrManager = manager
 
         let loadTime = CFAbsoluteTimeGetCurrent() - startTime
