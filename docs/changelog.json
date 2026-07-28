@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "app": "FoxSay",
+  "versions": [
+    {
+      "version": "2.0.0",
+      "build": 11,
+      "date": "2026-07-28",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "About pane in the main window, with the version, links and the update check",
+            "Our Apps pane listing the rest of the SkulkWorks apps",
+            "Vocal Corrections toggle in General settings",
+            "Parakeet TDT-CTC 110M speech model (English only, the smallest and fastest Parakeet)",
+            "Parakeet Japanese 0.6B speech model, more accurate for Japanese than the multilingual V3",
+            "Current-generation local AI models: Qwen 3.5 2B, Qwen 3 4B Instruct 2507, Qwen 3 1.7B, Gemma 3 1B QAT, Gemma 4 E2B, LFM2 1.2B and Llama 3.2 1B"
+          ]
+        },
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "New app icon, and a redesign of the whole app around it: one coral accent, neutral surfaces and consistent cards throughout",
+            "Recording overlay rebuilt as three studio meters (LED Meter, Analyzer and Waveform) with much faster level metering",
+            "About opens in the main window instead of a separate panel",
+            "Check for Updates moved from the app menu into the About pane",
+            "Qwen 2.5 1.5B is now the recommended AI model, with a rewritten vocal-corrections prompt"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Recording overlay shadow clipping into a hard square ring on bright desktops",
+            "Overlay corner radius not matching the system window radius",
+            "Prompt selector insets sitting unevenly against the overlay corners",
+            "Reasoning tags leaking into transcribed text when using a remote AI provider",
+            "Parakeet models failing to load with FluidAudio 0.15.x",
+            "Clean checkouts of the repository failing to build, from sources hidden by an over-broad .gitignore and unpinned dependencies"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>About pane in the main window, with the version, links and the update check</li>\n<li>Our Apps pane listing the rest of the SkulkWorks apps</li>\n<li>Vocal Corrections toggle in General settings</li>\n<li>Parakeet TDT-CTC 110M speech model (English only, the smallest and fastest Parakeet)</li>\n<li>Parakeet Japanese 0.6B speech model, more accurate for Japanese than the multilingual V3</li>\n<li>Current-generation local AI models: Qwen 3.5 2B, Qwen 3 4B Instruct 2507, Qwen 3 1.7B, Gemma 3 1B QAT, Gemma 4 E2B, LFM2 1.2B and Llama 3.2 1B</li>\n</ul>\n<h3>Improved</h3>\n<ul>\n<li>New app icon, and a redesign of the whole app around it: one coral accent, neutral surfaces and consistent cards throughout</li>\n<li>Recording overlay rebuilt as three studio meters (LED Meter, Analyzer and Waveform) with much faster level metering</li>\n<li>About opens in the main window instead of a separate panel</li>\n<li>Check for Updates moved from the app menu into the About pane</li>\n<li>Qwen 2.5 1.5B is now the recommended AI model, with a rewritten vocal-corrections prompt</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Recording overlay shadow clipping into a hard square ring on bright desktops</li>\n<li>Overlay corner radius not matching the system window radius</li>\n<li>Prompt selector insets sitting unevenly against the overlay corners</li>\n<li>Reasoning tags leaking into transcribed text when using a remote AI provider</li>\n<li>Parakeet models failing to load with FluidAudio 0.15.x</li>\n<li>Clean checkouts of the repository failing to build, from sources hidden by an over-broad .gitignore and unpinned dependencies</li>\n</ul>"
+    },
+    {
+      "version": "1.0.9",
+      "build": 10,
+      "date": "2026-02-20",
+      "sections": [
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "Smoother audio visualization animations in recording overlay"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Recording overlay not appearing after disconnecting external monitors (saved position was off-screen)"
+          ]
+        }
+      ],
+      "html": "<h3>Improved</h3>\n<ul>\n<li>Smoother audio visualization animations in recording overlay</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Recording overlay not appearing after disconnecting external monitors (saved position was off-screen)</li>\n</ul>"
+    },
+    {
+      "version": "1.0.8",
+      "build": 9,
+      "date": "2026-02-17",
+      "sections": [
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "All error states now show descriptive overlay messages that auto-dismiss after 3 seconds",
+            "Speech model availability is verified from disk before each recording session",
+            "Overlay error display is now dynamic, supporting different icons and messages per error type"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "App silently failing when a speech model's files are deleted from disk",
+            "Overlay getting stuck when no audio is captured (quick press-release)",
+            "No visible feedback when microphone permission is denied",
+            "No visible feedback when recording or transcription fails unexpectedly"
+          ]
+        }
+      ],
+      "html": "<h3>Improved</h3>\n<ul>\n<li>All error states now show descriptive overlay messages that auto-dismiss after 3 seconds</li>\n<li>Speech model availability is verified from disk before each recording session</li>\n<li>Overlay error display is now dynamic, supporting different icons and messages per error type</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>App silently failing when a speech model's files are deleted from disk</li>\n<li>Overlay getting stuck when no audio is captured (quick press-release)</li>\n<li>No visible feedback when microphone permission is denied</li>\n<li>No visible feedback when recording or transcription fails unexpectedly</li>\n</ul>"
+    },
+    {
+      "version": "1.0.7",
+      "build": 8,
+      "date": "2026-02-06",
+      "sections": [
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Crash when using dictation hotkey on a Mac with no microphone connected",
+            "Added friendly overlay error message when no microphone is detected, with auto-dismiss"
+          ]
+        }
+      ],
+      "html": "<h3>Fixed</h3>\n<ul>\n<li>Crash when using dictation hotkey on a Mac with no microphone connected</li>\n<li>Added friendly overlay error message when no microphone is detected, with auto-dismiss</li>\n</ul>"
+    },
+    {
+      "version": "1.0.6",
+      "build": 7,
+      "date": "2026-02-03",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Ability to assign remote AI models to specific apps",
+            "New presets for remote AI models: OpenAI, Anthropic, Google, OpenRouter",
+            "Discord community link"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Various bug fixes and UI improvements"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Ability to assign remote AI models to specific apps</li>\n<li>New presets for remote AI models: OpenAI, Anthropic, Google, OpenRouter</li>\n<li>Discord community link</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Various bug fixes and UI improvements</li>\n</ul>"
+    },
+    {
+      "version": "1.0.5",
+      "build": 6,
+      "date": "2026-02-02",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Download badge for README"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Menu bar only mode not working correctly"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Download badge for README</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Menu bar only mode not working correctly</li>\n</ul>"
+    },
+    {
+      "version": "1.0.4",
+      "build": 5,
+      "date": "2026-02-02",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Audio visualization styles: scrolling, spectrum, and pulsing",
+            "Activity stats with 1-year scaling"
+          ]
+        },
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "Removed 30-day activity limitation"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Various UI and stability fixes"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Audio visualization styles: scrolling, spectrum, and pulsing</li>\n<li>Activity stats with 1-year scaling</li>\n</ul>\n<h3>Improved</h3>\n<ul>\n<li>Removed 30-day activity limitation</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Various UI and stability fixes</li>\n</ul>"
+    },
+    {
+      "version": "1.0.3",
+      "build": 4,
+      "date": "2026-02-02",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Stats and dashboard view",
+            "Screenshot for documentation"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "UI fixes and improvements"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Stats and dashboard view</li>\n<li>Screenshot for documentation</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>UI fixes and improvements</li>\n</ul>"
+    },
+    {
+      "version": "1.0.2",
+      "build": 3,
+      "date": "2026-02-01",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Auto-update support via Sparkle framework",
+            "Appcast for update distribution"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Auto-update support via Sparkle framework</li>\n<li>Appcast for update distribution</li>\n</ul>"
+    },
+    {
+      "version": "1.0.1",
+      "build": 2,
+      "date": "2026-02-01",
+      "sections": [
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "Updated build script"
+          ]
+        }
+      ],
+      "html": "<h3>Improved</h3>\n<ul>\n<li>Updated build script</li>\n</ul>"
+    },
+    {
+      "version": "1.0.0",
+      "build": 1,
+      "date": "2026-02-01",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Initial public release",
+            "On-device speech-to-text transcription using Parakeet (FluidAudio) and Whisper (WhisperKit)",
+            "Hold-to-talk hotkey with configurable modifier keys",
+            "Multiple activation modes: hold, toggle, double-tap, and hold-or-toggle",
+            "LLM-powered corrections using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX",
+            "Support for remote OpenAI-compatible LLMs",
+            "Configurable system prompts for AI corrections",
+            "Markdown voice mode for dictating formatted text",
+            "Model preloading for faster first transcription",
+            "Transcription history with delete functionality",
+            "Interface sound options for overlay open/close",
+            "Input overlay with smooth animations",
+            "Sidebar with collapsible sections",
+            "Blank transcription detection to abort pipeline early",
+            "Apache 2.0 license"
+          ]
+        },
+        {
+          "name": "Improved",
+          "type": "improved",
+          "items": [
+            "Renamed project from VoiceFox to FoxSay",
+            "Refactored AI system to support custom local models and prompts",
+            "Improved selector overlay UI",
+            "Color and icon updates throughout the app",
+            "Markdown mode moved to experimental"
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Punctuation handling improvements",
+            "Removed sandboxing requirements for better accessibility"
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Initial public release</li>\n<li>On-device speech-to-text transcription using Parakeet (FluidAudio) and Whisper (WhisperKit)</li>\n<li>Hold-to-talk hotkey with configurable modifier keys</li>\n<li>Multiple activation modes: hold, toggle, double-tap, and hold-or-toggle</li>\n<li>LLM-powered corrections using local AI models (Qwen, Gemma, Llama, Phi, Mistral) via Apple MLX</li>\n<li>Support for remote OpenAI-compatible LLMs</li>\n<li>Configurable system prompts for AI corrections</li>\n<li>Markdown voice mode for dictating formatted text</li>\n<li>Model preloading for faster first transcription</li>\n<li>Transcription history with delete functionality</li>\n<li>Interface sound options for overlay open/close</li>\n<li>Input overlay with smooth animations</li>\n<li>Sidebar with collapsible sections</li>\n<li>Blank transcription detection to abort pipeline early</li>\n<li>Apache 2.0 license</li>\n</ul>\n<h3>Improved</h3>\n<ul>\n<li>Renamed project from VoiceFox to FoxSay</li>\n<li>Refactored AI system to support custom local models and prompts</li>\n<li>Improved selector overlay UI</li>\n<li>Color and icon updates throughout the app</li>\n<li>Markdown mode moved to experimental</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Punctuation handling improvements</li>\n<li>Removed sandboxing requirements for better accessibility</li>\n</ul>"
+    }
+  ]
+}

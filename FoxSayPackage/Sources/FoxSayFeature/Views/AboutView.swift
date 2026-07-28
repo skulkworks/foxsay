@@ -83,6 +83,18 @@ public struct AboutView: View {
             SettingsSectionHeader("Links", systemImage: "link")
 
             VStack(spacing: 0) {
+                // Release notes open the native What's New window rather than
+                // GitHub: it renders the same published feed the website uses.
+                Button("Release notes") {
+                    FoxSayChangelog.present()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+
+                Divider()
+
                 ForEach(Self.links, id: \.title) { link in
                     Link(link.title, destination: link.url)
                         .foregroundStyle(Color.accentColor)
@@ -101,7 +113,6 @@ public struct AboutView: View {
 
     private static let links: [(title: String, url: URL)] = [
         ("FoxSay on skulkworks.dev", URL(string: "https://skulkworks.dev/foxsay")!),
-        ("Release notes", URL(string: "https://github.com/skulkworks/foxsay/releases")!),
         ("Source on GitHub", URL(string: "https://github.com/skulkworks/foxsay")!),
         ("Privacy policy", URL(string: "https://skulkworks.dev/privacy")!),
     ]

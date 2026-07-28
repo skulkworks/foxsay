@@ -4,6 +4,16 @@ import AppKit
 import Sparkle
 
 @MainActor
+extension NSWindow {
+    /// A FoxSay main window: not a floating panel, and not the What's New window,
+    /// which is titled and `canBecomeMain` and would otherwise be mistaken for one
+    /// by the code that hides, restores, or fronts "the" window.
+    var isFoxSayMainWindow: Bool {
+        !(self is NSPanel) && canBecomeMain && !FoxSayChangelog.isChangelogWindow(self)
+    }
+}
+
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -17,6 +27,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Starting the updater is also what registers UpdateCheckBridge, which the
             // About pane's button drives — don't leave it to the scene's lazy init.
             _ = UpdaterController.shared
+
+            // First launch on a new version shows the What's New window once.
+            FoxSayChangelog.presentIfUpdated()
         }
 
         // Hide window on launch if setting is enabled
@@ -27,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // In accessory mode, closing/hiding windows destroys them in SwiftUI
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(300))
-                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                for window in NSApp.windows where window.isFoxSayMainWindow {
                     window.orderOut(nil)
                 }
             }
@@ -36,7 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // The window needs to exist for openWindow to work later
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(300))
-                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                for window in NSApp.windows where window.isFoxSayMainWindow {
                     window.orderBack(nil)
                     window.resignMain()
                     window.resignKey()
@@ -53,7 +66,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             Task { @MainActor in
                 // Find and show the main window
-                for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+                for window in NSApp.windows where window.isFoxSayMainWindow {
                     window.makeKeyAndOrderFront(nil)
                     return
                 }
@@ -73,13 +86,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard !(window is NSPanel) else { return }
 
             Task { @MainActor in
-                // Check canBecomeMain on main actor
-                guard window.canBecomeMain else { return }
+                // Check the rest on main actor
+                guard window.isFoxSayMainWindow else { return }
                 // Small delay to allow window to fully close
                 try? await Task.sleep(for: .milliseconds(200))
                 // Check if there are no more main windows visible
                 let hasVisibleMainWindow = NSApp.windows.contains { w in
-                    !(w is NSPanel) && w.canBecomeMain && w.isVisible
+                    w.isFoxSayMainWindow && w.isVisible
                 }
                 if !hasVisibleMainWindow {
                     MenuBarManager.restoreAccessoryModeIfNeeded()
@@ -178,7 +191,7 @@ struct FoxSayApp: App {
         // Raise an existing window rather than posting OpenMainWindow: WindowOpener
         // also observes that notification and calls openWindow(id:), which spawns a
         // second window in a WindowGroup rather than reusing the one already there.
-        for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+        for window in NSApp.windows where window.isFoxSayMainWindow {
             window.makeKeyAndOrderFront(nil)
             return
         }
@@ -270,6 +283,12 @@ struct FoxSayApp: App {
                     }
                 }
                 .keyboardShortcut("?", modifiers: .command)
+
+                Divider()
+
+                Button("What's New…") {
+                    FoxSayChangelog.present()
+                }
             }
         }
 
@@ -284,9 +303,7 @@ extension AppDelegate {
     @MainActor
     func createMainWindowIfNeeded() {
         // Check if a main window already exists
-        let hasMainWindow = NSApp.windows.contains { window in
-            !(window is NSPanel) && window.canBecomeMain
-        }
+        let hasMainWindow = NSApp.windows.contains { $0.isFoxSayMainWindow }
 
         if hasMainWindow {
             return

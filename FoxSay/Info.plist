@@ -25,7 +25,7 @@
     <key>NSHumanReadableCopyright</key>
     <string>Copyright 2026 SkulkWorks. All rights reserved.</string>
     <key>SUFeedURL</key>
-    <string>https://skulkworks.github.io/foxsay/appcast.xml</string>
+    <string>https://updates.skulkworks.dev/foxsay/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>GW7X7O/4w3LNPQbFP8CfmdwK8Xu9AbU+aooc8eLc5kc=</string>
     <key>SUEnableAutomaticChecks</key>

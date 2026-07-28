@@ -1,10 +1,8 @@
 # Changelog
 
-All notable changes to FoxSay will be documented in this file.
+## 2.0.0 (2026-07-28, build 11)
 
-## [2.0.0] - 2026-07-28
-
-### Added
+### New
 - About pane in the main window, with the version, links and the update check
 - Our Apps pane listing the rest of the SkulkWorks apps
 - Vocal Corrections toggle in General settings
@@ -12,7 +10,7 @@ All notable changes to FoxSay will be documented in this file.
 - Parakeet Japanese 0.6B speech model, more accurate for Japanese than the multilingual V3
 - Current-generation local AI models: Qwen 3.5 2B, Qwen 3 4B Instruct 2507, Qwen 3 1.7B, Gemma 3 1B QAT, Gemma 4 E2B, LFM2 1.2B and Llama 3.2 1B
 
-### Changed
+### Improved
 - New app icon, and a redesign of the whole app around it: one coral accent, neutral surfaces and consistent cards throughout
 - Recording overlay rebuilt as three studio meters (LED Meter, Analyzer and Waveform) with much faster level metering
 - About opens in the main window instead of a separate panel
@@ -27,15 +25,20 @@ All notable changes to FoxSay will be documented in this file.
 - Parakeet models failing to load with FluidAudio 0.15.x
 - Clean checkouts of the repository failing to build, from sources hidden by an over-broad .gitignore and unpinned dependencies
 
-## [1.0.9] - 2026-02-20
-
-### Fixed
-- Recording overlay not appearing after disconnecting external monitors (saved position was off-screen)
+## 1.0.9 (2026-02-20, build 10)
 
 ### Improved
 - Smoother audio visualization animations in recording overlay
 
-## [1.0.8] - 2026-02-17
+### Fixed
+- Recording overlay not appearing after disconnecting external monitors (saved position was off-screen)
+
+## 1.0.8 (2026-02-17, build 9)
+
+### Improved
+- All error states now show descriptive overlay messages that auto-dismiss after 3 seconds
+- Speech model availability is verified from disk before each recording session
+- Overlay error display is now dynamic, supporting different icons and messages per error type
 
 ### Fixed
 - App silently failing when a speech model's files are deleted from disk
@@ -43,20 +46,15 @@ All notable changes to FoxSay will be documented in this file.
 - No visible feedback when microphone permission is denied
 - No visible feedback when recording or transcription fails unexpectedly
 
-### Improved
-- All error states now show descriptive overlay messages that auto-dismiss after 3 seconds
-- Speech model availability is verified from disk before each recording session
-- Overlay error display is now dynamic, supporting different icons and messages per error type
-
-## [1.0.7] - 2026-02-06
+## 1.0.7 (2026-02-06, build 8)
 
 ### Fixed
 - Crash when using dictation hotkey on a Mac with no microphone connected
 - Added friendly overlay error message when no microphone is detected, with auto-dismiss
 
-## [1.0.6] - 2026-02-03
+## 1.0.6 (2026-02-03, build 7)
 
-### Added
+### New
 - Ability to assign remote AI models to specific apps
 - New presets for remote AI models: OpenAI, Anthropic, Google, OpenRouter
 - Discord community link
@@ -64,51 +62,50 @@ All notable changes to FoxSay will be documented in this file.
 ### Fixed
 - Various bug fixes and UI improvements
 
-## [1.0.5] - 2026-02-02
+## 1.0.5 (2026-02-02, build 6)
 
-### Added
+### New
 - Download badge for README
 
 ### Fixed
 - Menu bar only mode not working correctly
 
-## [1.0.4] - 2026-02-02
+## 1.0.4 (2026-02-02, build 5)
 
-### Added
+### New
 - Audio visualization styles: scrolling, spectrum, and pulsing
 - Activity stats with 1-year scaling
 
-### Changed
+### Improved
 - Removed 30-day activity limitation
 
 ### Fixed
 - Various UI and stability fixes
 
-## [1.0.3] - 2026-02-02
+## 1.0.3 (2026-02-02, build 4)
 
-### Added
+### New
 - Stats and dashboard view
 - Screenshot for documentation
 
 ### Fixed
 - UI fixes and improvements
 
-## [1.0.2] - 2026-02-01
+## 1.0.2 (2026-02-01, build 3)
 
-### Added
+### New
 - Auto-update support via Sparkle framework
 - Appcast for update distribution
 
-## [1.0.1] - 2026-02-01
+## 1.0.1 (2026-02-01, build 2)
 
-### Changed
+### Improved
 - Updated build script
 
-## [1.0.0] - 2026-02-01
+## 1.0.0 (2026-02-01, build 1)
 
-Initial public release.
-
-### Added
+### New
+- Initial public release
 - On-device speech-to-text transcription using Parakeet (FluidAudio) and Whisper (WhisperKit)
 - Hold-to-talk hotkey with configurable modifier keys
 - Multiple activation modes: hold, toggle, double-tap, and hold-or-toggle
@@ -124,7 +121,7 @@ Initial public release.
 - Blank transcription detection to abort pipeline early
 - Apache 2.0 license
 
-### Changed
+### Improved
 - Renamed project from VoiceFox to FoxSay
 - Refactored AI system to support custom local models and prompts
 - Improved selector overlay UI
