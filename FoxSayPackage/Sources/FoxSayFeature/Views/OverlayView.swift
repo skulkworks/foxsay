@@ -9,7 +9,8 @@ import QuartzCore
 enum OverlayMetrics {
     static let cardWidth: CGFloat = 440
     static let cardHeight: CGFloat = 80
-    static let cornerRadius: CGFloat = 14
+    @MainActor
+    static var cornerRadius: CGFloat { SystemChrome.windowCornerRadius }
     // Must comfortably exceed the shadow's full falloff (2 × radius + offset),
     // or the clipped shadow reads as a hard square-cornered ring on bright
     // desktops.

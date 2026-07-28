@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - FoxSay Theme
@@ -36,6 +37,37 @@ extension LinearGradient {
         startPoint: .top,
         endPoint: .bottom
     )
+}
+
+// MARK: - System chrome
+
+enum SystemChrome {
+    /// Corner radius of standard titled windows on this OS, so floating panels
+    /// match the main window (Tahoe rounds windows more than earlier releases).
+    /// AppKit has no public API for this; read it from a real window's frame
+    /// view, with per-OS fallbacks if that ever stops working.
+    @MainActor
+    static var windowCornerRadius: CGFloat {
+        if let cached = cachedWindowCornerRadius { return cached }
+        var radius: CGFloat
+        let key = "_cornerRadius"
+        if let frameView = NSApp.windows.first(where: { $0.styleMask.contains(.titled) })?
+            .contentView?.superview,
+            frameView.responds(to: NSSelectorFromString(key)),
+            let value = frameView.value(forKey: key) as? CGFloat,
+            value > 0 {
+            radius = value
+        } else if #available(macOS 26.0, *) {
+            radius = 16
+        } else {
+            radius = 11
+        }
+        cachedWindowCornerRadius = radius
+        return radius
+    }
+
+    @MainActor
+    private static var cachedWindowCornerRadius: CGFloat?
 }
 
 // MARK: - Shared Surfaces
