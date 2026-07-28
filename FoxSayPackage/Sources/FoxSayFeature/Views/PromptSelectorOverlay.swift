@@ -345,7 +345,11 @@ struct PromptSelectorContentView: View {
             promptSectionHeader
             promptList
         }
-        .padding(12)
+        // Top inset clears the 16pt corner curve; the bottom reads wider than
+        // it is because the list clips mid-row, so it stays at 12.
+        .padding(.top, 18)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 12)
         .frame(width: PromptSelectorMetrics.cardWidth)
         .background(cardBackground)
         .clipShape(cardShape)
