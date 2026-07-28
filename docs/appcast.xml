@@ -2,20 +2,48 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
     <channel>
         <title>FoxSay Updates</title>
-        <link>https://skulkworks.github.io/foxsay/appcast.xml</link>
+        <link>https://updates.skulkworks.dev/foxsay/appcast.xml</link>
         <description>Updates for FoxSay</description>
         <language>en</language>
         <item>
-            <title>Version 1.0.9</title>
-            <pubDate>Fri, 20 Feb 2026 20:03:57 -0500</pubDate>
-            <sparkle:version>10</sparkle:version>
-            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
+            <title>Version 2.0.0</title>
+            <pubDate>Tue, 28 Jul 2026 23:30:02 +0100</pubDate>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+<h3>New</h3>
+<ul>
+<li>About pane in the main window, with the version, links and the update check</li>
+<li>Our Apps pane listing the rest of the SkulkWorks apps</li>
+<li>Vocal Corrections toggle in General settings</li>
+<li>Parakeet TDT-CTC 110M speech model (English only, the smallest and fastest Parakeet)</li>
+<li>Parakeet Japanese 0.6B speech model, more accurate for Japanese than the multilingual V3</li>
+<li>Current-generation local AI models: Qwen 3.5 2B, Qwen 3 4B Instruct 2507, Qwen 3 1.7B, Gemma 3 1B QAT, Gemma 4 E2B, LFM2 1.2B and Llama 3.2 1B</li>
+</ul>
+<h3>Improved</h3>
+<ul>
+<li>New app icon, and a redesign of the whole app around it: one coral accent, neutral surfaces and consistent cards throughout</li>
+<li>Recording overlay rebuilt as three studio meters (LED Meter, Analyzer and Waveform) with much faster level metering</li>
+<li>About opens in the main window instead of a separate panel</li>
+<li>Check for Updates moved from the app menu into the About pane</li>
+<li>Qwen 2.5 1.5B is now the recommended AI model, with a rewritten vocal-corrections prompt</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Recording overlay shadow clipping into a hard square ring on bright desktops</li>
+<li>Overlay corner radius not matching the system window radius</li>
+<li>Prompt selector insets sitting unevenly against the overlay corners</li>
+<li>Reasoning tags leaking into transcribed text when using a remote AI provider</li>
+<li>Parakeet models failing to load with FluidAudio 0.15.x</li>
+<li>Clean checkouts of the repository failing to build, from sources hidden by an over-broad .gitignore and unpinned dependencies</li>
+</ul>
+            ]]></description>
             <enclosure
-                url="https://github.com/skulkworks/foxsay/releases/download/1.0.9/FoxSay.dmg"
-                length="16758808"
+                url="https://updates.skulkworks.dev/foxsay/FoxSay-2.0.0-11.dmg"
+                length="21198901"
                 type="application/octet-stream"
-                sparkle:edSignature="vmcB9CvtyyRIX6tilIkHt4pZN5T3O5aahBPnG2i4/vAUDeb676D+Vot61HR90vVReso95OUz0YdUld8Y2LWnBg=="
+                sparkle:edSignature="YrJBwkgD9+g/kk5fl4NujIUjqaOrTrSNl/pQSW0lVj2WPhl8yBhWS1tUyn7jCRZ2P2YZ1eOKdffDpdGbehIhCg=="
             />
         </item>
     </channel>
