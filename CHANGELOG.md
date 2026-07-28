@@ -2,7 +2,7 @@
 
 All notable changes to FoxSay will be documented in this file.
 
-## [1.0.10] - 2026-07-28
+## [2.0.0] - 2026-07-28
 
 ### Added
 - About pane in the main window, with the version, links and the update check
