@@ -77,17 +77,10 @@ public struct OverlayView: View {
         .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 4)
     }
 
-    /// Neutral dark ground matching the main window, lifted very slightly at
-    /// the top edge.
+    /// Neutral dark ground matching the main window. Flat on purpose: a top
+    /// lift washes out the hairline border along the top edge.
     private var cardBackground: some View {
-        ZStack {
-            Color(white: 0.11)
-            LinearGradient(
-                colors: [Color.white.opacity(0.06), Color.white.opacity(0.0)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
+        Color(white: 0.11)
     }
 
     /// One status line, then the meter gets the whole band beneath it. Nothing
