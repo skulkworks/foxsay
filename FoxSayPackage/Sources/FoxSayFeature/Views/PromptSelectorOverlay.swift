@@ -354,7 +354,7 @@ struct PromptSelectorContentView: View {
         .background(cardBackground)
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
-        .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 0)
     }
 
     /// Neutral dark ground matching the main window. Flat on purpose: a top
