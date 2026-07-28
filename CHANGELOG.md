@@ -2,6 +2,31 @@
 
 All notable changes to FoxSay will be documented in this file.
 
+## [1.0.10] - 2026-07-28
+
+### Added
+- About pane in the main window, with the version, links and the update check
+- Our Apps pane listing the rest of the SkulkWorks apps
+- Vocal Corrections toggle in General settings
+- Parakeet TDT-CTC 110M speech model (English only, the smallest and fastest Parakeet)
+- Parakeet Japanese 0.6B speech model, more accurate for Japanese than the multilingual V3
+- Current-generation local AI models: Qwen 3.5 2B, Qwen 3 4B Instruct 2507, Qwen 3 1.7B, Gemma 3 1B QAT, Gemma 4 E2B, LFM2 1.2B and Llama 3.2 1B
+
+### Changed
+- New app icon, and a redesign of the whole app around it: one coral accent, neutral surfaces and consistent cards throughout
+- Recording overlay rebuilt as three studio meters (LED Meter, Analyzer and Waveform) with much faster level metering
+- About opens in the main window instead of a separate panel
+- Check for Updates moved from the app menu into the About pane
+- Qwen 2.5 1.5B is now the recommended AI model, with a rewritten vocal-corrections prompt
+
+### Fixed
+- Recording overlay shadow clipping into a hard square ring on bright desktops
+- Overlay corner radius not matching the system window radius
+- Prompt selector insets sitting unevenly against the overlay corners
+- Reasoning tags leaking into transcribed text when using a remote AI provider
+- Parakeet models failing to load with FluidAudio 0.15.x
+- Clean checkouts of the repository failing to build, from sources hidden by an over-broad .gitignore and unpinned dependencies
+
 ## [1.0.9] - 2026-02-20
 
 ### Fixed
