@@ -59,7 +59,9 @@ Rules:
 
 ## The overlay HUD
 
-The floating recording overlay is the most-seen piece of the app and should
-echo the icon: slate background (`brandSlateDeep`), rounded waveform bars in
+The floating recording overlay is the most-seen piece of the app: neutral dark
+ground matching the main window (`Color(white: 0.11)`), rounded meter bars in
 white/coral, 14pt corners, 1px white 8% border, soft shadow. Monochrome bars —
-no green→red level colors, no pink→cyan spectrum ramps.
+no green→red level colors, no pink→cyan spectrum ramps. The panel's transparent
+margin must comfortably exceed the shadow's full falloff (2 × radius + offset);
+a clipped shadow reads as a hard square-cornered ring on bright desktops.

@@ -10,7 +10,10 @@ enum OverlayMetrics {
     static let cardWidth: CGFloat = 440
     static let cardHeight: CGFloat = 80
     static let cornerRadius: CGFloat = 14
-    static let shadowMargin: CGFloat = 18
+    // Must comfortably exceed the shadow's full falloff (2 × radius + offset),
+    // or the clipped shadow reads as a hard square-cornered ring on bright
+    // desktops.
+    static let shadowMargin: CGFloat = 28
 
     static var windowSize: CGSize {
         CGSize(width: cardWidth + shadowMargin * 2, height: cardHeight + shadowMargin * 2)
@@ -70,15 +73,16 @@ public struct OverlayView: View {
         .frame(width: OverlayMetrics.cardWidth, height: OverlayMetrics.cardHeight)
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
-        .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 8)
+        .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 4)
     }
 
-    /// Slate ground from the app icon, lifted very slightly at the top edge.
+    /// Neutral dark ground matching the main window, lifted very slightly at
+    /// the top edge.
     private var cardBackground: some View {
         ZStack {
-            Color.brandSlateDeep
+            Color(white: 0.11)
             LinearGradient(
-                colors: [Color.brandSlate.opacity(0.38), Color.brandSlate.opacity(0.0)],
+                colors: [Color.white.opacity(0.06), Color.white.opacity(0.0)],
                 startPoint: .top,
                 endPoint: .bottom
             )
