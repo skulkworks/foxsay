@@ -1,4 +1,6 @@
+import Combine
 import Foundation
+import FoxSayFeature
 import Sparkle
 
 /// Controller for managing Sparkle updates
@@ -9,6 +11,8 @@ final class UpdaterController: ObservableObject {
     let updaterController: SPUStandardUpdaterController
 
     @Published var canCheckForUpdates = false
+
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         // Create the updater controller with default UI
@@ -21,6 +25,15 @@ final class UpdaterController: ObservableObject {
         // Observe canCheckForUpdates property
         updaterController.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
+
+        // Hand the updater to the package, where the About pane's "Check for
+        // Updates…" button lives (the package never links Sparkle).
+        UpdateCheckBridge.shared.action = { [weak self] in self?.checkForUpdates() }
+        updaterController.updater.publisher(for: \.canCheckForUpdates)
+            .sink { value in
+                Task { @MainActor in UpdateCheckBridge.shared.canCheck = value }
+            }
+            .store(in: &cancellables)
     }
 
     func checkForUpdates() {

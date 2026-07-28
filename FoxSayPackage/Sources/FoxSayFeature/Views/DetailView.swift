@@ -33,6 +33,10 @@ public struct DetailView: View {
             HistoryView()
         case .experimental:
             ExperimentalSettingsView()
+        case .ourApps:
+            OurAppsView()
+        case .about:
+            AboutView()
         }
     }
 }

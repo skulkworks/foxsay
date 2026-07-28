@@ -37,6 +37,12 @@ public struct SidebarView: View {
                     sidebarRow(item)
                 }
             }
+
+            Section {
+                ForEach([SidebarItem.ourApps, .about]) { item in
+                    sidebarRow(item)
+                }
+            }
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {

@@ -11,6 +11,8 @@ public enum SidebarItem: String, CaseIterable, Identifiable {
     case dictionary = "Dictionary"
     case history = "History"
     case experimental = "Text Transforms"
+    case ourApps = "Our Apps"
+    case about = "About"
 
     public var id: String { rawValue }
 
@@ -25,6 +27,9 @@ public enum SidebarItem: String, CaseIterable, Identifiable {
         case .dictionary: return "character.book.closed"
         case .history: return "clock"
         case .experimental: return "flask"
+        // Dashboard already owns the 2x2 grid, so the app list takes the 3x3.
+        case .ourApps: return "square.grid.3x3"
+        case .about: return "info.circle"
         }
     }
 

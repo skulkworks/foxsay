@@ -14,6 +14,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize MenuBarManager on main thread
         Task { @MainActor in
             _ = MenuBarManager.shared
+            // Starting the updater is also what registers UpdateCheckBridge, which the
+            // About pane's button drives — don't leave it to the scene's lazy init.
+            _ = UpdaterController.shared
         }
 
         // Hide window on launch if setting is enabled
@@ -165,6 +168,23 @@ struct FoxSayApp: App {
         }
     }
 
+    /// Brings the main window forward on the About pane. FoxSay can be running as a
+    /// menu bar accessory with no visible window, so the window has to be raised
+    /// before the selection means anything.
+    private func showAbout() {
+        appState.selectedSidebarItem = .about
+        NSApp.activate(ignoringOtherApps: true)
+
+        // Raise an existing window rather than posting OpenMainWindow: WindowOpener
+        // also observes that notification and calls openWindow(id:), which spawns a
+        // second window in a WindowGroup rather than reusing the one already there.
+        for window in NSApp.windows where !(window is NSPanel) && window.canBecomeMain {
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+        NotificationCenter.default.post(name: NSNotification.Name("OpenMainWindow"), object: nil)
+    }
+
     private func resetToDefaults() {
         let alert = NSAlert()
         alert.messageText = "Reset to Defaults?"
@@ -222,18 +242,19 @@ struct FoxSayApp: App {
             // Remove the default "New Window" command
             CommandGroup(replacing: .newItem) {}
 
+            // Route About into the main window so the version, the update check and
+            // the app list live with the rest of the UI instead of a stock panel.
+            CommandGroup(replacing: .appInfo) {
+                Button("About FoxSay") {
+                    showAbout()
+                }
+            }
+
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {
                     appState.showSettings = true
                 }
                 .keyboardShortcut(",", modifiers: .command)
-
-                Divider()
-
-                Button("Check for Updates...") {
-                    updaterController.checkForUpdates()
-                }
-                .disabled(!updaterController.canCheckForUpdates)
 
                 Divider()
 
