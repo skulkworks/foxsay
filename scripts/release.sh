@@ -48,6 +48,12 @@ export TEAM_ID="M5N5FDK55S"
 export GITHUB_REPO="skulkworks/foxsay"
 export PROJECT_ROOT
 
+# mlx-swift ships a build plugin (CudaBuild) and mlx-swift-lm a macro
+# (#hubDownloader), both untrusted until opened in Xcode — an archive without
+# these fails validation. No other SkulkWorks app pulls in SPM plugins, so Den's
+# shared build script takes them from here rather than hardcoding them.
+export XCODEBUILD_FLAGS="-skipPackagePluginValidation -skipMacroValidation"
+
 # --- Update hosting (Cloudflare R2, custom domain updates.skulkworks.dev) ----------
 # The app's Sparkle feed URL (FoxSay/Info.plist) is baked to
 # https://updates.skulkworks.dev/foxsay/appcast.xml — these must stay in sync.
