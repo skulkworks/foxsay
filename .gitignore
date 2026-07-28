@@ -53,3 +53,6 @@ Cargo.lock
 
 # Sparkle signing keys (KEEP THESE SECRET!)
 .sparkle-keys/
+
+# Wrangler local state (R2 uploads during release)
+.wrangler/
