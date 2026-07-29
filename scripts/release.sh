@@ -9,6 +9,7 @@
 #   scripts/release.sh changelog         # compile changelog/*.md → docs/changelog.json
 #   scripts/release.sh appcast [ver]     # sign DMG → docs/appcast.xml (R2 URLs)
 #   scripts/release.sh publish [ver]     # upload versioned DMG + appcast + changelog to R2
+#   scripts/release.sh verify [ver]      # re-check the live DMG and the Homebrew cask
 #   scripts/release.sh pages             # commit + push docs/ so GitHub Pages serves it too
 #   scripts/release.sh release [args]    # build → changelog → appcast → publish → pages
 #
@@ -103,6 +104,11 @@ do_appcast() {
     "$DEN_DIR/scripts/generate-appcast.sh" "$version"
 }
 
+do_verify() {
+    local version; version=$(resolve_version "$1")
+    "$DEN_DIR/scripts/verify-publish.sh" "$version" "$(resolve_build)"
+}
+
 do_publish() {
     local version; version=$(resolve_version "$1")
     local name; name=$(dmg_name "$version")
@@ -167,6 +173,12 @@ do_publish() {
     echo "  Appcast:   https://$UPDATES_HOST/$UPDATES_PREFIX/appcast.xml"
     echo "  Changelog: https://$UPDATES_HOST/$UPDATES_PREFIX/changelog.json"
     echo "  DMG:       https://$UPDATES_HOST/$UPDATES_PREFIX/$name"
+
+    # Verify what actually landed: that R2 serves the bytes we just uploaded, and that
+    # the Homebrew cask matches them. A stale cask sha reads correct on every version
+    # number and only fails once someone runs brew install, so it is checked here rather
+    # than trusted. Runs last so the URLs above are printed either way.
+    "$DEN_DIR/scripts/verify-publish.sh" "$version" "$(resolve_build)"
 }
 
 # The second feed location: docs/ is GitHub Pages' source, so committing and
@@ -211,6 +223,9 @@ case "$command" in
         ;;
     publish)
         do_publish "$@"
+        ;;
+    verify)
+        do_verify "$@"
         ;;
     pages)
         do_pages
