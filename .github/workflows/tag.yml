@@ -1,0 +1,70 @@
+name: Tag
+
+# On every push to main: read MARKETING_VERSION from the Xcode project and,
+# if no such tag exists yet, create it and hand off to the Release workflow.
+#
+# Day to day this means merges land silently; the merge that bumps
+# MARKETING_VERSION (today's manual "prepare for release" step) is the one
+# that produces a tag and a release. Tag format matches the existing history:
+# plain 1.0.9, no leading "v".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag from MARKETING_VERSION
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      created: ${{ steps.create.outputs.created }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so every existing tag is visible to the check below.
+          fetch-depth: 0
+
+      - name: Read MARKETING_VERSION
+        id: read
+        run: |
+          VERSION="$(grep -m1 -o 'MARKETING_VERSION = [^;]*' FoxSay.xcodeproj/project.pbxproj | awk '{print $3}')"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "MARKETING_VERSION '$VERSION' is not X.Y.Z" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag if missing
+        id: create
+        env:
+          VERSION: ${{ steps.read.outputs.version }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$VERSION" > /dev/null; then
+            echo "Tag $VERSION already exists - nothing to do."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            git tag "$VERSION"
+            git push origin "refs/tags/$VERSION"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Tags pushed with the workflow's own GITHUB_TOKEN do not fire on:push
+  # workflows (GitHub's recursion guard), so invoke Release directly.
+  release:
+    name: Release
+    needs: tag
+    if: needs.tag.outputs.created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}
+    permissions:
+      contents: write
