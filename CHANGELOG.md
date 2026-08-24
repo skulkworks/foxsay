@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1 (2026-08-24, build 13)
+
+### Fixed
+- Accuracy card on the dashboard sitting lower than the other three statistics, because it had no trend line to fill the row
+- Status in the sidebar footer not being clickable — it reports permission and model problems, so it now jumps to System Status on the dashboard, where those are fixed
+
 ## 2.1.0 (2026-08-24, build 12)
 
 ### New

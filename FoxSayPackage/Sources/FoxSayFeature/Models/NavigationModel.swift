@@ -1,5 +1,16 @@
 import Foundation
 
+/// A dashboard section that can be jumped to from elsewhere in the app.
+///
+/// The sidebar's status footer reports permission and model problems, but the
+/// controls for fixing them live in the dashboard's System Status card, so the
+/// footer needs a way to say "show me that" rather than only "open Dashboard".
+public enum DashboardSection: String, Identifiable, Hashable {
+    case systemStatus
+
+    public var id: String { rawValue }
+}
+
 /// Sidebar navigation items
 public enum SidebarItem: String, CaseIterable, Identifiable {
     case status = "Dashboard"

@@ -40,6 +40,16 @@ public class AppState: ObservableObject {
     /// Currently selected sidebar item
     @Published public var selectedSidebarItem: SidebarItem = .status
 
+    /// A dashboard section to scroll to once the dashboard is on screen.
+    /// Set alongside `selectedSidebarItem`; the dashboard clears it after scrolling.
+    @Published public var dashboardScrollTarget: DashboardSection?
+
+    /// Show the dashboard and scroll it to `section`.
+    public func showDashboard(scrollingTo section: DashboardSection) {
+        selectedSidebarItem = .status
+        dashboardScrollTarget = section
+    }
+
     /// Whether settings sheet is shown (deprecated - for backward compatibility)
     @Published public var showSettings = false {
         didSet {

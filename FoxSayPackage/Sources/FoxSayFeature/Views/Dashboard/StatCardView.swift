@@ -43,11 +43,20 @@ struct StatCardView: View {
                     .lineLimit(1)
             }
 
+            // Always occupy the trend row, even with nothing to put in it.
+            // Without this the card without a trend — usually Accuracy, which has
+            // none until there is a previous month to compare against — is shorter
+            // than the rest of the row and the grid centres it, so its icon and
+            // value sit lower than its neighbours'.
             if let trend {
                 trendLabel(trend)
+            } else {
+                Text(" ")
+                    .font(.system(size: 10))
+                    .accessibilityHidden(true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .cardSurface(padding: 14)
     }
 

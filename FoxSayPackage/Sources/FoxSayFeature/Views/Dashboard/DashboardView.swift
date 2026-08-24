@@ -11,24 +11,47 @@ public struct DashboardView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                DashboardHeaderView()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 20) {
+                    DashboardHeaderView()
 
-                hotkeyIndicator
+                    hotkeyIndicator
 
-                activitySection
+                    activitySection
 
-                statsSection
+                    statsSection
 
-                systemStatusSection
+                    systemStatusSection
+                        .id(DashboardSection.systemStatus)
 
-                DashboardFooterView()
-                    .padding(.top, 4)
+                    DashboardFooterView()
+                        .padding(.top, 4)
+                }
+                .padding(24)
             }
-            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            // Two entry points, because the request can arrive either way: onChange
+            // when the dashboard is already showing, onAppear when the target was set
+            // while another pane was up and this view is only now being built.
+            .onChange(of: appState.dashboardScrollTarget) { _, target in
+                scroll(proxy, to: target)
+            }
+            .onAppear {
+                scroll(proxy, to: appState.dashboardScrollTarget)
+            }
         }
-        .background(Color(.windowBackgroundColor))
+    }
+
+    /// Scrolls to a requested section and clears the request, so returning to the
+    /// dashboard later does not jump again.
+    private func scroll(_ proxy: ScrollViewProxy, to target: DashboardSection?) {
+        guard let target else { return }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            proxy.scrollTo(target, anchor: .top)
+        }
+        appState.dashboardScrollTarget = nil
     }
 
     // MARK: - Hotkey Indicator

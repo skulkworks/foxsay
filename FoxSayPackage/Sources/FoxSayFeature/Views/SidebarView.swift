@@ -76,24 +76,43 @@ public struct SidebarView: View {
 
     // MARK: - Status Footer
 
+    @State private var isHoveringStatus = false
+
+    /// The footer reports problems ("Permissions needed") but the controls that fix
+    /// them are in the dashboard's System Status card, so the status itself is a
+    /// link there. Only the dot and text are clickable — the version is not a link.
     private var statusFooter: some View {
         VStack(spacing: 0) {
             Divider()
 
             HStack(spacing: 6) {
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .scaleEffect(0.65)
-                        .frame(width: 12, height: 12)
-                } else {
-                    StatusDot(color: statusColor)
-                }
+                Button {
+                    appState.showDashboard(scrollingTo: .systemStatus)
+                } label: {
+                    HStack(spacing: 6) {
+                        if isLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                                .scaleEffect(0.65)
+                                .frame(width: 12, height: 12)
+                        } else {
+                            StatusDot(color: statusColor)
+                        }
 
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                        Text(statusText)
+                            .font(.caption)
+                            .foregroundStyle(isHoveringStatus ? Color.primary : Color.secondary)
+                            .lineLimit(1)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Show System Status on the dashboard")
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        isHoveringStatus = hovering
+                    }
+                }
 
                 Spacer(minLength: 4)
 
