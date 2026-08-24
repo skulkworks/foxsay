@@ -3,6 +3,28 @@
   "app": "FoxSay",
   "versions": [
     {
+      "version": "2.1.0",
+      "build": 12,
+      "date": "2026-08-24",
+      "sections": [
+        {
+          "name": "New",
+          "type": "new",
+          "items": [
+            "Spoken Punctuation toggle in General settings: say \"comma\", \"question mark\", \"quote … unquote\", \"open parentheses … close parentheses\", \"dash\", \"dash dash\" for an em dash, or \"new paragraph\" and get the marks instead of the words. A spoken mark replaces the punctuation the speech model added for the same pause, rather than stacking on top of it, and bracket pairs open or close based on what is already open rather than on hearing the words \"open\" and \"close\""
+          ]
+        },
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Commas being stripped out of every transcription, so \"testing, one, two, three.\" came through as \"testing one two three.\""
+          ]
+        }
+      ],
+      "html": "<h3>New</h3>\n<ul>\n<li>Spoken Punctuation toggle in General settings: say \"comma\", \"question mark\", \"quote … unquote\", \"open parentheses … close parentheses\", \"dash\", \"dash dash\" for an em dash, or \"new paragraph\" and get the marks instead of the words. A spoken mark replaces the punctuation the speech model added for the same pause, rather than stacking on top of it, and bracket pairs open or close based on what is already open rather than on hearing the words \"open\" and \"close\"</li>\n</ul>\n<h3>Fixed</h3>\n<ul>\n<li>Commas being stripped out of every transcription, so \"testing, one, two, three.\" came through as \"testing one two three.\"</li>\n</ul>"
+    },
+    {
       "version": "2.0.0",
       "build": 11,
       "date": "2026-07-28",
