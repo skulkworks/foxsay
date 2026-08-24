@@ -4,7 +4,7 @@ import os.log
 private let pipelineLog = OSLog(subsystem: "com.foxsay", category: "PIPELINE")
 
 /// Orchestrates the text processing pipeline for transcribed text
-/// New flow: Transcription → Markdown PreProcess → Prompt Detection → Vocal Corrections → AI Transform → PostProcess
+/// New flow: Transcription → Markdown PreProcess → Prompt Detection → Spoken Punctuation → Vocal Corrections → AI Transform → PostProcess
 @MainActor
 public class CorrectionPipeline: ObservableObject {
     public static let shared = CorrectionPipeline()
@@ -17,6 +17,7 @@ public class CorrectionPipeline: ObservableObject {
     // MARK: - Vocal Corrections
 
     private static let vocalCorrectionsEnabledKey = "vocalCorrectionsEnabled"
+    private static let spokenPunctuationEnabledKey = "spokenPunctuationEnabled"
 
     /// Whether vocal corrections via AI are enabled (off by default)
     @Published public var vocalCorrectionsEnabled: Bool {
@@ -24,6 +25,19 @@ public class CorrectionPipeline: ObservableObject {
             UserDefaults.standard.set(vocalCorrectionsEnabled, forKey: Self.vocalCorrectionsEnabledKey)
         }
     }
+
+    /// Whether spoken punctuation words are converted to punctuation marks (off by default).
+    ///
+    /// Off by default because the trade is real: with this on, "the closing
+    /// period of the quarter" becomes "the closing . of the quarter", so it only pays
+    /// off for people who dictate punctuation deliberately.
+    @Published public var spokenPunctuationEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(spokenPunctuationEnabled, forKey: Self.spokenPunctuationEnabledKey)
+        }
+    }
+
+    private let punctuationCorrector = RuleBasedCorrector(rules: RuleBasedCorrector.punctuationRules)
 
     /// The prompt used to correct spoken self-corrections in transcribed text.
     ///
@@ -63,6 +77,7 @@ public class CorrectionPipeline: ObservableObject {
 
     private init() {
         self.vocalCorrectionsEnabled = UserDefaults.standard.bool(forKey: Self.vocalCorrectionsEnabledKey)
+        self.spokenPunctuationEnabled = UserDefaults.standard.bool(forKey: Self.spokenPunctuationEnabledKey)
     }
 
     /// Process transcription result through the pipeline
@@ -131,6 +146,17 @@ public class CorrectionPipeline: ObservableObject {
         } else {
             // Minimal cleanup for non-markdown mode
             text = minimalCleanup(text)
+        }
+
+        // Step 3.5: Convert spoken punctuation words to punctuation marks (if enabled).
+        // Runs after cleanup so the marks it inserts survive, and before the AI
+        // steps so the model sees properly punctuated text.
+        if spokenPunctuationEnabled {
+            let beforePunctuation = text
+            text = punctuationCorrector.correctSpokenPunctuation(text)
+            if text != beforePunctuation {
+                os_log(.info, log: pipelineLog, "After spoken punctuation: %{public}@", text)
+            }
         }
 
         // Step 4: Apply vocal corrections via AI (if enabled and AI model available)
@@ -283,12 +309,27 @@ public class CorrectionPipeline: ObservableObject {
         }
     }
 
+    /// Drop the comma a speech engine inserts between two identical adjacent words.
+    ///
+    /// Replaces a blanket `,` strip that used to run on every transcription in
+    /// both modes. That removed every comma the engine produced, including the
+    /// correct ones: "testing, one, two, three." came out as "testing one two
+    /// three." Only the repeated-word case this was written for is removed now,
+    /// so "no, no, no" still becomes "no no no".
+    nonisolated static func collapseRepeatedWordCommas(_ text: String) -> String {
+        let pattern = "\\b(\\w+),(?=\\s+\\1\\b)"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return text
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "$1")
+    }
+
     /// Minimal cleanup for non-markdown text
     private func minimalCleanup(_ text: String) -> String {
         var result = text
 
-        // Remove commas that Whisper adds between repeated words
-        result = result.replacingOccurrences(of: ",", with: "")
+        result = Self.collapseRepeatedWordCommas(result)
 
         // Remove double spaces
         while result.contains("  ") {
@@ -302,8 +343,7 @@ public class CorrectionPipeline: ObservableObject {
     private func preProcessMarkdown(_ text: String) -> String {
         var result = text
 
-        // Remove commas that Whisper adds
-        result = result.replacingOccurrences(of: ",", with: "")
+        result = Self.collapseRepeatedWordCommas(result)
 
         // Normalize spoken words to lowercase
         let spokenWords = [

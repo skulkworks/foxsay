@@ -301,6 +301,30 @@ public struct GeneralSettingsView: View {
 
             Divider()
 
+            // Spoken punctuation
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Spoken Punctuation")
+                    Text("Say \"comma\", \"question mark\", or \"quote … unquote\" to insert the marks")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $correctionPipeline.spokenPunctuationEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+
+            if correctionPipeline.spokenPunctuationEnabled {
+                Text("Words like \"period\" and \"quote\" become punctuation, even when you meant the word itself")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
             // Vocal corrections
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

@@ -58,6 +58,7 @@ Microphone → AVAudioEngine (16kHz mono) → TranscriptionEngine → Correction
 3. **Correction pipeline**: A multi-stage pipeline processes the raw transcript:
    - **Mode detection** - identifies voice mode triggers (e.g. saying "markdown" activates Markdown mode)
    - **Pre-processing** - converts spoken commands to symbols ("hash hash" to "##", "bold on/off" to "**", etc.)
+   - **Spoken punctuation** - optionally converts spoken punctuation words to marks ("comma" to ",", "quote"/"unquote" to `"`)
    - **LLM/rule-based correction** - optionally applies Qwen2.5-Coder-1.5B for context-aware cleanup, with rule-based fallback
    - **Post-processing** - collapses consecutive symbols, trims whitespace
 
@@ -153,6 +154,42 @@ Voice modes change how spoken text is interpreted. Activate by saying the mode n
 | Markdown | "markdown" / "md" | Converts voice commands to Markdown syntax |
 
 In Markdown mode, spoken commands like "h2", "bold on/off", "bullet", "code block python", and many others are converted to their Markdown equivalents. See `FoxSayPackage/Docs/MarkdownVoiceCommands.md` for the full reference.
+
+### Spoken Punctuation
+
+Off by default, enabled with the **Spoken Punctuation** toggle in General settings. When on, punctuation words you speak become the marks themselves, with the spacing tidied up so "hello comma there" gives `hello, there` rather than `hello , there`.
+
+| Say | Get |
+|-----|-----|
+| comma | `,` |
+| period / full stop | `.` |
+| question mark | `?` |
+| exclamation mark / point | `!` |
+| colon, semicolon | `:` `;` |
+| ellipsis / dot dot dot | `...` |
+| quote … unquote | `"…"` |
+| open quote … close quote | `"…"` |
+| apostrophe | `'` |
+| open/close paren, parens, parenthesis, parentheses | `(` `)` |
+| quote, parentheses, brackets, braces (on their own) | opens if the pair is closed, closes if it is open |
+| open/close bracket, brackets, square bracket | `[` `]` |
+| open/close brace, braces, curly brace | `{` `}` |
+| hyphen | `-` (no surrounding spaces) |
+| dash | ` - ` (spaced) |
+| dash dash, double dash, em dash | ` — ` (spaced) |
+| en dash | `–` (no spaces, for ranges) |
+| new line, line break | newline |
+| new paragraph | blank line |
+
+Both speech engines punctuate from prosody on their own, so dictating "comma" produces the engine's comma for the pause *and* the literal word — "Testing comma period" arrives as `Testing, comma, period.` A spoken mark is an explicit instruction, so it replaces whatever punctuation the engine put next to it instead of stacking on top of it. The conversion runs in two passes for this reason: rules leave placeholders that swallow the surrounding whitespace and engine punctuation, then a second pass expands them and decides the spacing.
+
+The trade-off is unavoidable and it's why the toggle is off by default: with it on, "the closing period of the quarter" becomes "the closing . of the quarter". Turn it on if you dictate punctuation deliberately, leave it off if you don't. "left" and "right" work anywhere "open" and "close" do. Sentence marks replace any punctuation the engine put in the same slot, while brackets, quotes and dashes only swallow the engine's pause comma and leave a genuine `.`, `?` or `!` alone.
+
+Pairs track how many of each are open rather than relying on the words "open" and "close", so any combination resolves: "open parentheses … parentheses", "parentheses … close parentheses", or a bare "parentheses" at both ends. Each pair keeps its own depth, so they nest.
+
+That matters because parentheses are the weak spot, and not for want of rules. "paren" and "parenthesis" are rare enough words that both engines mangle them — "open paren" comes back as *Perrin*, "open parenthesis" as *Princess*, "close parenthesis" as *Clothes Princess* — and the word "open" is frequently dropped altogether, leaving a bare *parentheses* at both ends. The homophones are matched after an opener or closer, and the depth counter covers the dropped opener. Square brackets transcribe the most reliably of the three pairs. The rules live in `RuleBasedCorrector.punctuationRules`.
+
+In Markdown mode, block syntax wins at the start of a line: saying "quote" there still produces a `>` blockquote.
 
 ### Hotkey System
 
