@@ -22,6 +22,14 @@ final class UpdaterController: ObservableObject {
             userDriverDelegate: nil
         )
 
+        // The dev build has its own bundle id but shares the released app's feed,
+        // so left alone it would spot the released version, call it an update, and
+        // install it over the build products directory. Automatic checks are off
+        // here; the About pane's button still works if the flow needs testing.
+        #if DEBUG
+        updaterController.updater.automaticallyChecksForUpdates = false
+        #endif
+
         // Observe canCheckForUpdates property
         updaterController.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)

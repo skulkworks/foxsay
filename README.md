@@ -43,6 +43,20 @@ The workspace includes:
 - `FoxSay.xcodeproj` - the app target
 - `FoxSayPackage` - Swift package containing all feature code
 
+### Debug builds are a separate app
+
+Debug builds are `FoxSay (DEV).app` with the bundle identifier `com.skulkworks.FoxSay.dev`; Release is unchanged. macOS keys privacy permissions on bundle identifier and code signature, so a debug build sharing the released app's identifier reads as the same app with a changed signature — Microphone and Accessibility get revoked, and every rebuild prompts again. As a separate identifier it gets its own entries in System Settings, granted once and left alone, and the released copy keeps its own.
+
+What is shared and what is not:
+
+| | Shared with the release build |
+|---|---|
+| Speech and AI models | Yes — no re-download |
+| History, statistics, audio | Yes — `~/Library/Application Support/FoxSay` |
+| Settings | **No** — separate `UserDefaults` domain, so the dev build runs the setup wizard on first launch and keeps its own hotkeys, model choice and toggles |
+
+Automatic update checks are off in debug builds. The dev build shares the released appcast, so left alone Sparkle would find the released version, call it an update, and install it over the build products directory. The About pane's "Check for Updates…" button still works if that flow needs testing.
+
 ## Architecture
 
 ### How Transcription Works

@@ -306,7 +306,8 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FoxSay/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
+				FOXSAY_DISPLAY_NAME = "FoxSay (DEV)";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(FOXSAY_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -315,8 +316,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.skulkworks.FoxSay;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.skulkworks.FoxSay.dev;
+				PRODUCT_NAME = "$(FOXSAY_DISPLAY_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -340,7 +341,8 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FoxSay/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FoxSay;
+				FOXSAY_DISPLAY_NAME = FoxSay;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(FOXSAY_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FoxSay needs microphone access to transcribe your speech to text.";
 				LD_RUNPATH_SEARCH_PATHS = (
