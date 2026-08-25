@@ -12,10 +12,12 @@
 #   scripts/release.sh cask [ver]        # bump + push the Homebrew cask to this build
 #   scripts/release.sh verify [ver]      # re-check the live DMG and the Homebrew cask
 #   scripts/release.sh pages             # commit + push docs/ so GitHub Pages serves it too
-#   scripts/release.sh release [args]    # build → changelog → appcast → publish → pages
+#   scripts/release.sh github [ver]      # tag + GitHub Release with the DMG attached
+#   scripts/release.sh release [args]    # build → changelog → appcast → publish → pages → github
 #
 # Notarization needs APPLE_ID and APPLE_APP_PASSWORD in the environment.
 # Publishing needs the `skulkworks-updates` profile in ~/.aws/credentials.
+# The GitHub Release needs the `gh` CLI, authenticated.
 #
 # TWO FEED LOCATIONS, ON PURPOSE. 2.0.0 and later poll R2 at
 # https://updates.skulkworks.dev/foxsay/appcast.xml, matching the other apps.
@@ -24,6 +26,14 @@
 # same feed from docs/. Both locations get the identical appcast and changelog;
 # only the host differs, and both point at the same R2 DMG. A 1.0.9 user polls
 # Pages, sees the release, downloads from R2, and polls R2 from then on.
+#
+# GITHUB RELEASES ARE A THIRD LOCATION, and not a feed — nothing polls them. FoxSay
+# is a public repo, its README download badge reads the latest GitHub release, and
+# that is where anyone who finds the project on GitHub goes to download it. 1.0.0
+# through 1.0.9 were published there because GitHub Releases also hosted the DMG;
+# moving hosting to R2 at 2.0.0 dropped the step along with it, and GitHub sat on
+# 1.0.9 while the site served 2.1.0. Every release now gets a tag, a GitHub Release
+# and a copy of the same DMG, on top of the R2 upload.
 
 set -e
 
@@ -221,6 +231,58 @@ do_pages() {
     echo "  Changelog: https://skulkworks.github.io/$UPDATES_PREFIX/changelog.json"
 }
 
+# Tag the release and publish it on GitHub with the DMG attached. Idempotent: an
+# existing tag is reused rather than moved, and an existing release has its notes and
+# asset replaced, so re-running after a failure part-way through is safe.
+do_github() {
+    local version; version=$(resolve_version "$1")
+    local name; name=$(dmg_name "$version")
+    local dmg="$BUILD_DIR/$APP_NAME.dmg"
+    local notes="$PROJECT_ROOT/changelog/$version.md"
+
+    command -v gh >/dev/null 2>&1 || { echo "[ERROR] gh CLI not found - install it to publish GitHub Releases." >&2; exit 1; }
+    [ -f "$dmg" ]   || { echo "[ERROR] DMG not found at $dmg (run build)" >&2; exit 1; }
+    [ -f "$notes" ] || { echo "[ERROR] Release notes not found at $notes" >&2; exit 1; }
+
+    cd "$PROJECT_ROOT"
+
+    # The tag is created here rather than by hand, so it always lands on the commit
+    # that was actually published (the pages commit, since do_pages runs first).
+    if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+        echo "[INFO] Tag $version already exists locally."
+    else
+        echo "[INFO] Tagging $version at $(git rev-parse --short HEAD)..."
+        git tag -a "$version" -m "$APP_NAME $version"
+    fi
+    git push origin "refs/tags/$version"
+
+    # Release notes are the changelog entry with its YAML frontmatter stripped —
+    # the same text the appcast and the in-app What's New window render.
+    local body; body=$(awk '
+        NR == 1 && $0 == "---" { fm = 1; next }
+        fm && $0 == "---"      { fm = 0; next }
+        !fm' "$notes" | sed '/./,$!d')
+
+    # gh names the asset after the file, so publish the DMG under the same
+    # build-stamped name R2 and the Homebrew cask use rather than a bare FoxSay.dmg.
+    local staged; staged=$(mktemp -d)
+    trap 'rm -rf "$staged"' RETURN
+    cp "$dmg" "$staged/$name"
+
+    if gh release view "$version" --repo "$GITHUB_REPO" >/dev/null 2>&1; then
+        echo "[INFO] Updating the existing $version release..."
+        gh release edit "$version" --repo "$GITHUB_REPO" --title "$version" --notes "$body"
+        gh release upload "$version" "$staged/$name" --repo "$GITHUB_REPO" --clobber
+    else
+        echo "[INFO] Creating the $version release..."
+        gh release create "$version" "$staged/$name" \
+            --repo "$GITHUB_REPO" --title "$version" --notes "$body"
+    fi
+
+    echo "[INFO] GitHub Release live:"
+    echo "  https://github.com/$GITHUB_REPO/releases/tag/$version"
+}
+
 command="${1:-build}"
 shift || true
 
@@ -246,19 +308,23 @@ case "$command" in
     pages)
         do_pages
         ;;
+    github)
+        do_github "$@"
+        ;;
     release)
         "$DEN_DIR/scripts/build-release.sh" "$@"
         "$DEN_DIR/scripts/generate-changelog.sh"
         do_appcast ""
         do_publish ""
         do_pages
+        do_github ""
         ;;
     keys)
         "$DEN_DIR/scripts/generate-sparkle-keys.sh" "$@"
         ;;
     *)
         echo "[ERROR] Unknown command: $command" >&2
-        sed -n '2,26p' "$0" >&2
+        sed -n '2,20p' "$0" >&2
         exit 1
         ;;
 esac
