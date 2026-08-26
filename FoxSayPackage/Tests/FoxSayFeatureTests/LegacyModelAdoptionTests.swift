@@ -96,6 +96,43 @@ struct LegacyModelAdoptionTests {
         #expect(FileManager.default.fileExists(atPath: legacy.path))
     }
 
+    @Test("a copy left by 1.x is reported as reclaimable, and removing it leaves the one in use")
+    func reclaimsOnlyTheLegacyCopy() async throws {
+        let root = try makeModelsRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let legacy = root.appendingPathComponent("parakeet-tdt-0.6b-v2-coreml")
+        let current = root.appendingPathComponent("parakeet-tdt-0.6b-v2")
+        try write(Self.v2Layout, into: legacy)
+        try write(Self.v2Layout, into: current)
+        try Data(repeating: 0, count: 4096).write(to: legacy.appendingPathComponent("weights.bin"))
+
+        let engine = ParakeetEngine(version: .v2, modelsRoot: root)
+        #expect(await engine.reclaimableBytes > 0)
+
+        await engine.reclaimLegacyStorage()
+
+        #expect(!FileManager.default.fileExists(atPath: legacy.path))
+        #expect(FileManager.default.fileExists(atPath: current.path))
+        #expect(await engine.isModelDownloaded)
+        #expect(await engine.reclaimableBytes == 0)
+    }
+
+    @Test("nothing is reclaimable when 1.x never downloaded this model")
+    func nothingToReclaim() async throws {
+        let root = try makeModelsRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try write(Self.v2Layout, into: root.appendingPathComponent("parakeet-tdt-0.6b-v2"))
+
+        let engine = ParakeetEngine(version: .v2, modelsRoot: root)
+        #expect(await engine.reclaimableBytes == 0)
+
+        // And asking anyway leaves the model in use alone.
+        await engine.reclaimLegacyStorage()
+        #expect(await engine.isModelDownloaded)
+    }
+
     @Test("versions that only ever existed in 2.x have nothing to adopt")
     func ignoresVersionsWithNoLegacyFolder() async throws {
         let root = try makeModelsRoot()

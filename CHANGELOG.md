@@ -2,7 +2,12 @@
 
 ## 2.1.1 (2026-08-26, build 13)
 
+### New
+- Stop button on a model download, for a download that is going nowhere or a model you picked by mistake. What has already been fetched is kept, so starting again carries on from there rather than going back to the beginning
+- Unused model files row in Speech Models, offering to remove the copy an earlier version of FoxSay downloaded into a folder this version no longer reads. It shows how much that copy is taking up, and only ever removes that older copy
+
 ### Improved
+- A model download says "Preparing…" while it works out what to fetch, instead of sitting at 0% for the several seconds that takes
 - Debug builds are now a separate app, `FoxSay (DEV)`, with their own bundle identifier. macOS ties privacy permissions to the identifier and code signature, so a debug build sharing the released app's identifier had Microphone and Accessibility revoked on every rebuild, and granting them took them away from the released copy. Each now has its own entries, granted once. Models, history and statistics stay shared; settings do not. Automatic update checks are off in debug builds, so the dev build cannot install the released version over itself
 
 ### Fixed

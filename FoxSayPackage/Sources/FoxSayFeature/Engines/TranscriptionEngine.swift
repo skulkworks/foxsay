@@ -24,6 +24,13 @@ public protocol TranscriptionEngine: Sendable {
     /// so that updating the app doesn't cost the user a re-download.
     func adoptLegacyDownload() async
 
+    /// Disk taken up by a copy of this model that an earlier version of FoxSay
+    /// downloaded and nothing uses any more. Zero when there is nothing to reclaim.
+    var reclaimableBytes: Int64 { get async }
+
+    /// Delete that copy.
+    func reclaimLegacyStorage() async
+
     /// Transcribe audio buffer to text
     /// - Parameter audioBuffer: Float array of audio samples at 16kHz mono
     /// - Returns: Transcription result
@@ -37,8 +44,13 @@ public protocol TranscriptionEngine: Sendable {
 }
 
 extension TranscriptionEngine {
-    /// Most engines have never moved their models and have nothing to adopt.
+    /// Most engines have never moved their models, so there is nothing to adopt
+    /// and nothing left behind to reclaim.
     public func adoptLegacyDownload() async {}
+    public var reclaimableBytes: Int64 {
+        get async { 0 }
+    }
+    public func reclaimLegacyStorage() async {}
 }
 
 /// Errors that can occur during transcription

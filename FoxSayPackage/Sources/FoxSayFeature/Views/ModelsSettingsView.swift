@@ -55,6 +55,10 @@ public struct ModelsSettingsView: View {
                     }
                 }
 
+                if modelManager.reclaimableBytes > 0 {
+                    reclaimableStorage(modelManager.reclaimableBytes)
+                }
+
                 Spacer()
             }
             .padding(24)
@@ -87,6 +91,39 @@ public struct ModelsSettingsView: View {
             }
 
             Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+
+    /// Offer to delete models an earlier FoxSay downloaded into a folder this
+    /// version no longer reads. Only appears when there is something to remove,
+    /// and only ever removes that older copy.
+    private func reclaimableStorage(_ bytes: Int64) -> some View {
+        HStack(spacing: 12) {
+            IconTile(systemName: "internaldrive")
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Unused model files")
+                    .font(.headline)
+
+                Text("An earlier version of FoxSay kept its speech models in a different folder. Nothing reads that copy now.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(bytes.formatted(.byteCount(style: .file)))
+                .font(.caption)
+                .fontWeight(.medium)
+                .monospacedDigit()
+
+            Button("Remove") {
+                Task { await modelManager.reclaimLegacyStorage() }
+            }
+            .controlSize(.small)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
@@ -208,14 +245,45 @@ struct ModelCardView: View {
         let isCurrentModel = isSelected
 
         if isCurrentModel && modelManager.isDownloading {
-            VStack(spacing: 4) {
-                ProgressView(value: modelManager.downloadProgress)
-                    .progressViewStyle(.linear)
-                    .frame(width: 70)
-                Text("\(Int(modelManager.downloadProgress * 100))%")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            HStack(spacing: 6) {
+                VStack(spacing: 4) {
+                    // Nothing has arrived yet: the download stack spends its first
+                    // several seconds listing the repository before a byte moves,
+                    // and a determinate bar pinned at 0% through that reads as a
+                    // download that never started.
+                    if modelManager.downloadProgress > 0 {
+                        ProgressView(value: modelManager.downloadProgress)
+                            .progressViewStyle(.linear)
+                            .frame(width: 70)
+                        Text("\(Int(modelManager.downloadProgress * 100))%")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Preparing…")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                // No room for a labelled button in this column, so the familiar
+                // stop glyph. What is already fetched survives and the next
+                // attempt resumes from it. The tappable area is padded well past
+                // the glyph — at 14pt it is otherwise a target you can miss by
+                // a few pixels and hit the card behind it instead.
+                Button {
+                    modelManager.cancelDownload()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                        .padding(6)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Stop downloading")
             }
         } else if isCurrentModel && modelManager.isPreloading {
             HStack(spacing: 6) {

@@ -180,6 +180,53 @@ public actor ParakeetEngine: TranscriptionEngine {
         }
     }
 
+    /// Disk held by a 1.x copy of this model that nothing uses any more.
+    ///
+    /// Reads whatever is left in the old folder once `adoptLegacyDownload()` has
+    /// had its turn, which is why that runs first at launch. By then anything
+    /// still sitting there is either a duplicate of a model already downloaded
+    /// in the new location, or a layout this build cannot load. Neither will
+    /// ever be read again, and together they can be most of a gigabyte.
+    public var reclaimableBytes: Int64 {
+        get async {
+            guard let legacy = legacyModelDirectory else { return 0 }
+            return Self.sizeOnDisk(of: legacy)
+        }
+    }
+
+    public func reclaimLegacyStorage() async {
+        // Only ever the old folder. If adoption claimed it, this path no longer
+        // exists and removing it does nothing, which is the point: there is no
+        // ordering here that can reach a model the app is actually using.
+        guard let legacy = legacyModelDirectory,
+            FileManager.default.fileExists(atPath: legacy.path)
+        else { return }
+
+        do {
+            try FileManager.default.removeItem(at: legacy)
+            print("FoxSay: Removed the Parakeet \(versionLabel) model left behind by FoxSay 1.x")
+        } catch {
+            print("FoxSay: Could not remove the Parakeet \(versionLabel) model left by FoxSay 1.x: \(error)")
+        }
+    }
+
+    private nonisolated static func sizeOnDisk(of directory: URL) -> Int64 {
+        let keys: [URLResourceKey] = [.isRegularFileKey, .fileAllocatedSizeKey]
+        guard
+            let files = FileManager.default.enumerator(
+                at: directory, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])
+        else { return 0 }
+
+        var total: Int64 = 0
+        for case let url as URL in files {
+            guard let values = try? url.resourceValues(forKeys: Set(keys)),
+                values.isRegularFile == true
+            else { continue }
+            total += Int64(values.fileAllocatedSize ?? 0)
+        }
+        return total
+    }
+
     public var downloadProgress: Double {
         get async {
             progress.value
@@ -238,6 +285,14 @@ public actor ParakeetEngine: TranscriptionEngine {
             progress.advance(to: 1.0)
             print("FoxSay: Parakeet \(versionLabel) model download complete")
         } catch {
+            // A download the user cancelled is not a failure. FluidAudio surfaces
+            // it as whatever URLSession threw, so ask the task rather than trying
+            // to recognise the error, and let it through as cancellation so the
+            // UI doesn't put up an error the user just caused on purpose.
+            if Task.isCancelled {
+                print("FoxSay: Parakeet \(versionLabel) download cancelled")
+                throw CancellationError()
+            }
             print("FoxSay: Parakeet \(versionLabel) download failed: \(error)")
             throw TranscriptionError.transcriptionFailed("Failed to download Parakeet \(versionLabel) model: \(error.localizedDescription)")
         }

@@ -321,10 +321,23 @@ public struct SetupWizardView: View {
                         .progressViewStyle(.linear)
                         .frame(width: 200)
 
-                    Text("Downloading… \(Int(engineManager.downloadProgress * 100))%")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    // Before the first byte lands there is nothing honest to put
+                    // a percentage on — the repository listing takes a few
+                    // seconds on its own.
+                    Text(
+                        engineManager.downloadProgress > 0
+                            ? "Downloading… \(Int(engineManager.downloadProgress * 100))%"
+                            : "Preparing…"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+
+                    Button("Cancel") {
+                        engineManager.cancelDownload()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 } else if let error = downloadError {
                     Text(error)
                         .font(.caption)
@@ -454,6 +467,12 @@ public struct SetupWizardView: View {
                     isDownloading = false
                     // Auto-advance to complete step
                     currentStep = .complete
+                }
+            } catch is CancellationError {
+                // Stopped on purpose. Stay on this step with the Download button
+                // back, rather than advancing as though the model were ready.
+                await MainActor.run {
+                    isDownloading = false
                 }
             } catch {
                 await MainActor.run {

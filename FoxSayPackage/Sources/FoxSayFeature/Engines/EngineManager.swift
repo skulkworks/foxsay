@@ -12,6 +12,8 @@ public class ModelManager: ObservableObject {
     @Published public private(set) var isModelReady = false
     @Published public private(set) var isPreloading = false
     @Published public private(set) var isModelLoaded = false
+    /// Disk held by models an earlier version of FoxSay downloaded elsewhere.
+    @Published public private(set) var reclaimableBytes: Int64 = 0
 
     private var models: [ModelType: any TranscriptionEngine] = [:]
     private var downloadTask: Task<Void, Error>?
@@ -42,17 +44,24 @@ public class ModelManager: ObservableObject {
             // Before deciding what is downloaded, let each model claim anything an
             // older FoxSay left in a different folder. Run first, or the update
             // that changed the folder reads as "model gone" and re-downloads it.
-            // The legacy alias points at an engine another key already covers,
-            // which just makes one of these a second no-op call.
-            for model in models.values {
+            for model in distinctModels {
                 await model.adoptLegacyDownload()
             }
 
             await refreshModelReadyState()
+            await refreshReclaimableStorage()
             if isModelReady {
                 await preloadCurrentModel()
             }
         }
+    }
+
+    /// Every engine, once each. `.whisperKit` is an alias holding the same object
+    /// as `.whisperBase`, so walking the dictionary itself visits one twice —
+    /// harmless when asking each to do something idempotent, wrong when adding
+    /// their numbers up.
+    private var distinctModels: [any TranscriptionEngine] {
+        models.compactMap { type, model in type == .whisperKit ? nil : model }
     }
 
     /// Get the currently selected model
@@ -133,31 +142,43 @@ public class ModelManager: ObservableObject {
         downloadProgress = 0
         downloadError = nil
 
-        do {
-            // Start progress polling task
-            let progressTask = Task {
-                while !Task.isCancelled {
-                    let progress = await model.downloadProgress
-                    await MainActor.run {
-                        self.downloadProgress = progress
-                    }
-                    try await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+        // Start progress polling task
+        let progressTask = Task {
+            while !Task.isCancelled {
+                let progress = await model.downloadProgress
+                await MainActor.run {
+                    self.downloadProgress = progress
                 }
+                try await Task.sleep(nanoseconds: 100_000_000)  // 100ms
             }
+        }
+        defer { progressTask.cancel() }
 
-            // Download the model
-            try await model.downloadModel()
+        // The download runs in a task we hold on to, which is what makes
+        // cancelDownload() work: without a handle on it, cancelling could only
+        // ever hide the progress bar and leave the download running.
+        let download = Task { try await model.downloadModel() }
+        downloadTask = download
+        defer { downloadTask = nil }
 
-            // Cancel progress polling
-            progressTask.cancel()
+        do {
+            try await download.value
 
-            // Update final state
             downloadProgress = 1.0
             isDownloading = false
             await refreshModelReadyState()
 
             // Preload the model after download
             await preloadCurrentModel()
+        } catch is CancellationError {
+            // The user stopped it. Nothing to report as an error, and the bytes
+            // already fetched stay on disk for the next attempt to resume from.
+            // Still rethrown, so a caller doesn't mistake a stopped download for
+            // a finished one and move on to whatever comes after it.
+            isDownloading = false
+            downloadProgress = 0
+            await refreshModelReadyState()
+            throw CancellationError()
         } catch {
             isDownloading = false
             downloadError = error.localizedDescription
@@ -165,11 +186,29 @@ public class ModelManager: ObservableObject {
         }
     }
 
-    /// Cancel ongoing download
+    /// Stop a running download.
+    ///
+    /// What has already been fetched is kept: both download stacks write to a
+    /// partial file beside the destination and resume from it, so downloading
+    /// again picks up roughly where this left off rather than starting over.
     public func cancelDownload() {
         downloadTask?.cancel()
-        downloadTask = nil
-        isDownloading = false
+    }
+
+    /// Delete model copies left behind by an earlier version of FoxSay.
+    public func reclaimLegacyStorage() async {
+        for model in distinctModels {
+            await model.reclaimLegacyStorage()
+        }
+        await refreshReclaimableStorage()
+    }
+
+    private func refreshReclaimableStorage() async {
+        var total: Int64 = 0
+        for model in distinctModels {
+            total += await model.reclaimableBytes
+        }
+        reclaimableBytes = total
     }
 
     /// Transcribe audio using the current model

@@ -143,6 +143,12 @@ public actor WhisperKitEngine: TranscriptionEngine {
             print("FoxSay: WhisperKit \(whisperModelName) model download complete")
             print("FoxSay: Model path exists: \(FileManager.default.fileExists(atPath: modelPath.path))")
         } catch {
+            // A download the user cancelled is not a failure; let it through as
+            // cancellation rather than an error they have to dismiss.
+            if Task.isCancelled {
+                print("FoxSay: WhisperKit \(whisperModelName) download cancelled")
+                throw CancellationError()
+            }
             print("FoxSay: WhisperKit download failed: \(error)")
             throw TranscriptionError.transcriptionFailed("Failed to download model: \(error.localizedDescription)")
         }

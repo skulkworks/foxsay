@@ -56,10 +56,23 @@ public struct ModelDownloadView: View {
                     ProgressView(value: engineManager.downloadProgress)
                         .progressViewStyle(.linear)
 
-                    Text("Downloading… \(Int(engineManager.downloadProgress * 100))%")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    // Before the first byte lands there is nothing honest to put
+                    // a percentage on — the repository listing takes a few
+                    // seconds on its own.
+                    Text(
+                        engineManager.downloadProgress > 0
+                            ? "Downloading… \(Int(engineManager.downloadProgress * 100))%"
+                            : "Preparing…"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+
+                    Button("Cancel") {
+                        engineManager.cancelDownload()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
 
@@ -125,6 +138,11 @@ public struct ModelDownloadView: View {
                 await MainActor.run {
                     isDownloading = false
                     downloadComplete = true
+                }
+            } catch is CancellationError {
+                // Stopped on purpose — back to the Download button, no error.
+                await MainActor.run {
+                    isDownloading = false
                 }
             } catch {
                 await MainActor.run {
