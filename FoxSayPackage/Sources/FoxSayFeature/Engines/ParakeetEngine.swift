@@ -77,23 +77,61 @@ public actor ParakeetEngine: TranscriptionEngine {
     private nonisolated(unsafe) var asrManager: AsrManager?
     private var models: AsrModels?
     // nonisolated so progress polling doesn't block on actor
-    private nonisolated(unsafe) var _downloadProgress: Double = 0
+    private nonisolated let progress = ModelDownloadProgress()
+
+    /// How much of our bar the fetch is worth. The rest covers compiling and
+    /// loading the CoreML models, which is a few seconds of work against the
+    /// minutes the bytes take.
+    private static let fetchShareOfBar = 0.90
+
+    /// FluidAudio reports each step it runs on that step's own 0…1 scale, and
+    /// splits the scale evenly: fetching bytes fills the first half, compiling
+    /// the models the second.
+    private static let fetchShareOfFluidAudioScale = 0.5
     private var transcriptionTask: Task<TranscriptionResult, Error>?
     private var isCancelled = false
 
-    public init(version: AsrModelVersion = .v2) {
+    /// Where to look for downloaded models. Tests point this at a temporary
+    /// directory; the app leaves it nil and gets FluidAudio's real cache.
+    private nonisolated let modelsRootOverride: URL?
+
+    public init(version: AsrModelVersion = .v2, modelsRoot: URL? = nil) {
         self.version = version
+        self.modelsRootOverride = modelsRoot
+    }
+
+    /// FluidAudio keeps its models in ~/Library/Application Support/FluidAudio/Models/.
+    /// FoxSay is not sandboxed, so this is the real home directory for both the
+    /// released app and a debug build, and they share one copy of every model.
+    private nonisolated var modelsRoot: URL? {
+        if let modelsRootOverride { return modelsRootOverride }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("FluidAudio")
+            .appendingPathComponent("Models")
+    }
+
+    private nonisolated var modelDirectory: URL? {
+        modelsRoot?.appendingPathComponent(modelDirectoryName)
+    }
+
+    /// The folder FoxSay 1.0.x downloaded this model into.
+    ///
+    /// 1.0.x shipped FluidAudio 0.10.0, which stored each model under its full
+    /// HuggingFace repository name; 0.15.5 strips the trailing "-coreml". Only
+    /// V2 and V3 existed back then — the other versions arrived with 2.0.0 and
+    /// have nothing to adopt.
+    private nonisolated var legacyModelDirectory: URL? {
+        switch version {
+        case .v2, .v3:
+            return modelsRoot?.appendingPathComponent("\(modelDirectoryName)-coreml")
+        default:
+            return nil
+        }
     }
 
     public var isModelDownloaded: Bool {
         get async {
-            // FluidAudio stores models in ~/Library/Application Support/FluidAudio/Models/
-            let modelDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-                .appendingPathComponent("FluidAudio")
-                .appendingPathComponent("Models")
-                .appendingPathComponent(modelDirectoryName)
-
-            guard let modelDir = modelDir else { return false }
+            guard let modelDir = modelDirectory else { return false }
 
             // Check if the vocab file exists (indicates complete download)
             let vocabPath = modelDir.appendingPathComponent(vocabFileName)
@@ -101,46 +139,103 @@ public actor ParakeetEngine: TranscriptionEngine {
         }
     }
 
+    /// Take over a model downloaded by FoxSay 1.0.x, so that updating doesn't
+    /// silently cost the user a model they already have.
+    ///
+    /// Because of the folder rename above, a 1.0.x user updating to 2.x finds
+    /// nothing where the app now looks: the model reads as "Not downloaded", and
+    /// re-fetching it pulls down several hundred megabytes that are already on
+    /// the disk a folder away. The old copy is never cleaned up either, so the
+    /// user pays for it twice, in bandwidth and in space.
+    ///
+    /// The old folder is moved into place and then handed to FluidAudio to
+    /// judge, because nothing short of trying it can tell whether the files
+    /// inside are still the ones this build wants. V2's did not change across
+    /// those versions, so it adopts cleanly. V3's did — 0.15.5 wants a
+    /// precision-specific encoder and a JointDecisionv3 that the 0.10.0 layout
+    /// has no copy of — so V3 fails the check and is put back exactly where it
+    /// was, leaving the re-download as the only way forward. Nothing here
+    /// deletes a model: an old copy this build cannot use is still the user's.
+    public func adoptLegacyDownload() async {
+        let fileManager = FileManager.default
+        guard let legacy = legacyModelDirectory, let current = modelDirectory,
+            fileManager.fileExists(atPath: legacy.path)
+        else { return }
+
+        // Never move onto an existing download.
+        guard !fileManager.fileExists(atPath: current.path) else { return }
+
+        do {
+            try fileManager.moveItem(at: legacy, to: current)
+        } catch {
+            print("FoxSay: Could not adopt the Parakeet \(versionLabel) model from FoxSay 1.x: \(error)")
+            return
+        }
+
+        if AsrModels.modelsExist(at: current, version: version) {
+            print("FoxSay: Adopted the Parakeet \(versionLabel) model downloaded by FoxSay 1.x")
+        } else {
+            try? fileManager.moveItem(at: current, to: legacy)
+            print("FoxSay: Parakeet \(versionLabel) model from FoxSay 1.x has the old layout and can't be adopted")
+        }
+    }
+
     public var downloadProgress: Double {
         get async {
-            _downloadProgress
+            progress.value
+        }
+    }
+
+    /// Translate one of FluidAudio's progress reports into a position on our bar.
+    ///
+    /// FluidAudio runs a model as a series of steps, one per CoreML file, and
+    /// reports each on its own 0…1 scale. Only the first step fetches anything:
+    /// when any file is missing it pulls the whole repository in one pass, so
+    /// that step's fetch half carries the entire download and every later step
+    /// is a cache hit that returns immediately. Taking the fetch half of
+    /// whichever step is reporting and stretching it across our bar therefore
+    /// tracks the real bytes, and `ModelDownloadProgress` keeps the per-step
+    /// restarts from walking the bar backwards.
+    private nonisolated func record(_ update: DownloadProgress) {
+        switch update.phase {
+        case .listing:
+            // A step is starting and its fraction has restarted at zero. Nothing
+            // has happened yet, so the bar holds where it is.
+            break
+        case .downloading:
+            let fetched = min(update.fractionCompleted / Self.fetchShareOfFluidAudioScale, 1.0)
+            progress.advance(to: fetched * Self.fetchShareOfBar)
+        case .compiling:
+            // Compiling only begins once every byte is on disk — including on the
+            // path where the files were already cached and nothing was fetched.
+            progress.advance(to: Self.fetchShareOfBar)
+        @unknown default:
+            break
         }
     }
 
     public func downloadModel() async throws {
-        _downloadProgress = 0
+        progress.reset()
 
         print("FoxSay: Starting Parakeet \(versionLabel) model download via FluidAudio...")
 
         do {
-            // Start a background task to animate progress while downloading
-            // FluidAudio doesn't expose download progress, so we simulate it
-            let progressTask = Task {
-                // Simulate download progress over ~20 seconds
-                for i in 1...80 {
-                    try Task.checkCancellation()
-                    try await Task.sleep(for: .milliseconds(250))
-                    // Progress from 0 to 0.8 during download
-                    _downloadProgress = Double(i) / 100.0
-                }
+            // Real progress, straight from FluidAudio. This used to be a timer
+            // animating the bar to 80% over 20 seconds and then holding there
+            // until the download finished, which on a 450 MB model meant minutes
+            // of a bar that looked wedged.
+            models = try await AsrModels.downloadAndLoad(version: version) { [weak self] update in
+                self?.record(update)
             }
-
-            // FluidAudio handles downloading and caching automatically
-            models = try await AsrModels.downloadAndLoad(version: version)
-
-            // Cancel the simulated progress
-            progressTask.cancel()
-            _downloadProgress = 0.85
 
             print("FoxSay: Parakeet \(versionLabel) models downloaded, initializing...")
 
             // Initialize ASR manager
             let manager = AsrManager(config: .default)
-            _downloadProgress = 0.90
             try await manager.loadModels(models!)
             asrManager = manager
 
-            _downloadProgress = 1.0
+            progress.advance(to: 1.0)
             print("FoxSay: Parakeet \(versionLabel) model download complete")
         } catch {
             print("FoxSay: Parakeet \(versionLabel) download failed: \(error)")

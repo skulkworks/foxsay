@@ -144,20 +144,14 @@ public class AIModelManager: ObservableObject {
         print("FoxSay: Starting AI model download: \(model.huggingFaceId)")
 
         do {
-            // Simulated progress task for visual feedback
-            let progressTask = Task {
-                for i in 1...80 {
-                    try Task.checkCancellation()
-                    try await Task.sleep(for: .milliseconds(200))
-                    await MainActor.run {
-                        if self.downloadProgress < Double(i) / 100.0 {
-                            self.downloadProgress = Double(i) / 100.0
-                        }
-                    }
-                }
-            }
-
-            // Load the model - this downloads it if not cached
+            // Load the model - this downloads it if not cached.
+            //
+            // The reported fraction is real, straight from the hub downloader.
+            // A timer used to walk the bar to 80% over its first sixteen seconds
+            // alongside this, and whichever number was higher won — so on any
+            // model that took more than sixteen seconds to fetch, which is all
+            // of them, the bar raced ahead of the download and then sat still
+            // waiting for reality to catch up. Only the real number now.
             let container = try await loadModelContainer(
                 from: #hubDownloader(),
                 using: #huggingFaceTokenizerLoader(),
@@ -171,7 +165,6 @@ public class AIModelManager: ObservableObject {
                 }
             }
 
-            progressTask.cancel()
             downloadProgress = 0.95
 
             // Store the loaded model if this is the selected model

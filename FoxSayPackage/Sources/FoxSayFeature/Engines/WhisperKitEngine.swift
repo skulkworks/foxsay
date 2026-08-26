@@ -15,8 +15,12 @@ public actor WhisperKitEngine: TranscriptionEngine {
     private var whisperKit: WhisperKit?
     private var isLoading = false
     // nonisolated so progress polling doesn't block on actor
-    private nonisolated(unsafe) var _downloadProgress: Double = 0
+    private nonisolated let progress = ModelDownloadProgress()
     private var isCancelled = false
+
+    /// How much of our bar the fetch is worth. The rest covers handing the files
+    /// to WhisperKit and compiling them onto the Neural Engine.
+    private static let fetchShareOfBar = 0.90
 
     /// Optimized compute options for Apple Silicon
     /// Uses Neural Engine for maximum performance and energy efficiency
@@ -66,7 +70,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
     public var downloadProgress: Double {
         get async {
-            _downloadProgress
+            progress.value
         }
     }
 
@@ -95,7 +99,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
     public func downloadModel() async throws {
         guard !isLoading else { return }
         isLoading = true
-        _downloadProgress = 0
+        progress.reset()
 
         defer { isLoading = false }
 
@@ -108,30 +112,33 @@ public actor WhisperKitEngine: TranscriptionEngine {
         do {
             print("FoxSay: Starting WhisperKit download for \(whisperModelName) to \(downloadBase.path)")
 
-            // Start a background task to animate progress while downloading
-            // WhisperKit doesn't expose download progress, so we simulate it
-            // Adjust duration based on model size
-            let progressDuration = modelType == .whisperLargeTurbo ? 300 : (modelType == .whisperSmall ? 200 : 100)
-            let progressTask = Task {
-                for i in 1...80 {
-                    try Task.checkCancellation()
-                    try await Task.sleep(for: .milliseconds(progressDuration))
-                    _downloadProgress = Double(i) / 100.0
-                }
+            // Fetch the files first, with WhisperKit reporting real byte progress
+            // as it goes. This used to be a timer animating the bar to 80% and
+            // holding there — on Large Turbo, 809 MB of holding.
+            let folder = try await WhisperKit.download(
+                variant: whisperModelName,
+                downloadBase: downloadBase
+            ) { [progress] update in
+                progress.advance(to: update.fractionCompleted * Self.fetchShareOfBar)
             }
 
-            // WhisperKit handles model download automatically
-            // Use optimized compute options for Apple Neural Engine acceleration
+            progress.advance(to: Self.fetchShareOfBar)
+
+            // Point WhisperKit at what was just fetched rather than letting it
+            // resolve the model itself, which would re-list the repository over
+            // the network to reach the same folder. `load: false` keeps this the
+            // set-up-only call it has always been; the models are read into
+            // memory by preload() or the first transcription.
             whisperKit = try await WhisperKit(
                 model: whisperModelName,
                 downloadBase: downloadBase,
+                modelFolder: folder.path,
                 computeOptions: computeOptions,
-                verbose: true
+                verbose: true,
+                load: false
             )
 
-            // Cancel the simulated progress
-            progressTask.cancel()
-            _downloadProgress = 1.0
+            progress.advance(to: 1.0)
 
             print("FoxSay: WhisperKit \(whisperModelName) model download complete")
             print("FoxSay: Model path exists: \(FileManager.default.fileExists(atPath: modelPath.path))")

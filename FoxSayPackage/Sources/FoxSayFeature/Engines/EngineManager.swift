@@ -39,6 +39,15 @@ public class ModelManager: ObservableObject {
 
         // Check initial model state and preload if ready
         Task {
+            // Before deciding what is downloaded, let each model claim anything an
+            // older FoxSay left in a different folder. Run first, or the update
+            // that changed the folder reads as "model gone" and re-downloads it.
+            // The legacy alias points at an engine another key already covers,
+            // which just makes one of these a second no-op call.
+            for model in models.values {
+                await model.adoptLegacyDownload()
+            }
+
             await refreshModelReadyState()
             if isModelReady {
                 await preloadCurrentModel()

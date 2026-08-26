@@ -20,6 +20,10 @@ public protocol TranscriptionEngine: Sendable {
     /// Download the model files
     func downloadModel() async throws
 
+    /// Take over a model an earlier version of FoxSay downloaded somewhere else,
+    /// so that updating the app doesn't cost the user a re-download.
+    func adoptLegacyDownload() async
+
     /// Transcribe audio buffer to text
     /// - Parameter audioBuffer: Float array of audio samples at 16kHz mono
     /// - Returns: Transcription result
@@ -30,6 +34,11 @@ public protocol TranscriptionEngine: Sendable {
 
     /// Preload the model into memory for faster first transcription
     func preload() async throws
+}
+
+extension TranscriptionEngine {
+    /// Most engines have never moved their models and have nothing to adopt.
+    public func adoptLegacyDownload() async {}
 }
 
 /// Errors that can occur during transcription
