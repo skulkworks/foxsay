@@ -6,28 +6,22 @@
         <description>Updates for FoxSay</description>
         <language>en</language>
         <item>
-            <title>Version 2.2.0</title>
-            <pubDate>Sun, 13 Sep 2026 21:37:55 -0600</pubDate>
-            <sparkle:version>14</sparkle:version>
-            <sparkle:shortVersionString>2.2.0</sparkle:shortVersionString>
+            <title>Version 2.2.1</title>
+            <pubDate>Mon, 14 Sep 2026 09:41:47 -0600</pubDate>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>2.2.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-<h3>New</h3>
-<ul>
-<li>Nemotron Streaming, a speech model that transcribes while you are still talking rather than waiting for you to let go of the key. The words appear in the overlay and go into whatever you are typing in as they are spoken, and releasing the key finishes in a few hundredths of a second because the work is already done. English, about 590 MB, in Speech Models alongside the others. Anything your prompts or dictionary would have rewritten is still rewritten when you let go — FoxSay takes back only the words that changed</li>
-</ul>
 <h3>Improved</h3>
 <ul>
-<li>The recording overlay now appears when you press the key instead of when the microphone is ready. It used to wait for permission checks, a model check and the audio engine to spin up, which on a warm Mac was about half a second and on a cold or Bluetooth microphone rather longer. It is on screen in about a tenth of a second now, and the fade-in is quicker</li>
-<li>Recording starts roughly three times faster after the first dictation of a session. The audio capture graph is built once and kept rather than assembled from scratch every time you press the key: 240–340ms before, 76–81ms now. The microphone is still released between dictations, so the orange recording dot behaves exactly as it did, and the graph is given back after a minute of not dictating</li>
-<li>Pressing the hotkey during the model preload at launch no longer waits for the preload to finish. FoxSay checked with the speech model whether it was ready, and that question had to queue behind the model loading itself — up to fifteen seconds on a cold start</li>
+<li>The recording overlay keeps its level meter while Nemotron Streaming types. The live transcript used to take the meter's place the moment the first words came back, so the card stopped moving with your voice halfway through a dictation. The meter now stays where it is and the transcript runs on its own line underneath it, with the card growing to fit and shrinking back when the words are gone</li>
 </ul>
             ]]></description>
             <enclosure
-                url="https://updates.skulkworks.dev/foxsay/FoxSay-2.2.0-14.dmg"
-                length="21297433"
+                url="https://updates.skulkworks.dev/foxsay/FoxSay-2.2.1-15.dmg"
+                length="21298878"
                 type="application/octet-stream"
-                sparkle:edSignature="u4nU2xcbWNwyrE/KH1UFziGFFsdZ9mx16b912vCQmab+A+EKEWWyU0WVt9pMV18JMPS0gJxrmCJo+feTL5fPDQ=="
+                sparkle:edSignature="tyo58RPjJOhkJyYXgXmU59XLzYtCoDUDrOCX5ZQohp7WYnJrDXrIj3LVxT9NMO73YWZhLwEDmzYD4D8HPYcDAQ=="
             />
         </item>
     </channel>
