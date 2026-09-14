@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.0 (2026-09-13, build 14)
+
+### New
+- Nemotron Streaming, a speech model that transcribes while you are still talking rather than waiting for you to let go of the key. The words appear in the overlay and go into whatever you are typing in as they are spoken, and releasing the key finishes in a few hundredths of a second because the work is already done. English, about 590 MB, in Speech Models alongside the others. Anything your prompts or dictionary would have rewritten is still rewritten when you let go — FoxSay takes back only the words that changed
+
+### Improved
+- The recording overlay now appears when you press the key instead of when the microphone is ready. It used to wait for permission checks, a model check and the audio engine to spin up, which on a warm Mac was about half a second and on a cold or Bluetooth microphone rather longer. It is on screen in about a tenth of a second now, and the fade-in is quicker
+- Recording starts roughly three times faster after the first dictation of a session. The audio capture graph is built once and kept rather than assembled from scratch every time you press the key: 240–340ms before, 76–81ms now. The microphone is still released between dictations, so the orange recording dot behaves exactly as it did, and the graph is given back after a minute of not dictating
+- Pressing the hotkey during the model preload at launch no longer waits for the preload to finish. FoxSay checked with the speech model whether it was ready, and that question had to queue behind the model loading itself — up to fifteen seconds on a cold start
+
 ## 2.1.1 (2026-08-26, build 13)
 
 ### New
