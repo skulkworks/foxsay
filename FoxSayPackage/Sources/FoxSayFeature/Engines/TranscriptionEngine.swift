@@ -91,6 +91,9 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
     case parakeetTdtCtc110m = "parakeet-tdt-ctc-110m"
     case parakeetJa = "parakeet-ja"
 
+    // Streaming via FluidAudio — transcribes while you speak
+    case nemotronStreaming = "nemotron-streaming"
+
     // Legacy alias
     case whisperKit = "whisperkit"
 
@@ -106,6 +109,7 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         case .parakeetV3: return "Parakeet V3"
         case .parakeetTdtCtc110m: return "Parakeet TDT-CTC 110M"
         case .parakeetJa: return "Parakeet Japanese"
+        case .nemotronStreaming: return "Nemotron Streaming"
         }
     }
 
@@ -119,6 +123,7 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         case .parakeetV3: return "Parakeet V3"
         case .parakeetTdtCtc110m: return "Parakeet 110M"
         case .parakeetJa: return "Parakeet JA"
+        case .nemotronStreaming: return "Nemotron Live"
         }
     }
 
@@ -140,6 +145,8 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
             return "English-only, smallest and fastest Parakeet (~230MB)"
         case .parakeetJa:
             return "Japanese-only, tuned for Japanese speech (~620MB)"
+        case .nemotronStreaming:
+            return "Types as you speak, English (~590MB)"
         }
     }
 
@@ -147,9 +154,14 @@ public enum ModelType: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .whisperTiny, .whisperBase, .whisperKit, .whisperSmall, .whisperLargeTurbo, .parakeetV3:
             return true
-        case .parakeetV2, .parakeetTdtCtc110m, .parakeetJa:
+        case .parakeetV2, .parakeetTdtCtc110m, .parakeetJa, .nemotronStreaming:
             return false
         }
+    }
+
+    /// Whether this model transcribes while the user is still speaking.
+    public var isStreaming: Bool {
+        self == .nemotronStreaming
     }
 
     /// WhisperKit model name for this type

@@ -34,6 +34,10 @@ final class AudioTapProcessor: @unchecked Sendable {
     /// True when a sink node handles metering, so the 100 ms tap buffers don't
     /// overwrite the fresher per-cycle values.
     var skipLevelMetering = false
+    /// Optional live consumer of the converted 16 kHz mono samples — the
+    /// streaming transcription path. Called on the audio thread, so it must
+    /// hand off rather than do work.
+    var sampleSink: (@Sendable ([Float]) -> Void)?
     let storage: AudioBufferStorage
     let targetSampleRate: Double
     private var converter: AVAudioConverter?
@@ -101,6 +105,7 @@ final class AudioTapProcessor: @unchecked Sendable {
 
         // Update storage
         storage.append(samples)
+        sampleSink?(samples)
 
         if !skipLevelMetering {
             storage.currentLevel = samples.reduce(0) { max($0, abs($1)) }
@@ -129,9 +134,28 @@ public class AudioEngine: ObservableObject {
     private var inputNode: AVAudioInputNode?
     private var meterSink: AVAudioSinkNode?
 
+    /// The graph is built once and kept between recordings. Constructing an
+    /// AVAudioEngine, negotiating the input format, installing the tap and
+    /// resizing the device's IO buffer cost roughly 100ms, and that used to sit
+    /// between the hotkey and the first captured sample on every single
+    /// dictation. The engine is stopped while idle — nothing holds the
+    /// microphone open — and torn down once dictation has clearly finished, so
+    /// the device's IO buffer doesn't stay resized for the life of the app.
+    private var preparedDeviceID: AudioDeviceID?
+    private var engineNeedsRebuild = false
+    private var idleTeardownTimer: Timer?
+    private let idleTeardownDelay: TimeInterval = 60
+
     // Separate storage and processor that can be safely accessed from audio thread
     private let storage = AudioBufferStorage()
     private var tapProcessor: AudioTapProcessor?
+
+    /// Live consumer of the captured 16 kHz samples, used by the streaming
+    /// transcription path. Set it before recording starts; it survives graph
+    /// rebuilds. Called on the audio thread.
+    public var liveSampleSink: (@Sendable ([Float]) -> Void)? {
+        didSet { tapProcessor?.sampleSink = liveSampleSink }
+    }
 
     #if DEBUG
     /// Debug flag to simulate no microphone being connected
@@ -148,11 +172,14 @@ public class AudioEngine: ObservableObject {
     @Published public var selectedDeviceUID: String {
         didSet {
             UserDefaults.standard.set(selectedDeviceUID, forKey: "selectedAudioInputDevice")
-            if isRecording {
-                // Restart recording with new device
-                let buffer = stopRecording()
+            let wasRecording = isRecording
+            if wasRecording {
                 // Note: buffer will be lost, but this is expected behavior when switching devices
-                _ = buffer
+                _ = stopRecording()
+            }
+            // The warm graph is bound to the old device, so drop it either way.
+            teardownEngine()
+            if wasRecording {
                 try? startRecording()
             }
         }
@@ -174,6 +201,27 @@ public class AudioEngine: ObservableObject {
 
         // Listen for device changes
         setupDeviceChangeNotification()
+        setupEngineConfigurationChangeNotification()
+    }
+
+    /// A graph that outlives a single recording can have the hardware change
+    /// under it — a different default input, a sample rate changed in Audio MIDI
+    /// Setup, headphones plugged in. CoreAudio tears the engine's connections
+    /// down when that happens, so drop ours and build fresh on the next press.
+    private func setupEngineConfigurationChangeNotification() {
+        NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.engineNeedsRebuild = true
+                if !self.isRecording {
+                    self.teardownEngine()
+                }
+            }
+        }
     }
 
     // MARK: - Device Management
@@ -526,63 +574,22 @@ public class AudioEngine: ObservableObject {
             throw AudioEngineError.noMicrophoneDetected
         }
 
+        // Dictation is clearly still going, so keep the graph.
+        idleTeardownTimer?.invalidate()
+        idleTeardownTimer = nil
+
         // Clear previous buffer
         storage.clear()
 
         // Mute system audio if enabled
         muteSystemAudio()
 
-        // Create audio engine
-        audioEngine = AVAudioEngine()
-        guard let engine = audioEngine else {
-            restoreSystemAudio()
-            throw AudioEngineError.engineCreationFailed
-        }
-
-        // Set input device if not using default
-        if selectedDeviceUID != "default", let deviceID = getDeviceID(forUID: selectedDeviceUID) {
-            setInputDevice(deviceID, for: engine)
-        }
-
-        // Small IO buffer so the level meter tracks the voice in real time
-        requestSmallIOBuffer()
-
-        inputNode = engine.inputNode
-        guard let node = inputNode else {
-            restoreSystemAudio()
-            throw AudioEngineError.noInputNode
-        }
-
-        // Get input format - check for valid format
-        let inputFormat = node.outputFormat(forBus: 0)
-        print("FoxSay: Input format - sampleRate: \(inputFormat.sampleRate), channels: \(inputFormat.channelCount), device: \(selectedDeviceName)")
-
-        // Validate input format
-        guard inputFormat.sampleRate > 0 && inputFormat.channelCount > 0 else {
-            print("FoxSay: Invalid input format")
-            restoreSystemAudio()
-            throw AudioEngineError.noInputNode
-        }
-
-        // Create tap processor
-        let processor = AudioTapProcessor(storage: storage, targetSampleRate: Self.targetSampleRate)
-        processor.configure(inputFormat: inputFormat)
-        tapProcessor = processor
-
-        // Install tap to capture audio - use nonisolated helper to avoid actor context
-        Self.installAudioTap(on: node, format: inputFormat, processor: processor)
-
-        // Metering sink: taps coalesce to ~100 ms buffers no matter what, so the
-        // level meter reads the input per IO cycle (~10 ms) through a sink node.
-        // The tap stays the transcription capture path.
-        let sink = Self.makeMeterSink(storage: storage)
-        engine.attach(sink)
-        engine.connect(node, to: sink, format: inputFormat)
-        meterSink = sink
-        processor.skipLevelMetering = true
-
-        // Start engine
         do {
+            try prepareEngineIfNeeded()
+            guard let engine = audioEngine else {
+                throw AudioEngineError.engineCreationFailed
+            }
+
             try engine.start()
             isRecording = true
             recordingStartTime = Date()
@@ -593,14 +600,109 @@ public class AudioEngine: ObservableObject {
             startLevelUpdateTimer()
         } catch {
             print("FoxSay: Failed to start audio engine: \(error)")
-            // Clean up
-            restoreIOBuffer()
-            inputNode?.removeTap(onBus: 0)
-            audioEngine = nil
-            inputNode = nil
-            tapProcessor = nil
+            teardownEngine()
             restoreSystemAudio()
             throw error
+        }
+    }
+
+    /// Build the capture graph, or keep the one already standing.
+    ///
+    /// A rebuild happens when nothing is built yet, when the input device we
+    /// prepared against is no longer the one we'd record from, or when CoreAudio
+    /// told us the configuration changed underneath us.
+    private func prepareEngineIfNeeded() throws {
+        let deviceID = currentInputDeviceID()
+
+        if audioEngine != nil, !engineNeedsRebuild, preparedDeviceID == deviceID {
+            return
+        }
+
+        teardownEngine()
+
+        let engine = AVAudioEngine()
+
+        // Set input device if not using default
+        if selectedDeviceUID != "default", let selectedID = getDeviceID(forUID: selectedDeviceUID) {
+            setInputDevice(selectedID, for: engine)
+        }
+
+        // Small IO buffer so the level meter tracks the voice in real time.
+        // Done before the graph is built so the engine sees one stable device
+        // configuration for as long as it lives.
+        requestSmallIOBuffer()
+
+        let node = engine.inputNode
+
+        // Get input format - check for valid format
+        let inputFormat = node.outputFormat(forBus: 0)
+        print("FoxSay: Input format - sampleRate: \(inputFormat.sampleRate), channels: \(inputFormat.channelCount), device: \(selectedDeviceName)")
+
+        // Validate input format
+        guard inputFormat.sampleRate > 0 && inputFormat.channelCount > 0 else {
+            print("FoxSay: Invalid input format")
+            restoreIOBuffer()
+            throw AudioEngineError.noInputNode
+        }
+
+        // Create tap processor
+        let processor = AudioTapProcessor(storage: storage, targetSampleRate: Self.targetSampleRate)
+        processor.configure(inputFormat: inputFormat)
+        processor.sampleSink = liveSampleSink
+
+        // Install tap to capture audio - use nonisolated helper to avoid actor context
+        Self.installAudioTap(on: node, format: inputFormat, processor: processor)
+
+        // Metering sink: taps coalesce to ~100 ms buffers no matter what, so the
+        // level meter reads the input per IO cycle (~10 ms) through a sink node.
+        // The tap stays the transcription capture path.
+        let sink = Self.makeMeterSink(storage: storage)
+        engine.attach(sink)
+        engine.connect(node, to: sink, format: inputFormat)
+        processor.skipLevelMetering = true
+
+        engine.prepare()
+
+        audioEngine = engine
+        inputNode = node
+        meterSink = sink
+        tapProcessor = processor
+        preparedDeviceID = deviceID
+        engineNeedsRebuild = false
+    }
+
+    /// Dispose of the capture graph and put the device's IO buffer back.
+    private func teardownEngine() {
+        idleTeardownTimer?.invalidate()
+        idleTeardownTimer = nil
+
+        if let engine = audioEngine {
+            engine.stop()
+            inputNode?.removeTap(onBus: 0)
+            if let sink = meterSink {
+                engine.detach(sink)
+            }
+        }
+
+        audioEngine = nil
+        inputNode = nil
+        meterSink = nil
+        tapProcessor = nil
+        preparedDeviceID = nil
+        engineNeedsRebuild = false
+
+        restoreIOBuffer()
+    }
+
+    /// Hold the graph for a while after a recording — dictation usually comes in
+    /// bursts — then give the device back.
+    private func scheduleIdleTeardown() {
+        idleTeardownTimer?.invalidate()
+        idleTeardownTimer = Timer.scheduledTimer(withTimeInterval: idleTeardownDelay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self = self, !self.isRecording else { return }
+                self.teardownEngine()
+            }
         }
     }
 
@@ -723,22 +825,19 @@ public class AudioEngine: ObservableObject {
         recordingStartTime = nil
 
         stopLevelUpdateTimer()
-        inputNode?.removeTap(onBus: 0)
+
+        // Stop the IO but keep the graph — tap, sink and negotiated format all
+        // stay valid for the next recording. Stopping (rather than pausing)
+        // releases the input device, so nothing holds the microphone open
+        // between dictations.
         audioEngine?.stop()
-        if let sink = meterSink {
-            audioEngine?.detach(sink)
-            meterSink = nil
-        }
-        audioEngine = nil
-        inputNode = nil
-        tapProcessor = nil
         isRecording = false
         audioLevel = 0
         audioRMS = 0
         storage.currentLevel = 0
         storage.currentRMS = 0
 
-        restoreIOBuffer()
+        scheduleIdleTeardown()
 
         // Restore system audio
         restoreSystemAudio()

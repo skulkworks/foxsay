@@ -39,6 +39,9 @@ public class ModelManager: ObservableObject {
         models[.parakeetTdtCtc110m] = ParakeetEngine(version: .tdtCtc110m)
         models[.parakeetJa] = ParakeetEngine(version: .tdtJa)
 
+        // Streaming
+        models[.nemotronStreaming] = NemotronStreamingEngine()
+
         // Check initial model state and preload if ready
         Task {
             // Before deciding what is downloaded, let each model claim anything an

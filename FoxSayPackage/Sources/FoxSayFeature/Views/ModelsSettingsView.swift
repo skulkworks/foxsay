@@ -226,6 +226,8 @@ struct ModelCardView: View {
             return "waveform"
         case .parakeetJa:
             return "character.bubble"
+        case .nemotronStreaming:
+            return "text.cursor"
         }
     }
 

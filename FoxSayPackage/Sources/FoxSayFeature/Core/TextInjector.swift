@@ -73,6 +73,115 @@ public class TextInjector {
         NSLog("FoxSay: Text injection complete")
     }
 
+    // MARK: - Live injection (streaming models)
+
+    /// Exactly what this session has typed into the target app so far. The
+    /// streaming models emit monotonically — every partial extends the last one
+    /// rather than rewriting it — so live injection only ever appends, and this
+    /// is the record of what would have to be taken back if the processed text
+    /// ends up differing.
+    public private(set) var liveInjectedText = ""
+
+    /// Whether anything has been typed live into the target app this session.
+    public var hasLiveInjection: Bool { !liveInjectedText.isEmpty }
+
+    public func beginLiveInjection() {
+        liveInjectedText = ""
+    }
+
+    /// Type whatever part of `transcript` has not been typed yet.
+    ///
+    /// Uses synthesised key events rather than the pasteboard: a partial lands
+    /// every half second or so, and going through the clipboard that often would
+    /// stamp on whatever the user had copied.
+    public func injectLive(transcript: String) {
+        // Partials reach the main actor through separate tasks, and those are
+        // not guaranteed to run in the order they were produced. Because the
+        // model only ever extends its transcript, anything that is not strictly
+        // longer than what we have typed is a straggler from earlier and must be
+        // dropped — typing it would duplicate words already on screen.
+        guard transcript.count > liveInjectedText.count else { return }
+
+        guard transcript.hasPrefix(liveInjectedText) else {
+            // The model rewrote something it had already emitted. Rather than
+            // deleting text out from under the user mid-sentence, leave the
+            // screen alone and let the reconcile at the end sort it out.
+            NSLog("FoxSay: Live partial diverged from typed text — deferring to the final reconcile")
+            return
+        }
+
+        let delta = String(transcript.dropFirst(liveInjectedText.count))
+        guard !delta.isEmpty else { return }
+
+        typeUnicode(delta)
+        liveInjectedText = transcript
+    }
+
+    /// Reconcile what was typed live with the text the processing pipeline
+    /// produced. A no-op when they already agree, which is the common case.
+    public func replaceLiveInjection(with finalText: String) async {
+        guard liveInjectedText != finalText else { return }
+
+        // Keep the shared opening: only take back the part that differs.
+        let commonPrefix = String(liveInjectedText.commonPrefix(with: finalText))
+        let toDelete = liveInjectedText.count - commonPrefix.count
+        if toDelete > 0 {
+            sendBackspaces(toDelete)
+            try? await Task.sleep(nanoseconds: 30_000_000)  // let the app catch up
+        }
+
+        let remainder = String(finalText.dropFirst(commonPrefix.count))
+        if !remainder.isEmpty {
+            typeUnicode(remainder)
+        }
+        liveInjectedText = finalText
+    }
+
+    /// Type a string via synthesised key events, no pasteboard involved.
+    /// Chunked because a single event carries a limited unicode payload.
+    private func typeUnicode(_ text: String) {
+        let units = Array(text.utf16)
+        let chunkSize = 16
+        var index = 0
+
+        while index < units.count {
+            let end = min(index + chunkSize, units.count)
+            var chunk = Array(units[index..<end])
+            index = end
+
+            guard
+                let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true),
+                let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false)
+            else { continue }
+
+            // The payload goes on the key-down only. Putting it on the key-up
+            // as well makes text fields insert the same characters twice.
+            down.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: &chunk)
+            // Clear the modifiers explicitly. In hold mode the user's finger is
+            // still on Right Command while this types, and an inherited flag
+            // would turn every character into a menu shortcut.
+            down.flags = []
+            up.flags = []
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
+        }
+    }
+
+    private func sendBackspaces(_ count: Int) {
+        guard count > 0 else { return }
+        for _ in 0..<count {
+            let down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Delete), keyDown: true)
+            let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Delete), keyDown: false)
+            // Same reason as typeUnicode: a held hotkey modifier must not turn a
+            // backspace into Command-Delete, which deletes the whole line.
+            down?.flags = []
+            up?.flags = []
+            down?.post(tap: .cghidEventTap)
+            up?.post(tap: .cghidEventTap)
+        }
+        NSLog("FoxSay: Took back %d live-typed characters", count)
+    }
+
     /// Save current pasteboard contents for later restoration
     private func savePasteboardContents() -> [NSPasteboardItem]? {
         guard let items = pasteboard.pasteboardItems, !items.isEmpty else { return nil }

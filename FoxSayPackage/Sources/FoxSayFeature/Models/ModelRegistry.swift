@@ -83,6 +83,20 @@ public struct ModelRegistry {
             badges: [.compact, .fastest]
         ),
 
+        // Nemotron Streaming - transcribes while you speak
+        TranscriptionModelInfo(
+            id: "nemotron-streaming",
+            type: .nemotronStreaming,
+            displayName: "Nemotron Streaming",
+            version: "0.6B",
+            description: "Transcribes while you talk and types as it goes, instead of waiting for you to finish. English.",
+            accuracyRating: 4,
+            speedRating: 5,
+            sizeBytes: 590_000_000,
+            languageSupport: .englishOnly,
+            badges: [.fastest]
+        ),
+
         // Parakeet Japanese - Japanese-only
         TranscriptionModelInfo(
             id: "parakeet-ja",

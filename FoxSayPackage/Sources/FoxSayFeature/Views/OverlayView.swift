@@ -89,12 +89,32 @@ public struct OverlayView: View {
         VStack(alignment: .leading, spacing: 7) {
             statusRow
 
-            MeterView(isActive: appState.isRecording)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityHidden(true)
+            // A streaming model gives the band something better to show than a
+            // level meter: the words themselves. The meter stays for every other
+            // model, and for the moment before the first partial arrives.
+            if appState.liveTranscript.isEmpty {
+                MeterView(isActive: appState.isRecording)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityHidden(true)
+            } else {
+                transcriptBand
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
+    }
+
+    /// The tail of the running transcript. Truncating from the head keeps the
+    /// newest words in view, which is where the eye is.
+    private var transcriptBand: some View {
+        Text(appState.liveTranscript)
+            .font(.system(size: 12))
+            .foregroundStyle(Color.white.opacity(0.85))
+            .lineLimit(2)
+            .truncationMode(.head)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .animation(nil, value: appState.liveTranscript)
     }
 
     private var statusRow: some View {
@@ -170,7 +190,11 @@ public struct OverlayView: View {
     }
 
     private var statusText: String {
-        if appState.isRecording {
+        // `isStartingRecording` covers the few hundred milliseconds between the
+        // hotkey and the audio engine running. The card is already up by then,
+        // and the user is holding the key, so it reads as Recording — the meter
+        // stays flat until real audio arrives.
+        if appState.isRecording || appState.isStartingRecording {
             return "Recording"
         } else if appState.isTranscribing {
             return "Transcribing"
@@ -834,6 +858,12 @@ public class OverlayWindowController {
         let showInputOverlay = UserDefaults.standard.object(forKey: "showInputOverlay") as? Bool ?? true
         guard showInputOverlay else { return }
 
+        // Already up: leave it alone. The card now goes up at the keypress, so
+        // an error arriving mid-session would otherwise replay the open sound,
+        // re-run the entrance from zero, and yank the window back to its
+        // default position. The view picks up `overlayError` on its own.
+        guard !isShowing else { return }
+
         if window == nil {
             createWindow()
         }
@@ -871,23 +901,23 @@ public class OverlayWindowController {
         isShowing = true
         SoundEffectManager.shared.playOpen()
 
-        // A short hop lets SwiftUI commit the collapsed state before the
-        // transform animates; the window is still fully transparent here.
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(10))
-            self.animateIn()
-        }
+        // Commit the collapsed state synchronously rather than waiting a frame
+        // for it: the transform has to start from the small, dropped card or the
+        // entrance reads as a pop. The window is still fully transparent here.
+        window.contentView?.layoutSubtreeIfNeeded()
+        window.contentView?.displayIfNeeded()
+        animateIn()
     }
 
     private func animateIn() {
         guard isShowing, let window = window else { return }
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.22
+            context.duration = 0.12
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             window.animator().alphaValue = 1
         }
-        withAnimation(.easeOut(duration: 0.22)) {
+        withAnimation(.easeOut(duration: 0.12)) {
             OverlayPresentation.shared.isVisible = true
         }
     }

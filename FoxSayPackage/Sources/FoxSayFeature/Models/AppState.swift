@@ -22,8 +22,23 @@ public class AppState: ObservableObject {
     /// Current recording state
     @Published public var isRecording = false
 
+    /// Set from the moment the hotkey fires until the audio engine is actually
+    /// running. The overlay goes up on this flag rather than waiting for the
+    /// engine, which takes ~250ms to spin up (mic permission, device probe,
+    /// AVAudioEngine start) and made the HUD feel like it lagged the keypress.
+    @Published public private(set) var isStartingRecording = false
+
     /// Current transcription state
     @Published public var isTranscribing = false
+
+    /// The running transcript from a streaming model, updated while the user is
+    /// still speaking. Empty for the batch engines.
+    @Published public private(set) var liveTranscript = ""
+
+    /// The streaming engine driving the current recording, if the selected model
+    /// is one. Held for the length of the hold: started on key down, finished on
+    /// key up.
+    private var activeStream: (any StreamingTranscriptionEngine)?
 
     /// Last transcription result
     @Published public var lastResult: TranscriptionResult?
@@ -133,6 +148,18 @@ public class AppState: ObservableObject {
         isTranscribing = false
         errorMessage = nil
 
+        // A cancelled recording should leave no trace, including the words a
+        // streaming model already typed into the target app.
+        let stream = activeStream
+        endStreaming()
+        liveTranscript = ""
+        Task { @MainActor in
+            await stream?.cancelStream()
+            if TextInjector.shared.hasLiveInjection {
+                await TextInjector.shared.replaceLiveInjection(with: "")
+            }
+        }
+
         // Hide overlay
         OverlayWindowController.shared.hideOverlay()
 
@@ -143,12 +170,90 @@ public class AppState: ObservableObject {
         MenuBarManager.shared.setRecording(false)
     }
 
+    // MARK: - Streaming
+
+    /// Open a streaming session when the selected model supports one. Batch
+    /// models fall straight through and behave exactly as before.
+    private func beginStreamingIfSupported() async {
+        liveTranscript = ""
+
+        guard let engine = ModelManager.shared.currentModel as? any StreamingTranscriptionEngine else { return }
+
+        // Live typing only makes sense when we would have pasted anyway. In
+        // copy-only or history-only mode the overlay still shows the transcript
+        // as it arrives, but nothing is typed into anyone's document.
+        let typeIntoApp = TextInjector.shared.shouldPasteToActiveApp
+        if typeIntoApp {
+            TextInjector.shared.beginLiveInjection()
+        }
+
+        do {
+            try await engine.startStream { [weak self] partial in
+                Task { @MainActor in
+                    self?.handlePartial(partial, typeIntoApp: typeIntoApp)
+                }
+            }
+        } catch {
+            // A streaming model that will not start is not fatal: the audio is
+            // being captured regardless, so the release path transcribes it in
+            // one pass like any other model.
+            print("FoxSay: Could not start streaming session (\(error)) — falling back to batch")
+            return
+        }
+
+        activeStream = engine
+        AudioEngine.shared.liveSampleSink = { [weak self] samples in
+            Task { @MainActor in
+                await self?.feedStream(samples)
+            }
+        }
+    }
+
+    private func feedStream(_ samples: [Float]) async {
+        guard let stream = activeStream else { return }
+        do {
+            try await stream.appendStream(samples: samples)
+        } catch {
+            print("FoxSay: Streaming append failed: \(error)")
+        }
+    }
+
+
+    /// Partials arrive as the full running transcript, roughly twice a second.
+    /// Typing happens here on the main actor without an intervening suspension,
+    /// so two partials can never land out of order.
+    private func handlePartial(_ partial: String, typeIntoApp: Bool) {
+        liveTranscript = partial
+        guard typeIntoApp else { return }
+        TextInjector.shared.injectLive(transcript: partial)
+    }
+
+    /// Detach the audio sink and forget the session. Does not touch text that
+    /// was already typed — the caller decides whether it stands.
+    private func endStreaming() {
+        AudioEngine.shared.liveSampleSink = nil
+        activeStream = nil
+    }
+
     /// Start recording audio
     public func startRecording() async {
-        guard !isRecording else { return }
+        guard !isRecording, !isStartingRecording else { return }
 
         // Capture the target app before showing overlay (so we know where text will go)
         AppDetector.shared.captureTargetApp()
+
+        // Put the overlay up now, before any of the work below. Everything from
+        // here to `engine.start()` costs a few hundred milliseconds, and the
+        // user is already holding the key — waiting on it to draw the HUD is
+        // what made the overlay feel like it arrived late. Any failure below
+        // replaces the card with an error, so nothing lingers falsely.
+        isStartingRecording = true
+        overlayError = nil
+        OverlayWindowController.shared.showOverlay()
+
+        // Every path out of here either has the engine running (`isRecording`)
+        // or has shown an error card, so the starting flag is done with.
+        defer { isStartingRecording = false }
 
         // Refresh and check microphone permission
         AudioEngine.shared.updatePermissionStatus()
@@ -168,17 +273,28 @@ public class AppState: ObservableObject {
             return
         }
 
-        // Refresh model state from disk and check readiness
-        await ModelManager.shared.refreshModelReadyState()
-        guard ModelManager.shared.isModelReady else {
-            print("FoxSay: Speech model not available on disk")
-            showOverlayError(OverlayError(
-                icon: "waveform.badge.exclamationmark",
-                title: "No Speech Model Available",
-                subtitle: "Download a model in Settings to use FoxSay"
-            ))
-            AppDetector.shared.clearTargetApp()
-            return
+        // Trust the cached readiness flag here. Refreshing it asks the engine
+        // actor whether the model is on disk, which queues behind whatever that
+        // actor is doing — during the startup preload that is upwards of fifteen
+        // seconds, and the keypress would wait it out. Only when the cache says
+        // no do we pay for a definitive answer, because then we are about to
+        // refuse the recording and had better be right (the flag can lag a
+        // download that just finished).
+        if ModelManager.shared.isModelReady {
+            // Keep the cache honest for next time without blocking this press.
+            Task { await ModelManager.shared.refreshModelReadyState() }
+        } else {
+            await ModelManager.shared.refreshModelReadyState()
+            guard ModelManager.shared.isModelReady else {
+                print("FoxSay: Speech model not available on disk")
+                showOverlayError(OverlayError(
+                    icon: "waveform.badge.exclamationmark",
+                    title: "No Speech Model Available",
+                    subtitle: "Download a model in Settings to use FoxSay"
+                ))
+                AppDetector.shared.clearTargetApp()
+                return
+            }
         }
 
         do {
@@ -188,8 +304,7 @@ public class AppState: ObservableObject {
             isRecording = true
             errorMessage = nil
 
-            // Show overlay
-            OverlayWindowController.shared.showOverlay()
+            await beginStreamingIfSupported()
         } catch let error as AudioEngineError where error == .noMicrophoneDetected {
             print("FoxSay: No microphone detected")
             showOverlayError(OverlayError(
@@ -214,12 +329,22 @@ public class AppState: ObservableObject {
         guard isRecording else { return }
 
         print("FoxSay: Stopping recording...")
+        // Take the streaming session out of the audio path first: no more
+        // samples should arrive once the user has let go of the key.
+        let stream = activeStream
+        endStreaming()
+
         let audioBuffer = AudioEngine.shared.stopRecording()
         let recordingDuration = AudioEngine.shared.lastRecordingDuration
         isRecording = false
 
         guard !audioBuffer.isEmpty else {
             print("FoxSay: No audio recorded")
+            await stream?.cancelStream()
+            liveTranscript = ""
+            if TextInjector.shared.hasLiveInjection {
+                await TextInjector.shared.replaceLiveInjection(with: "")
+            }
             OverlayWindowController.shared.hideOverlay()
             AppDetector.shared.clearTargetApp()
             HotkeyManager.shared.ensureMonitoringActive()
@@ -252,8 +377,16 @@ public class AppState: ObservableObject {
                 return
             }
 
-            print("FoxSay: Starting transcription...")
-            var result = try await ModelManager.shared.transcribe(audioBuffer: audioBuffer)
+            var result: TranscriptionResult
+            if let stream {
+                // The words are already decoded — this only closes the session
+                // and hands back the final text, in tens of milliseconds.
+                print("FoxSay: Finishing streaming session...")
+                result = try await stream.finishStream()
+            } else {
+                print("FoxSay: Starting transcription...")
+                result = try await ModelManager.shared.transcribe(audioBuffer: audioBuffer)
+            }
 
             // Apply processing pipeline (markdown preprocessing, prompts, etc.)
             print("FoxSay: Processing transcription...")
@@ -268,6 +401,7 @@ public class AppState: ObservableObject {
 
             lastResult = result
             isTranscribing = false
+            liveTranscript = ""
 
             // Save to history (with audio if text is not empty)
             if !result.text.isEmpty && TextInjector.shared.shouldSaveToHistory {
@@ -289,13 +423,28 @@ public class AppState: ObservableObject {
                 StatisticsManager.shared.recordSession(from: statsItem)
             }
 
+            // Words typed live are already on screen, so they have to be
+            // squared with the final text whatever it turned out to be —
+            // including an empty result, which means taking all of them back.
+            if TextInjector.shared.hasLiveInjection {
+                NSLog("FoxSay: Reconciling live-typed text with the processed result...")
+                await TextInjector.shared.replaceLiveInjection(with: result.text)
+                if !result.text.isEmpty && TextInjector.shared.shouldCopyToClipboard {
+                    TextInjector.shared.copyToClipboard(result.text)
+                }
+            }
+
             // Handle output based on settings
             if !result.text.isEmpty {
                 let shouldPaste = TextInjector.shared.shouldPasteToActiveApp
                 let shouldCopy = TextInjector.shared.shouldCopyToClipboard
                 NSLog("FoxSay: Output text: '%@', paste: %d, copy: %d", result.text, shouldPaste ? 1 : 0, shouldCopy ? 1 : 0)
 
-                if shouldPaste {
+                if TextInjector.shared.hasLiveInjection {
+                    // Already handled above: the words went in as they were
+                    // spoken and have been reconciled with the final text.
+                    NSLog("FoxSay: Text was typed live; nothing further to inject")
+                } else if shouldPaste {
                     // Inject text via clipboard + Cmd+V
                     // If copy is disabled, restore previous clipboard after pasting
                     NSLog("FoxSay: Injecting text at cursor...")

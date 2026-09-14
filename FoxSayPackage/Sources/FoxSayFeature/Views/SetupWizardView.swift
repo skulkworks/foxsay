@@ -453,6 +453,7 @@ public struct SetupWizardView: View {
         case .whisperSmall: return "Whisper Small"
         case .whisperLargeTurbo: return "Whisper Large Turbo"
         case .whisperTiny: return "Whisper Tiny"
+        case .nemotronStreaming: return "Nemotron Streaming (Live)"
         }
     }
 
