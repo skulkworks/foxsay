@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1 (2026-09-14, build 15)
+
+### Improved
+- The recording overlay keeps its level meter while Nemotron Streaming types. The live transcript used to take the meter's place the moment the first words came back, so the card stopped moving with your voice halfway through a dictation. The meter now stays where it is and the transcript runs on its own line underneath it, with the card growing to fit and shrinking back when the words are gone
+
 ## 2.2.0 (2026-09-13, build 14)
 
 ### New

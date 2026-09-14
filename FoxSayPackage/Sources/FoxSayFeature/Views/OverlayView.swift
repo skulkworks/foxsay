@@ -9,6 +9,10 @@ import QuartzCore
 enum OverlayMetrics {
     static let cardWidth: CGFloat = 440
     static let cardHeight: CGFloat = 80
+    /// With a streaming model the card carries a line of live transcript under
+    /// the meter, which the standing 80pt has no room for. The meter keeps its
+    /// full height and the card grows downward instead of squeezing it.
+    static let transcriptCardHeight: CGFloat = 106
     @MainActor
     static var cornerRadius: CGFloat { SystemChrome.windowCornerRadius }
     // Must comfortably exceed the shadow's full falloff (2 × radius + offset),
@@ -16,9 +20,18 @@ enum OverlayMetrics {
     // desktops.
     static let shadowMargin: CGFloat = 28
 
-    static var windowSize: CGSize {
-        CGSize(width: cardWidth + shadowMargin * 2, height: cardHeight + shadowMargin * 2)
+    static func cardHeight(showingTranscript: Bool) -> CGFloat {
+        showingTranscript ? transcriptCardHeight : cardHeight
     }
+
+    static func windowSize(showingTranscript: Bool = false) -> CGSize {
+        CGSize(
+            width: cardWidth + shadowMargin * 2,
+            height: cardHeight(showingTranscript: showingTranscript) + shadowMargin * 2
+        )
+    }
+
+    static var windowSize: CGSize { windowSize(showingTranscript: false) }
 }
 
 // MARK: - Presentation state
@@ -71,7 +84,10 @@ public struct OverlayView: View {
                 liveContent
             }
         }
-        .frame(width: OverlayMetrics.cardWidth, height: OverlayMetrics.cardHeight)
+        .frame(
+            width: OverlayMetrics.cardWidth,
+            height: OverlayMetrics.cardHeight(showingTranscript: !appState.liveTranscript.isEmpty)
+        )
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
         .shadow(color: .black.opacity(0.40), radius: 10, x: 0, y: 0)
@@ -89,31 +105,31 @@ public struct OverlayView: View {
         VStack(alignment: .leading, spacing: 7) {
             statusRow
 
-            // A streaming model gives the band something better to show than a
-            // level meter: the words themselves. The meter stays for every other
-            // model, and for the moment before the first partial arrives.
-            if appState.liveTranscript.isEmpty {
-                MeterView(isActive: appState.isRecording)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityHidden(true)
-            } else {
-                transcriptBand
+            MeterView(isActive: appState.isRecording)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityHidden(true)
+
+            // A streaming model adds the words underneath the meter. The meter
+            // keeps its own band: it is the thing that says the microphone is
+            // hearing you, and the transcript is a different question.
+            if !appState.liveTranscript.isEmpty {
+                transcriptLine
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
     }
 
-    /// The tail of the running transcript. Truncating from the head keeps the
-    /// newest words in view, which is where the eye is.
-    private var transcriptBand: some View {
+    /// The tail of the running transcript, on one line. Truncating from the head
+    /// keeps the newest words in view, which is where the eye already is.
+    private var transcriptLine: some View {
         Text(appState.liveTranscript)
             .font(.system(size: 12))
             .foregroundStyle(Color.white.opacity(0.85))
-            .lineLimit(2)
+            .lineLimit(1)
             .truncationMode(.head)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 16)
             .animation(nil, value: appState.liveTranscript)
     }
 
@@ -850,6 +866,7 @@ public class OverlayWindowController {
     private var isShowing = false
 
     private let positionKey = "transcribeOverlayWindowPosition"
+    private var showingTranscript = false
 
     private init() {}
 
@@ -869,6 +886,10 @@ public class OverlayWindowController {
         }
 
         guard let window = window else { return }
+
+        // Every session starts at the standing height; the transcript line grows
+        // it again if a streaming model has something to show.
+        applyCardHeight(showingTranscript: false, animated: false)
 
         // Restore saved position or use default position
         var useDefault = true
@@ -909,6 +930,42 @@ public class OverlayWindowController {
         animateIn()
     }
 
+    /// Grow or shrink the panel for the live transcript line, keeping the top
+    /// edge where it is so the card extends downward rather than jumping.
+    public func setTranscriptVisible(_ visible: Bool) {
+        guard showingTranscript != visible else { return }
+        showingTranscript = visible
+        guard isShowing else { return }
+        applyCardHeight(showingTranscript: visible, animated: true)
+    }
+
+    private func applyCardHeight(showingTranscript visible: Bool, animated: Bool) {
+        guard let window = window else { return }
+
+        let size = OverlayMetrics.windowSize(showingTranscript: visible)
+        guard window.frame.height != size.height else { return }
+
+        // AppKit measures from the bottom, so holding the top edge means moving
+        // the origin down by whatever the window gained.
+        let top = window.frame.maxY
+        let frame = NSRect(
+            x: window.frame.origin.x,
+            y: top - size.height,
+            width: size.width,
+            height: size.height
+        )
+
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.16
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                window.animator().setFrame(frame, display: true)
+            }
+        } else {
+            window.setFrame(frame, display: false)
+        }
+    }
+
     private func animateIn() {
         guard isShowing, let window = window else { return }
 
@@ -924,6 +981,12 @@ public class OverlayWindowController {
 
     public func hideOverlay() {
         guard let window = window, isShowing else { return }
+
+        // Back to the standing height first: the position below is the bottom
+        // left corner, so saving it while the transcript line is showing would
+        // put the card 26pt lower next time.
+        showingTranscript = false
+        applyCardHeight(showingTranscript: false, animated: false)
 
         // Save window position before hiding
         let position: [String: CGFloat] = [

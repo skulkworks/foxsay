@@ -153,6 +153,7 @@ public class AppState: ObservableObject {
         let stream = activeStream
         endStreaming()
         liveTranscript = ""
+        OverlayWindowController.shared.setTranscriptVisible(false)
         Task { @MainActor in
             await stream?.cancelStream()
             if TextInjector.shared.hasLiveInjection {
@@ -223,7 +224,12 @@ public class AppState: ObservableObject {
     /// Typing happens here on the main actor without an intervening suspension,
     /// so two partials can never land out of order.
     private func handlePartial(_ partial: String, typeIntoApp: Bool) {
+        let hadText = !liveTranscript.isEmpty
         liveTranscript = partial
+        if !hadText && !partial.isEmpty {
+            // First words of the session: make room under the meter for them.
+            OverlayWindowController.shared.setTranscriptVisible(true)
+        }
         guard typeIntoApp else { return }
         TextInjector.shared.injectLive(transcript: partial)
     }
@@ -342,6 +348,7 @@ public class AppState: ObservableObject {
             print("FoxSay: No audio recorded")
             await stream?.cancelStream()
             liveTranscript = ""
+            OverlayWindowController.shared.setTranscriptVisible(false)
             if TextInjector.shared.hasLiveInjection {
                 await TextInjector.shared.replaceLiveInjection(with: "")
             }
@@ -402,6 +409,7 @@ public class AppState: ObservableObject {
             lastResult = result
             isTranscribing = false
             liveTranscript = ""
+            OverlayWindowController.shared.setTranscriptVisible(false)
 
             // Save to history (with audio if text is not empty)
             if !result.text.isEmpty && TextInjector.shared.shouldSaveToHistory {
