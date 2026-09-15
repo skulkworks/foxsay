@@ -1,0 +1,41 @@
+# git-cliff configuration: groups commits between the previous and the current
+# version tag into release-notes sections for the Release workflow.
+#
+# The repo does not use conventional commits, so grouping keys off the first
+# word of each subject line ("Add ...", "Fix ...", "Upgrade ..."). Anything
+# unmatched lands in "Other" rather than being dropped.
+
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {{ commit.message | split(pat="\n") | first | trim | upper_first }} ({{ commit.id | truncate(length=7, end="") }})
+{%- endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = false
+filter_unconventional = false
+split_commits = false
+protect_breaking_commits = false
+filter_commits = false
+# Plain X.Y.Z tags, matching the existing history (no leading "v").
+tag_pattern = "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+sort_commits = "newest"
+
+# The <!-- N --> prefixes only order the sections; they render as invisible
+# HTML comments on GitHub.
+commit_parsers = [
+  { message = "^(?i)merge ", skip = true },
+  { message = "^(?i)test only", skip = true },
+  { message = "^(?i)(add|feat|new|implement|introduce|restore)", group = "<!-- 0 -->New" },
+  { message = "^(?i)(fix|correct|resolve|repair|prevent)", group = "<!-- 1 -->Fixes" },
+  { message = "^(?i)(upgrade|update|bump|improve|refactor|rework|change|switch|move|recommend|rename|split|make|use|prepare|pin|clean)", group = "<!-- 2 -->Changes" },
+  { message = "^(?i)(doc|readme)", group = "<!-- 3 -->Documentation" },
+  { message = ".*", group = "<!-- 4 -->Other" },
+]

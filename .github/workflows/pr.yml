@@ -1,0 +1,89 @@
+name: PR
+
+# Package tests for every commit of an open pull request. The full app build
+# runs only in the Release workflow, so PR feedback stays fast and cheap.
+#
+# Abuse containment for a public repo: GitHub already requires maintainer
+# approval before workflows run on PRs from first-time contributors, fork PRs
+# get no secrets and a read-only token, the concurrency group below cancels
+# superseded runs of the same PR, and the job carries a hard timeout.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Guards the release flow driven by tag.yml. A PR that does not touch
+  # MARKETING_VERSION is fine - merging it simply won't cut a release, and the
+  # job says so in its summary. A PR that does bump it must bump to a version
+  # that is well-formed, strictly greater than the base, and not yet released;
+  # otherwise tag.yml would silently skip the tag and no release would happen.
+  version-lint:
+    name: Version lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the check needs every existing tag plus the base commit.
+          fetch-depth: 0
+
+      - name: Validate MARKETING_VERSION
+        env:
+          # SHA of the PR base (empty on workflow_dispatch, falls back to origin/main).
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          read_version() {
+            grep -m1 -o 'MARKETING_VERSION = [^;]*' "$1" | awk '{print $3}'
+          }
+
+          HEAD_VERSION="$(read_version FoxSay.xcodeproj/project.pbxproj)"
+          git show "${BASE_SHA:-origin/main}:FoxSay.xcodeproj/project.pbxproj" > /tmp/base.pbxproj
+          BASE_VERSION="$(read_version /tmp/base.pbxproj)"
+
+          if [[ ! "$HEAD_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::MARKETING_VERSION '$HEAD_VERSION' is not plain X.Y.Z" >&2
+            exit 1
+          fi
+
+          if [[ "$HEAD_VERSION" == "$BASE_VERSION" ]]; then
+            echo "No version bump ($HEAD_VERSION): merging this PR will NOT cut a release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$HEAD_VERSION" > /dev/null; then
+            echo "::error::MARKETING_VERSION was bumped to $HEAD_VERSION, but that tag already exists - this version has already been released, so tag.yml would silently skip it. Bump to an unreleased version."
+            exit 1
+          fi
+
+          HIGHEST="$(printf '%s\n%s\n' "$BASE_VERSION" "$HEAD_VERSION" | sort -V | tail -1)"
+          if [[ "$HIGHEST" != "$HEAD_VERSION" ]]; then
+            echo "::error::MARKETING_VERSION went backwards: $BASE_VERSION -> $HEAD_VERSION"
+            exit 1
+          fi
+
+          echo "Version bump $BASE_VERSION -> $HEAD_VERSION: merging this PR WILL cut release $HEAD_VERSION." >> "$GITHUB_STEP_SUMMARY"
+
+  package-tests:
+    name: Package tests
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: FoxSayPackage/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('FoxSayPackage/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Run package tests
+        run: swift test --package-path FoxSayPackage

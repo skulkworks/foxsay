@@ -1,0 +1,120 @@
+name: Release
+
+# Production build for a version tag (plain X.Y.Z, matching the existing tag
+# history). Runs for tags pushed by hand and, via workflow_call, for tags the
+# Tag workflow just created - GitHub's recursion guard keeps those from firing
+# on:push, so the Tag workflow invokes this one directly.
+#
+# The artifacts are unsigned: signing and notarization need the maintainer's
+# Developer ID certificate and Apple ID, which CI does not have. The published
+# release carries a note saying so. scripts/build-release.sh remains the path
+# for producing the signed, notarized, Sparkle-ready DMG.
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag to build and release (X.Y.Z)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and publish release
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # For on:push this re-checks-out the same tag; for workflow_call it
+          # picks up the tag the Tag workflow created moments ago. The tag
+          # format filter above plus the X.Y.Z validation in tag.yml keep this
+          # ref well-formed.
+          ref: ${{ inputs.version || github.ref_name }}
+          # Full history: release notes are generated from the commit range
+          # between the previous version tag and this one.
+          fetch-depth: 0
+
+      - name: Install Metal Toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData
+          key: derived-${{ runner.os }}-${{ hashFiles('FoxSayPackage/Package.resolved') }}
+          restore-keys: |
+            derived-${{ runner.os }}-
+
+      - name: Build FoxSay.app
+        run: |
+          xcodebuild build \
+            -workspace FoxSay.xcworkspace \
+            -scheme FoxSay \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package zip and DMG
+        run: |
+          APP="build/DerivedData/Build/Products/Release/FoxSay.app"
+          ditto -c -k --keepParent "$APP" "build/FoxSay-$VERSION-unsigned.zip"
+
+          DMG_TEMP="build/dmg_temp"
+          mkdir -p "$DMG_TEMP"
+          cp -R "$APP" "$DMG_TEMP/"
+          ln -s /Applications "$DMG_TEMP/Applications"
+          hdiutil create -volname "FoxSay" \
+            -srcfolder "$DMG_TEMP" \
+            -ov -format UDZO \
+            "build/FoxSay-$VERSION-unsigned.dmg"
+
+      # Grouped release notes from the commits between the previous version
+      # tag and this one (cliff.toml holds the grouping rules). The repo
+      # doesn't use conventional commits, and GitHub's own note generation
+      # only sees PRs - git-cliff covers direct-to-main commits too.
+      - name: Generate release notes
+        run: |
+          brew install --quiet git-cliff
+          git cliff --config cliff.toml --current --output build/notes-body.md
+
+          PREV_TAG="$(git tag --list --sort=-version:refname \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$VERSION" | head -1)"
+
+          {
+            cat build/notes-body.md
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              echo "**Full changelog:** https://github.com/$GITHUB_REPOSITORY/compare/$PREV_TAG...$VERSION"
+              echo ""
+            fi
+            echo "---"
+            echo ""
+            echo "**These artifacts are unsigned and not notarized** - macOS Gatekeeper will block them on first launch (right-click - Open to bypass). The signed, notarized DMG for end users is produced by the maintainer via scripts/build-release.sh."
+          } > build/notes.md
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            gh release upload "$VERSION" \
+              "build/FoxSay-$VERSION-unsigned.zip" \
+              "build/FoxSay-$VERSION-unsigned.dmg" \
+              --clobber
+          else
+            gh release create "$VERSION" \
+              "build/FoxSay-$VERSION-unsigned.zip" \
+              "build/FoxSay-$VERSION-unsigned.dmg" \
+              --title "$VERSION" \
+              --notes-file build/notes.md
+          fi
