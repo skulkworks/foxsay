@@ -3,6 +3,21 @@
   "app": "FoxSay",
   "versions": [
     {
+      "version": "2.2.2",
+      "build": 16,
+      "date": "2026-09-17",
+      "sections": [
+        {
+          "name": "Fixed",
+          "type": "fixed",
+          "items": [
+            "Switching from Nemotron Streaming to a regular speech model could make each new dictation replace the previous one in any app. FoxSay now clears live text tracking between recordings, so completed dictations stay in place without needing to restart the app"
+          ]
+        }
+      ],
+      "html": "<h3>Fixed</h3>\n<ul>\n<li>Switching from Nemotron Streaming to a regular speech model could make each new dictation replace the previous one in any app. FoxSay now clears live text tracking between recordings, so completed dictations stay in place without needing to restart the app</li>\n</ul>"
+    },
+    {
       "version": "2.2.1",
       "build": 15,
       "date": "2026-09-14",

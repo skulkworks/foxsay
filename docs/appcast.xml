@@ -6,22 +6,22 @@
         <description>Updates for FoxSay</description>
         <language>en</language>
         <item>
-            <title>Version 2.2.1</title>
-            <pubDate>Mon, 14 Sep 2026 09:41:47 -0600</pubDate>
-            <sparkle:version>15</sparkle:version>
-            <sparkle:shortVersionString>2.2.1</sparkle:shortVersionString>
+            <title>Version 2.2.2</title>
+            <pubDate>Thu, 17 Sep 2026 16:15:10 -0600</pubDate>
+            <sparkle:version>16</sparkle:version>
+            <sparkle:shortVersionString>2.2.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-<h3>Improved</h3>
+<h3>Fixed</h3>
 <ul>
-<li>The recording overlay keeps its level meter while Nemotron Streaming types. The live transcript used to take the meter's place the moment the first words came back, so the card stopped moving with your voice halfway through a dictation. The meter now stays where it is and the transcript runs on its own line underneath it, with the card growing to fit and shrinking back when the words are gone</li>
+<li>Switching from Nemotron Streaming to a regular speech model could make each new dictation replace the previous one in any app. FoxSay now clears live text tracking between recordings, so completed dictations stay in place without needing to restart the app</li>
 </ul>
             ]]></description>
             <enclosure
-                url="https://updates.skulkworks.dev/foxsay/FoxSay-2.2.1-15.dmg"
-                length="21298878"
+                url="https://updates.skulkworks.dev/foxsay/FoxSay-2.2.2-16.dmg"
+                length="20487160"
                 type="application/octet-stream"
-                sparkle:edSignature="tyo58RPjJOhkJyYXgXmU59XLzYtCoDUDrOCX5ZQohp7WYnJrDXrIj3LVxT9NMO73YWZhLwEDmzYD4D8HPYcDAQ=="
+                sparkle:edSignature="jG+oP0BQNG2eDP0GZskxfUsMgfnGGY8kH0LZb/1kSbbPJz+u3tLxIQ2O7DWo2dIZkwUpgHF7nO7FsOJxdWwaCQ=="
             />
         </item>
     </channel>
