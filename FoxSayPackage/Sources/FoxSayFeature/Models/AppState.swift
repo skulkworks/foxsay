@@ -39,6 +39,7 @@ public class AppState: ObservableObject {
     /// is one. Held for the length of the hold: started on key down, finished on
     /// key up.
     private var activeStream: (any StreamingTranscriptionEngine)?
+    private var streamSessionID: UUID?
 
     /// Last transcription result
     @Published public var lastResult: TranscriptionResult?
@@ -145,7 +146,7 @@ public class AppState: ObservableObject {
         NSLog("FoxSay: Recording cancelled")
         _ = AudioEngine.shared.stopRecording()
         isRecording = false
-        isTranscribing = false
+        isTranscribing = true
         errorMessage = nil
 
         // A cancelled recording should leave no trace, including the words a
@@ -155,6 +156,10 @@ public class AppState: ObservableObject {
         liveTranscript = ""
         OverlayWindowController.shared.setTranscriptVisible(false)
         Task { @MainActor in
+            defer {
+                TextInjector.shared.resetLiveInjection()
+                isTranscribing = false
+            }
             await stream?.cancelStream()
             if TextInjector.shared.hasLiveInjection {
                 await TextInjector.shared.replaceLiveInjection(with: "")
@@ -184,6 +189,8 @@ public class AppState: ObservableObject {
         // copy-only or history-only mode the overlay still shows the transcript
         // as it arrives, but nothing is typed into anyone's document.
         let typeIntoApp = TextInjector.shared.shouldPasteToActiveApp
+        let sessionID = UUID()
+        streamSessionID = sessionID
         if typeIntoApp {
             TextInjector.shared.beginLiveInjection()
         }
@@ -191,7 +198,8 @@ public class AppState: ObservableObject {
         do {
             try await engine.startStream { [weak self] partial in
                 Task { @MainActor in
-                    self?.handlePartial(partial, typeIntoApp: typeIntoApp)
+                    guard let self, self.streamSessionID == sessionID else { return }
+                    self.handlePartial(partial, typeIntoApp: typeIntoApp)
                 }
             }
         } catch {
@@ -199,9 +207,13 @@ public class AppState: ObservableObject {
             // being captured regardless, so the release path transcribes it in
             // one pass like any other model.
             print("FoxSay: Could not start streaming session (\(error)) — falling back to batch")
+            if streamSessionID == sessionID {
+                streamSessionID = nil
+            }
             return
         }
 
+        guard streamSessionID == sessionID, isRecording else { return }
         activeStream = engine
         AudioEngine.shared.liveSampleSink = { [weak self] samples in
             Task { @MainActor in
@@ -237,13 +249,17 @@ public class AppState: ObservableObject {
     /// Detach the audio sink and forget the session. Does not touch text that
     /// was already typed — the caller decides whether it stands.
     private func endStreaming() {
+        streamSessionID = nil
         AudioEngine.shared.liveSampleSink = nil
         activeStream = nil
     }
 
     /// Start recording audio
     public func startRecording() async {
-        guard !isRecording, !isStartingRecording else { return }
+        guard !isRecording, !isStartingRecording, !isTranscribing else { return }
+
+        // Reset for every model and output mode, including non-streaming models.
+        TextInjector.shared.resetLiveInjection()
 
         // Capture the target app before showing overlay (so we know where text will go)
         AppDetector.shared.captureTargetApp()
@@ -334,6 +350,14 @@ public class AppState: ObservableObject {
     public func stopRecordingAndTranscribe() async {
         guard isRecording else { return }
 
+        // Keep this session exclusive through reconciliation and paste, including
+        // their async delays, so its cleanup cannot clear a newer recording.
+        isTranscribing = true
+        defer {
+            TextInjector.shared.resetLiveInjection()
+            isTranscribing = false
+        }
+
         print("FoxSay: Stopping recording...")
         // Take the streaming session out of the audio path first: no more
         // samples should arrive once the user has let go of the key.
@@ -365,9 +389,6 @@ public class AppState: ObservableObject {
 
         print("FoxSay: Audio buffer size: \(audioBuffer.count) samples, duration: \(recordingDuration)s")
 
-        // Start transcription
-        isTranscribing = true
-
         do {
             // Check if model is ready
             guard ModelManager.shared.isModelReady else {
@@ -380,7 +401,6 @@ public class AppState: ObservableObject {
                     title: "No Speech Model Available",
                     subtitle: "Download a model in Settings to use FoxSay"
                 ))
-                isTranscribing = false
                 return
             }
 
@@ -407,7 +427,6 @@ public class AppState: ObservableObject {
             HotkeyManager.shared.ensureMonitoringActive()
 
             lastResult = result
-            isTranscribing = false
             liveTranscript = ""
             OverlayWindowController.shared.setTranscriptVisible(false)
 
@@ -477,7 +496,6 @@ public class AppState: ObservableObject {
             AppDetector.shared.clearTargetApp()
             HotkeyManager.shared.ensureMonitoringActive()
 
-            isTranscribing = false
             showOverlayError(OverlayError(
                 icon: "exclamationmark.triangle.fill",
                 title: "Transcription Failed",

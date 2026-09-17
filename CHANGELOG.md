@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.2 (2026-09-17, build 16)
+
+### Fixed
+- Switching from Nemotron Streaming to a regular speech model could make each new dictation replace the previous one in any app. FoxSay now clears live text tracking between recordings, so completed dictations stay in place without needing to restart the app
+
 ## 2.2.1 (2026-09-14, build 15)
 
 ### Improved

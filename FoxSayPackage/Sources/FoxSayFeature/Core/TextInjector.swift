@@ -30,7 +30,14 @@ public class TextInjector {
         !shouldPasteToActiveApp && shouldCopyToClipboard
     }
 
-    private init() {}
+    private let typeUnicodeOverride: ((String) -> Void)?
+    private let sendBackspacesOverride: ((Int) -> Void)?
+
+    // Tests can exercise insertion without sending keystrokes to the active app.
+    init(typeUnicode: ((String) -> Void)? = nil, sendBackspaces: ((Int) -> Void)? = nil) {
+        typeUnicodeOverride = typeUnicode
+        sendBackspacesOverride = sendBackspaces
+    }
 
     /// Copy text to clipboard without pasting
     public func copyToClipboard(_ text: String) {
@@ -81,12 +88,21 @@ public class TextInjector {
     /// is the record of what would have to be taken back if the processed text
     /// ends up differing.
     public private(set) var liveInjectedText = ""
+    private var isLiveInjectionActive = false
 
     /// Whether anything has been typed live into the target app this session.
     public var hasLiveInjection: Bool { !liveInjectedText.isEmpty }
 
     public func beginLiveInjection() {
         liveInjectedText = ""
+        isLiveInjectionActive = true
+    }
+
+    /// Forget this recording's text without deleting it from the target app.
+    /// Completed dictations must never be reconciled by a later recording.
+    public func resetLiveInjection() {
+        liveInjectedText = ""
+        isLiveInjectionActive = false
     }
 
     /// Type whatever part of `transcript` has not been typed yet.
@@ -95,6 +111,7 @@ public class TextInjector {
     /// every half second or so, and going through the clipboard that often would
     /// stamp on whatever the user had copied.
     public func injectLive(transcript: String) {
+        guard isLiveInjectionActive else { return }
         // Partials reach the main actor through separate tasks, and those are
         // not guaranteed to run in the order they were produced. Because the
         // model only ever extends its transcript, anything that is not strictly
@@ -120,6 +137,7 @@ public class TextInjector {
     /// Reconcile what was typed live with the text the processing pipeline
     /// produced. A no-op when they already agree, which is the common case.
     public func replaceLiveInjection(with finalText: String) async {
+        guard isLiveInjectionActive else { return }
         guard liveInjectedText != finalText else { return }
 
         // Keep the shared opening: only take back the part that differs.
@@ -140,6 +158,10 @@ public class TextInjector {
     /// Type a string via synthesised key events, no pasteboard involved.
     /// Chunked because a single event carries a limited unicode payload.
     private func typeUnicode(_ text: String) {
+        if let typeUnicodeOverride {
+            typeUnicodeOverride(text)
+            return
+        }
         let units = Array(text.utf16)
         let chunkSize = 16
         var index = 0
@@ -169,6 +191,10 @@ public class TextInjector {
 
     private func sendBackspaces(_ count: Int) {
         guard count > 0 else { return }
+        if let sendBackspacesOverride {
+            sendBackspacesOverride(count)
+            return
+        }
         for _ in 0..<count {
             let down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Delete), keyDown: true)
             let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Delete), keyDown: false)
